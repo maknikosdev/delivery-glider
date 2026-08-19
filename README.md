@@ -184,29 +184,6 @@ TurboModules), υποχρεωτικό σε αυτή την έκδοση του R
 Το παιχνίδι δεν κάνει καμία κλήση δικτύου (zero network requests) — δουλεύει
 πλήρως σε Flight Mode.
 
-### Store listing / Δημοσίευση στο Google Play
-
-Στο `store_assets/` (αν σου έχει δοθεί ξεχωριστά) θα βρεις:
-- Πλήρες κείμενο store listing (όνομα, περιγραφές, κατηγορία, content rating, data safety)
-- Πολιτική απορρήτου έτοιμη προς hosting (`privacy_policy.html`, Ελληνικά + Αγγλικά)
-- Feature graphic (1024×500) και hi-res icon (512×512)
-
-Χρειάζεται να προσθέσεις εσύ: πραγματικά screenshots από τη συσκευή σου, και
-να ανεβάσεις την πολιτική απορρήτου κάπου δημόσια (π.χ. GitHub Pages) για να
-πάρεις το URL που ζητάει το Play Console.
-
-### Επόμενα βήματα / ιδέες επέκτασης
-
-- Roguelike "Mystery Packages" (Volatile Battery, Fragile Vase, Gravity Core) — η βάση
-  (`packages` counter, delivery system) υπάρχει, λείπει μόνο η ειδική λογική per-package.
-  Καλή θέση να προσθέσεις: `src/game/useGameLoop.js`, μέσα στο `tryDeliver`/`ensureChunksAhead`.
-- Weather/time themes (Neon Rain, Rush Hour, Deep Night) — θα μπει σαν modifier στο `DIFFICULTY`
-  config και στο `ParallaxBackground`.
-- Daily Contracts — απλό, βασισμένο στο υπάρχον save system (`storage.js`).
-- Αν θες μελλοντικά πραγματικά PNG sprites αντί για SVG, βάλε το spritesheet
-  στο `assets/sprites/` και αντικατέστησε το περιεχόμενο των components στο
-  `src/components/`.
-
 ---
 
 ## 🇬🇧 English
@@ -373,27 +350,3 @@ TurboModules), which is mandatory in this version of React Native.
 
 The game makes zero network calls — it works fully in Airplane Mode.
 
-### Store listing / Publishing to Google Play
-
-In `store_assets/` (if provided to you separately) you'll find:
-- Full store listing copy (name, descriptions, category, content rating, data safety)
-- A privacy policy ready to host (`privacy_policy.html`, Greek + English)
-- Feature graphic (1024×500) and hi-res icon (512×512)
-
-You still need to add: real screenshots from your device, and host the
-privacy policy somewhere public (e.g. GitHub Pages) to get the URL that Play
-Console requires.
-
-### Next steps / extension ideas
-
-- Roguelike "Mystery Packages" (Volatile Battery, Fragile Vase, Gravity Core)
-  — the foundation (`packages` counter, delivery system) already exists,
-  only the per-package special logic is missing. Good place to add it:
-  `src/game/useGameLoop.js`, inside `tryDeliver`/`ensureChunksAhead`.
-- Weather/time themes (Neon Rain, Rush Hour, Deep Night) — would plug in as a
-  modifier on the `DIFFICULTY` config and in `ParallaxBackground`.
-- Daily Contracts — straightforward, building on the existing save system
-  (`storage.js`).
-- If you want real PNG sprites instead of SVG down the line, drop the
-  spritesheet in `assets/sprites/` and swap the contents of the components in
-  `src/components/`.
