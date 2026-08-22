@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getTodayKey, pickDailyContracts, contractById, contractProgress } from "../game/contracts";
 
-const KEY = "@delivery_glider/save_v6";
+const KEY = "@delivery_glider/save_v6"; // unchanged on purpose — keeps existing players' progress;
+// new stat fields below are safely backfilled by the `{ ...DEFAULT_SAVE, ...saved }` merge in loadSave().
 
 // NOTE: No real-money purchases anywhere in this game — no billing library,
 // no payment SDK, no network call. "credits" is an in-game points balance
@@ -27,8 +28,20 @@ const DEFAULT_SAVE = {
   unlockedSkins: [],
   selectedSkin: null, // a hex color, or null for the glider's default color
   // Lifetime stats used by some achievements (accumulate on every run,
-  // regardless of the MIN_METERS_FOR_REWARDS credits threshold).
-  stats: { totalDeliveries: 0, totalContractsCompleted: 0 },
+  // regardless of the MIN_METERS_FOR_REWARDS credits threshold), plus the
+  // extra counters shown on the "STATS" screen.
+  stats: {
+    totalDeliveries: 0,
+    totalContractsCompleted: 0,
+    totalMeters: 0, // cumulative distance flown, across every run ever
+    totalCoinsCollected: 0,
+    totalCreditsEarnedLifetime: 0,
+    bestComboEver: 0,
+    bestWantedLevelEver: 0,
+    totalEmpUsed: 0,
+    totalSlipstreamTriggers: 0,
+    totalRevivesUsed: 0,
+  },
   // First-launch onboarding.
   hasSeenTutorial: false,
   // Daily Contracts: 3 picked deterministically per calendar day (device
@@ -66,14 +79,33 @@ export function getCachedSave() {
   return cache || DEFAULT_SAVE;
 }
 
-export async function recordRunResult({ meters, deliveries, creditsEarned }) {
+// Accepts the full game-over result object (meters, deliveries, creditsEarned,
+// plus the extra per-run counters from useGameLoop.js: maxCombo, coinsThisRun,
+// maxWantedLevel, empUsedCount, slipstreamTriggerCount, usedRevive) and folds
+// everything into both the "best" records and the lifetime totals used by
+// the STATS screen. Extra fields are optional/defaulted so this stays safe
+// to call even from older result shapes.
+export async function recordRunResult(result) {
+  const { meters, deliveries, creditsEarned } = result;
   const s = await loadSave();
+  const prevStats = s.stats || {};
   const updated = {
     highScoreMeters: Math.max(s.highScoreMeters, Math.floor(meters)),
     bestDeliveries: Math.max(s.bestDeliveries, deliveries),
     credits: s.credits + creditsEarned,
     totalRuns: s.totalRuns + 1,
-    stats: { ...s.stats, totalDeliveries: (s.stats?.totalDeliveries || 0) + deliveries },
+    stats: {
+      ...prevStats,
+      totalDeliveries: (prevStats.totalDeliveries || 0) + deliveries,
+      totalMeters: (prevStats.totalMeters || 0) + Math.max(0, meters),
+      totalCoinsCollected: (prevStats.totalCoinsCollected || 0) + (result.coinsThisRun || 0),
+      totalCreditsEarnedLifetime: (prevStats.totalCreditsEarnedLifetime || 0) + (creditsEarned || 0),
+      bestComboEver: Math.max(prevStats.bestComboEver || 0, result.maxCombo || 0),
+      bestWantedLevelEver: Math.max(prevStats.bestWantedLevelEver || 0, result.maxWantedLevel || 0),
+      totalEmpUsed: (prevStats.totalEmpUsed || 0) + (result.empUsedCount || 0),
+      totalSlipstreamTriggers: (prevStats.totalSlipstreamTriggers || 0) + (result.slipstreamTriggerCount || 0),
+      totalRevivesUsed: (prevStats.totalRevivesUsed || 0) + (result.usedRevive ? 1 : 0),
+    },
   };
   return saveSave(updated);
 }

@@ -37,6 +37,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     reviveDecline,
     skillCooldownRemainingMs,
     skillActiveRemainingMs,
+    stormImmune,
   } = useGameLoop({
     gliderConfig,
     gadgetIds,
@@ -227,6 +228,18 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           pointerEvents="none"
         />
       )}
+      {world.weatherEvent && world.weatherEvent.id === "sandstorm" && (
+        <View
+          style={[StyleSheet.absoluteFill, styles.sandTint, { opacity: WEATHER.events.sandstorm.dustOpacity }]}
+          pointerEvents="none"
+        />
+      )}
+      {world.weatherEvent && world.weatherEvent.id === "blackout" && !stormImmune && (
+        <View
+          style={[StyleSheet.absoluteFill, styles.blackoutTint, { opacity: WEATHER.events.blackout.dimOpacity }]}
+          pointerEvents="none"
+        />
+      )}
 
       {/* Danger-edge glow: pulses red near the top/bottom bounds as an early
           tension cue, before the crash itself. */}
@@ -251,6 +264,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         credits={world.credits}
         zoneIndex={world.zoneIndex}
         combo={world.combo}
+        dimmed={world.weatherEvent && world.weatherEvent.id === "blackout" && !stormImmune}
       />
 
       <SkillIndicator
@@ -286,6 +300,8 @@ const styles = StyleSheet.create({
   },
   acidTint: { backgroundColor: COLORS.neonGreen, opacity: 0.08 },
   flareTint: { backgroundColor: COLORS.danger, opacity: 0.07 },
+  sandTint: { backgroundColor: "#ffcf6b" },
+  blackoutTint: { backgroundColor: "#000000" },
   blockadeBand: {
     position: "absolute",
     left: 0,

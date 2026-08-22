@@ -5,7 +5,7 @@ import { useGame } from "../store/GameContext";
 import MuteButton from "../components/MuteButton";
 import AudioManager from "../audio/AudioManager";
 
-export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onTutorial }) {
+export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial }) {
   const { save } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
 
@@ -60,6 +60,16 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
           }}
         >
           <Text style={[styles.gridButtonText, { color: COLORS.neonYellow }]}>DAILY CONTRACTS</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.gridButton, styles.statsButton]}
+          onPress={() => {
+            AudioManager.play("click");
+            onStats();
+          }}
+        >
+          <Text style={[styles.gridButtonText, { color: COLORS.neonCyan }]}>STATS</Text>
         </Pressable>
 
         <Pressable
@@ -134,6 +144,7 @@ const styles = StyleSheet.create({
   garageButton: { backgroundColor: "rgba(255,46,168,0.08)", borderColor: COLORS.neonPink },
   achievementsButton: { backgroundColor: "rgba(157,255,77,0.08)", borderColor: "#9dff4d" },
   contractsButton: { backgroundColor: "rgba(255,225,77,0.08)", borderColor: COLORS.neonYellow },
+  statsButton: { backgroundColor: "rgba(40,224,255,0.08)", borderColor: COLORS.neonCyan },
   tutorialButton: { backgroundColor: "rgba(143,155,192,0.08)", borderColor: "#33334a" },
   gridButtonText: { fontWeight: "800", fontSize: 10.5, letterSpacing: 0.5, textAlign: "center" },
 });

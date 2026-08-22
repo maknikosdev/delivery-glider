@@ -39,6 +39,7 @@ export const DIFFICULTY = {
     { name: "Transit Lanes", minMeters: 250, speedMult: 1.25, movingObstacles: true, density: 0.8, extraHazards: 1 },
     { name: "Megacity Core", minMeters: 650, speedMult: 1.55, movingObstacles: true, density: 1.1, extraHazards: 2 },
     { name: "Hyper-Speed Chaos", minMeters: 1300, speedMult: 1.95, movingObstacles: true, density: 1.4, extraHazards: 3 },
+    { name: "Blackout Sprawl", minMeters: 2200, speedMult: 2.3, movingObstacles: true, density: 1.7, extraHazards: 4 },
   ],
 };
 
@@ -119,6 +120,17 @@ export const SKILLS = {
     id: "reinforced_hull",
     baseShieldCharges: 1, // free shield charge granted at the start of every run
   },
+  phase_shift: {
+    id: "phase_shift",
+    cooldownMs: 17000,
+    durationMs: 2200, // full intangibility window (no shield consumed, ignores wanted level too)
+    pullRadius: 380, // instantly collects coins within this world-space radius on activation
+  },
+  storm_immunity: {
+    id: "storm_immunity",
+    corrosionMult: 0.5, // acid rain corrodes at half rate
+    creditBonusMult: 1.3, // +30% credits from deliveries/coins while any weather event is active
+  },
 };
 
 // Double-tap detection window for active skills that use that trigger.
@@ -145,6 +157,19 @@ export const WEATHER = {
     solar_flare: { id: "solar_flare", durationMs: 8000, label: "SOLAR FLARE — ΑΝΤΕΣΤΡΑΜΜΕΝΟΙ ΧΕΙΡΙΣΜΟΙ" },
     acid_rain: { id: "acid_rain", durationMs: 12000, label: "ACID RAIN — ΚΡΥΨΟΥ ΧΑΜΗΛΑ", corrosionPerSec: 34, shelterDrainPerSec: 55, shelterY: 0.5 },
     police_blockade: { id: "police_blockade", warmupMs: 2000, label: "POLICE BLOCKADE — ΑΛΛΑΞΕ ΥΨΟΣ", bandHeight: 90 },
+    sandstorm: {
+      id: "sandstorm",
+      durationMs: 10000,
+      label: "SANDSTORM — ΤΥΡΒΩΔΕΙΣ ΑΝΕΜΟΙ",
+      turbulenceAccel: 520, // extra oscillating vertical force fighting the player's control
+      dustOpacity: 0.4,
+    },
+    blackout: {
+      id: "blackout",
+      durationMs: 9000,
+      label: "BLACKOUT — ΤΥΦΛΗ ΠΤΗΣΗ",
+      dimOpacity: 0.6, // screen darkens; HUD numbers fade out until it passes
+    },
   },
 };
 
@@ -241,6 +266,8 @@ export const SKILL_UPGRADES = {
     coin_magnet_boost: { magnetMultAddPerLevel: 0.6, streakReducePerLevel: 2 },
     turbo_dash: { cooldownMultPerLevel: 0.85, durationAddPerLevel: 500 },
     reinforced_hull: { extraChargePerLevel: 1 },
+    phase_shift: { cooldownMultPerLevel: 0.85, durationAddPerLevel: 400, radiusAddPerLevel: 70 },
+    storm_immunity: { corrosionReducePerLevel: 0.1, creditBonusAddPerLevel: 0.1 },
   },
 };
 

@@ -152,6 +152,14 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
         invincibleMs: base.invincibleMs,
       };
     }
+    if (skillDef.id === "phase_shift") {
+      const base = SKILLS.phase_shift;
+      return {
+        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, level),
+        durationMs: base.durationMs + up.durationAddPerLevel * level,
+        pullRadius: base.pullRadius + up.radiusAddPerLevel * level,
+      };
+    }
     return null;
   }, [skillDef, level]);
 
@@ -184,6 +192,21 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
     const up = SKILL_UPGRADES.effects.coin_magnet_boost;
     return Math.max(3, base - up.streakReducePerLevel * level);
   }, [isCoinMagnetBoost, level]);
+
+  // Storm Breaker passive: reduces acid-rain corrosion, ignores solar-flare
+  // control inversion, keeps the HUD visible during Blackout, and grants a
+  // credit bonus for the duration of any active weather event.
+  const isStormImmune = skillDef && skillDef.id === "storm_immunity";
+  const effectiveCorrosionMult = useMemo(() => {
+    if (!isStormImmune) return 1;
+    const up = SKILL_UPGRADES.effects.storm_immunity;
+    return Math.max(0.15, SKILLS.storm_immunity.corrosionMult - up.corrosionReducePerLevel * level);
+  }, [isStormImmune, level]);
+  const effectiveWeatherCreditMult = useMemo(() => {
+    if (!isStormImmune) return 1;
+    const up = SKILL_UPGRADES.effects.storm_immunity;
+    return SKILLS.storm_immunity.creditBonusMult + up.creditBonusAddPerLevel * level;
+  }, [isStormImmune, level]);
 
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
@@ -346,7 +369,8 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
             }
 
             const slipMult = now < world.slipstreamUntil ? SLIPSTREAM.scoreMult : 1;
-            let earned = COMBO.creditsPerDelivery * world.combo * slipMult;
+            const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
+            let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult;
 
             if (b.express && b.expiresAt && now <= b.expiresAt) {
               earned = earned * EXPRESS.rewardMult;
@@ -373,21 +397,21 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       }
       return delivered;
     },
-    [addFloatingText, boostMult, deliveryTolerance]
+    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult]
   );
 
   const applyDive = useCallback((world) => {
     const now = Date.now();
     world.longestNoDiveMs = Math.max(world.longestNoDiveMs, now - world.lastDiveAt);
     world.lastDiveAt = now;
-    const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare";
+    const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
       world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy);
     } else {
       world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy);
     }
     AudioManager.play("swipe");
-  }, []);
+  }, [isStormImmune]);
 
   const setThrust = useCallback((held) => {
     worldRef.current.thrustHeld = held;
@@ -440,6 +464,33 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       world.skillActiveUntil = now + cfg.durationMs;
       addFloatingText(world, "TURBO DASH!", riderWorldX, world.riderY - 40, "banner");
       AudioManager.play("swipe");
+    } else if (skillDef.id === "phase_shift") {
+      const cfg = effSkill;
+      const riderWorldX = world.cameraX + RIDER.screenX;
+      // Full intangibility: passes through obstacles/police drones without
+      // raising the Wanted Level, and doesn't spend a shield charge.
+      world.invincibleUntil = Math.max(world.invincibleUntil, now + cfg.durationMs);
+      world.skillCooldownUntil = now + cfg.cooldownMs;
+      world.skillActiveUntil = now + cfg.durationMs;
+      let pulled = 0;
+      for (const chunk of world.chunks) {
+        for (const c of chunk.coins) {
+          if (c.collected) continue;
+          const dist = Math.hypot(c.worldX - riderWorldX, c.y - world.riderY);
+          if (dist <= cfg.pullRadius) {
+            c.collected = true;
+            world.coinStreak += 1;
+            world.coinsThisRun += 1;
+            pulled += 1;
+          }
+        }
+      }
+      if (pulled > 0) {
+        world.credits += pulled * COIN.value;
+      }
+      addFloatingText(world, "PHASE SHIFT!", riderWorldX, world.riderY - 40, "banner");
+      world.particles.push({ id: `phase_${now}`, x: riderWorldX, y: world.riderY, born: now, kind: "phase" });
+      AudioManager.play("swipe");
     }
   }, [skillDef, addFloatingText, effSkill]);
 
@@ -491,11 +542,22 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
           const cfg = WEATHER.events.acid_rain;
           const sheltered = world.riderY + RIDER.height / 2 > SCREEN.height * cfg.shelterY;
           if (!invincible) {
-            world.corrosion += (sheltered ? -cfg.shelterDrainPerSec : cfg.corrosionPerSec) * dt;
+            const corrosionMult = isStormImmune ? effectiveCorrosionMult : 1;
+            world.corrosion += (sheltered ? -cfg.shelterDrainPerSec : cfg.corrosionPerSec * corrosionMult) * dt;
             world.corrosion = Math.max(0, Math.min(100, world.corrosion));
             if (world.corrosion >= 100) {
               handleCrash(world);
             }
+          }
+          if (now >= ev.until) world.weatherEvent = null;
+        } else if (ev.id === "sandstorm") {
+          if (!invincible) {
+            const cfg = WEATHER.events.sandstorm;
+            // Oscillating turbulence fights the player's vertical control —
+            // reduced range (not removed) for the Storm Breaker passive.
+            const turbulenceMult = isStormImmune ? 0.35 : 1;
+            const turbulence = Math.sin(now / 140 + world.cameraX * 0.015) * cfg.turbulenceAccel * turbulenceMult;
+            world.velocityY += turbulence * dt;
           }
           if (now >= ev.until) world.weatherEvent = null;
         } else {
@@ -545,7 +607,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
         world.combo = 1;
       }
 
-      const controlsInverted = world.weatherEvent && world.weatherEvent.id === "solar_flare";
+      const controlsInverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
       let g = currentGravity(world);
       if (world.thrustHeld) {
         g += controlsInverted ? -PHYSICS.thrustAccel : PHYSICS.thrustAccel;
@@ -712,7 +774,8 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
           if (dx < radius && dy < radius) {
             c.collected = true;
             const feverActive = now < world.feverUntil;
-            world.credits += COIN.value * (feverActive ? FEVER.coinValueMult : 1);
+            const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
+            world.credits += COIN.value * (feverActive ? FEVER.coinValueMult : 1) * weatherMult;
             world.coinStreak += 1;
             world.coinsThisRun += 1;
             AudioManager.play("pickup");
@@ -789,6 +852,9 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       isCoinMagnetBoost,
       effectiveStreakForBoost,
       maybeTriggerWeather,
+      effectiveWeatherCreditMult,
+      effectiveCorrosionMult,
+      isStormImmune,
     ]
   );
 
@@ -895,5 +961,6 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
     reviveDecline,
     skillCooldownRemainingMs: Math.max(0, world.skillCooldownUntil - now),
     skillActiveRemainingMs: Math.max(0, world.skillActiveUntil - now),
+    stormImmune: isStormImmune,
   };
 }

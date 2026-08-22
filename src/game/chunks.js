@@ -88,7 +88,26 @@ const chaos = {
   droneStations: [],
 };
 
-export const CHUNK_POOL = [quiet, industrial, avenue, megacityCore, chaos];
+const blackoutSprawl = {
+  id: "blackout_sprawl",
+  weight: 1,
+  minZoneIndex: 4,
+  obstacles: [
+    { type: "police_drone", relX: 200, relY: SCREEN.height * 0.25, movePattern: "sine", moveAmp: 140, moveSpeed: 2.6 },
+    { type: "robo_pigeon", relX: 500, relY: SCREEN.height * 0.55, movePattern: "sine", moveAmp: 90, moveSpeed: 3.0 },
+    { type: "police_drone", relX: 850, relY: SCREEN.height * 0.65, movePattern: "sine", moveAmp: 120, moveSpeed: 2.7 },
+    { type: "flying_taxi", relX: 1150, relY: SCREEN.height * 0.3, movePattern: "sine", moveAmp: 130, moveSpeed: 2.3 },
+    { type: "static_billboard", relX: 1450, relY: SCREEN.height * 0.5 },
+    { type: "robo_pigeon", relX: 1700, relY: SCREEN.height * 0.2, movePattern: "sine", moveAmp: 80, moveSpeed: 3.2 },
+  ],
+  balconies: [
+    { color: "red", relX: 350, relY: SCREEN.height * 0.4 },
+    { color: "red", relX: 1000, relY: SCREEN.height * 0.6 },
+  ],
+  droneStations: [{ relX: 1550, relY: SCREEN.height * 0.75 }],
+};
+
+export const CHUNK_POOL = [quiet, industrial, avenue, megacityCore, chaos, blackoutSprawl];
 
 let uidCounter = 1;
 function nextUid() {
@@ -219,6 +238,7 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0) {
 
 export function getZoneIndex(meters) {
   // matches DIFFICULTY.zones ordering in gameConfig.js
+  if (meters >= 2200) return 4;
   if (meters >= 1300) return 3;
   if (meters >= 650) return 2;
   if (meters >= 250) return 1;

@@ -15,6 +15,7 @@ export function GameProvider({ children }) {
       setSave(s);
       AudioManager.setMuted(!!s.muted);
       await AudioManager.init();
+      AudioManager.playMusic();
       setLoading(false);
     })();
     return () => {
@@ -31,10 +32,13 @@ export function GameProvider({ children }) {
     });
   }, []);
 
-  const finishRun = useCallback(async ({ meters, deliveries, creditsEarned }) => {
-    const updated = await recordRunResult({ meters, deliveries, creditsEarned });
+  // Accepts the full run result (not just meters/deliveries/creditsEarned)
+  // so storage.js can also fold the extra counters (combo, coins, wanted
+  // level, etc.) into the lifetime stats shown on the STATS screen.
+  const finishRun = useCallback(async (result) => {
+    const updated = await recordRunResult(result);
     setSave(updated);
-    setLastRun({ meters, deliveries, creditsEarned });
+    setLastRun(result);
     return updated;
   }, []);
 

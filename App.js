@@ -8,6 +8,7 @@ import GameOverScreen from "./src/screens/GameOverScreen";
 import GarageScreen from "./src/screens/GarageScreen";
 import MysteryCrateScreen from "./src/screens/MysteryCrateScreen";
 import AchievementsScreen from "./src/screens/AchievementsScreen";
+import StatsScreen from "./src/screens/StatsScreen";
 import TutorialScreen from "./src/screens/TutorialScreen";
 import DailyContractsScreen from "./src/screens/DailyContractsScreen";
 import { GLIDERS } from "./src/game/gliders";
@@ -26,7 +27,7 @@ function Root() {
     updateDailyContracts,
     markTutorialSeen,
   } = useGame();
-  const [screen, setScreen] = useState("menu"); // menu | tutorial | loadout | game | crate | gameover | garage | achievements | contracts
+  const [screen, setScreen] = useState("menu"); // menu | tutorial | loadout | game | crate | gameover | garage | achievements | contracts | stats
   const [runResult, setRunResult] = useState(null);
   const [runKey, setRunKey] = useState(0);
   const [runBonuses, setRunBonuses] = useState({ reviveToken: false, tempSkinColor: null });
@@ -152,6 +153,7 @@ function Root() {
         case "garage":
         case "achievements":
         case "contracts":
+        case "stats":
         default:
           setScreen("menu");
           return true;
@@ -174,6 +176,7 @@ function Root() {
           onGarage={() => setScreen("garage")}
           onAchievements={() => setScreen("achievements")}
           onContracts={() => setScreen("contracts")}
+          onStats={() => setScreen("stats")}
           onTutorial={handleOpenTutorial}
         />
       )}
@@ -213,6 +216,8 @@ function Root() {
       {screen === "achievements" && <AchievementsScreen onBack={() => setScreen("menu")} />}
 
       {screen === "contracts" && <DailyContractsScreen onBack={() => setScreen("menu")} />}
+
+      {screen === "stats" && <StatsScreen onBack={() => setScreen("menu")} />}
     </View>
   );
 }

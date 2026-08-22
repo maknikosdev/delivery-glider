@@ -18,9 +18,9 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - ✅ "Close call" bonus πόντοι όταν περνάς ξυστά από εμπόδιο χωρίς να χτυπήσεις
 - ✅ Zone milestone banners με μπόνους πόντους κάθε φορά που μπαίνεις σε πιο δύσκολη ζώνη
 - ✅ Screen shake στο crash + προειδοποιητική κόκκινη λάμψη στις άκρες της οθόνης όταν πλησιάζεις όριο (πριν κρασάρεις)
-- ✅ Dynamic difficulty σε 4 ζώνες (Rookie District → Hyper-Speed Chaos), πιο απότομη καμπύλη δυσκολίας
+- ✅ Dynamic difficulty σε **5 ζώνες** (Rookie District → Hyper-Speed Chaos → **Blackout Sprawl**), πιο απότομη καμπύλη δυσκολίας
 - ✅ Drone refuel stations, delivery particles, collisions (AABB)
-- ✅ **Weather/City Events**: Solar Flare (αντεστραμμένοι χειρισμοί), Acid Rain (μέτρημα διάβρωσης, κρύψου χαμηλά), Police Blockade (προειδοποίηση + ζώνη-θανάτου) — τυχαία κάθε 60-120"
+- ✅ **Weather/City Events**: Solar Flare (αντεστραμμένοι χειρισμοί), Acid Rain (μέτρημα διάβρωσης, κρύψου χαμηλά), Police Blockade (προειδοποίηση + ζώνη-θανάτου), **Sandstorm** (τυρβώδεις άνεμοι/turbulence στον έλεγχο ύψους), **Blackout** (σκοτεινιάζει η οθόνη + ξεθωριάζει το HUD) — τυχαία κάθε 60-120"
 - ✅ **Power-up orbs** στην πίστα: Overclock (ταχύτητα + ατρωσία + καταστρέφει εμπόδια), Nano-Repair (ασπίδα 1 χτυπήματος), Grav-Inverter (αντιστροφή βαρύτητας)
 - ✅ **Wanted Level** (0-3 αστέρια): ανεβαίνει αν χτυπήσεις police drone ή χάσεις 5 παραδόσεις στη σειρά· level 2+ φέρνει επίμονο "chaser" drone από πίσω· κατεβαίνει με 3 συνεχόμενες παραδόσεις σε κόκκινα (illegal) μπαλκόνια
 - ✅ **Slipstream/Drafting**: μείνε πίσω από ιπτάμενο ταξί για λίγο και παίρνεις x2 πόντους για μερικά δευτερόλεπτα
@@ -28,9 +28,10 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - ✅ **Express Delivery**: σπάνιο VIP μπαλκόνι με μετρητή 5"— πρόλαβέ το για x5 νομίσματα + turbo
 - ✅ **Mystery Crate** στο Game Over: διάλεξε 1 από 3 κλειστά κουτιά, δωρεάν νομίσματα/free revive/προσωρινό skin
 - ✅ **Gadgets/Loadout** πριν το run: Ejector Seat, Package Magnet, Fuel Canister — αγοράζονται μία φορά με πόντους, εξοπλίζεις έως 2 ανά run
-- ✅ Garage: **12 ξεκλειδώσιμα gliders** (6 βασικά + 6 με μοναδικά Active/Passive Skills: EMP Blast, Decoy Drone, Mass Reduction, Coin Magnet & Boost, Turbo Dash, Reinforced Hull), μόνο με πόντους (credits) που μαζεύει ο παίκτης παίζοντας — **καμία αγορά με πραγματικά χρήματα, καμία in-app purchase, κανένα billing SDK**
+- ✅ Garage: **14 ξεκλειδώσιμα gliders** (6 βασικά + 8 με μοναδικά Active/Passive Skills: EMP Blast, Decoy Drone, Mass Reduction, Coin Magnet & Boost, Turbo Dash, Reinforced Hull, **Phase Shift**, **Storm Immunity**), μόνο με πόντους (credits) που μαζεύει ο παίκτης παίζοντας — **καμία αγορά με πραγματικά χρήματα, καμία in-app purchase, κανένα billing SDK**
 - ✅ **Skill Upgrade Tree**: κάθε skill glider αναβαθμίζεται 0→3 (μικρότερο cooldown, μεγαλύτερη ακτίνα/διάρκεια/μαγνήτης) με πόντους, στο Garage
-- ✅ **9 Achievements** που ξεκλειδώνουν αμιγώς cosmetic skins (χρώματα glider) — νέα οθόνη "ACHIEVEMENTS" από το Menu
+- ✅ **15 Achievements** που ξεκλειδώνουν αμιγώς cosmetic skins (χρώματα glider) — οθόνη "ACHIEVEMENTS" από το Menu
+- ✅ **Στατιστικά Παίκτη**: νέα οθόνη "STATS" από το Menu — συνολική απόσταση, συνολικές παραδόσεις, καλύτερο combo, νομίσματα lifetime, EMP/Slipstream/Revive μετρητές, κ.λπ. (100% offline, AsyncStorage)
 - ✅ Neo-Coins/Data-Cubes διάσπαρτα στην πίστα σε "coin trails", μαζεύονται πετώντας από πάνω τους
 - ✅ "Second Chance" Revive: στο πρώτο crash, αν έχεις ≥100 νομίσματα, μπορείς να συνεχίσεις από το ίδιο σημείο με 3" ατρωσία — αυστηρά μία φορά ανά run
 - ✅ 100% offline τοπική αποθήκευση (AsyncStorage) — high score, credits, owned gliders, επιλεγμένο glider, mute
@@ -48,8 +49,11 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
    θελήσεις να προσθέσεις πραγματικές in-app purchases, θα χρειαστεί να
    ενσωματώσεις ξεχωριστά κάποιο billing plugin (π.χ. `react-native-iap`) —
    δεν υπάρχει τίποτα τέτοιο εδώ.
-1. **Καθόλου μουσική.** Όπως ζήτησες, δεν υπάρχει κανένα background track, ούτε
-   θέση για να προσθέσεις ένα. Μόνο σύντομα SFX.
+1. **Background μουσική.** Υπάρχει ένα looping background track
+   (`assets/audio/music.mp3`, ανέβηκε από εσένα, no-copyright/royalty-free)
+   που παίζει συνεχόμενα από το άνοιγμα της εφαρμογής (Menu + in-run), σε
+   χαμηλότερη ένταση από τα SFX ώστε να μην τα σκεπάζει. Ελέγχεται από το
+   ίδιο mute button με τα SFX (`src/audio/AudioManager.js`).
 2. **Τα SFX είναι 100% συνθετικά**, φτιαγμένα προγραμματιστικά (sine/square waves +
    filtered noise) με το `tools/gen_sfx.py` — καθόλου δείγματα από το internet,
    άρα καθόλου θέμα πνευματικών δικαιωμάτων. Αρχεία: `assets/audio/*.wav`
@@ -74,6 +78,33 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
    (δεν υπάρχει πολλαπλών-ζωών σύστημα)· το Grav-Inverter αντιστρέφει μόνο τη
    βαρύτητα, όχι τα visuals του glider. Όλα δουλεύουν, απλά μην περιμένεις
    1-προς-1 αντιστοιχία με κάθε λεπτομέρεια του doc.
+
+### 🆕 Πρόσφατος εμπλουτισμός (νέα αρχεία/αλλαγές παρακάτω)
+
+1. **Background μουσική** — `assets/audio/music.mp3` (δικό σου, no-copyright),
+   loop, ελεγχόμενη από το ίδιο mute button. Δες `src/audio/AudioManager.js`
+   και `src/store/GameContext.js`.
+2. **5η ζώνη "Blackout Sprawl"** (από τα 2200m) — πυκνά police
+   drones/robo-pigeons, κόκκινα (illegal) μπαλκόνια. Δες
+   `src/constants/gameConfig.js` (`DIFFICULTY.zones`) και
+   `src/game/chunks.js` (`blackoutSprawl` template, `getZoneIndex`).
+3. **2 νέα Weather Events**: **Sandstorm** (τυρβώδεις άνεμοι — δυσκολεύει τον
+   έλεγχο ύψους) και **Blackout** (σκοτεινιάζει η οθόνη, ξεθωριάζει το HUD).
+   Δες `WEATHER.events` στο `gameConfig.js`, physics στο `useGameLoop.js`,
+   οπτικά στο `GameScreen.js`/`HUD.js`.
+4. **2 νέα gliders με νέα skills**:
+   - **Riftwalker** (active, double-tap): *Phase Shift* — άυλος ~2.2", περνάς
+     μέσα από εμπόδια χωρίς Wanted Level, μαζεύει αυτόματα κοντινά νομίσματα.
+   - **Storm Breaker** (passive): *Storm Immunity* — μισή διάβρωση Acid Rain,
+     χωρίς αντιστροφή χειρισμών στο Solar Flare, ορατό HUD στο Blackout,
+     +30% credits όσο διαρκεί weather event.
+   Δες `src/game/gliders.js`, `SKILLS`/`SKILL_UPGRADES` στο `gameConfig.js`,
+   λογική στο `useGameLoop.js`.
+5. **Νέα οθόνη "STATS"** — συνολική απόσταση, συνολικές παραδόσεις, καλύτερο
+   combo, νομίσματα lifetime, EMP/Slipstream/Revive μετρητές κ.λπ. Νέο
+   `src/screens/StatsScreen.js`, κουμπί στο `MenuScreen.js`, routing στο
+   `App.js`, νέα πεδία στο `stats` object του `src/store/storage.js` (safe
+   merge — δεν χάνεται το save file υπαρχόντων παικτών).
 
 ### Δομή Project
 
@@ -184,29 +215,6 @@ TurboModules), υποχρεωτικό σε αυτή την έκδοση του R
 Το παιχνίδι δεν κάνει καμία κλήση δικτύου (zero network requests) — δουλεύει
 πλήρως σε Flight Mode.
 
-### Store listing / Δημοσίευση στο Google Play
-
-Στο `store_assets/` (αν σου έχει δοθεί ξεχωριστά) θα βρεις:
-- Πλήρες κείμενο store listing (όνομα, περιγραφές, κατηγορία, content rating, data safety)
-- Πολιτική απορρήτου έτοιμη προς hosting (`privacy_policy.html`, Ελληνικά + Αγγλικά)
-- Feature graphic (1024×500) και hi-res icon (512×512)
-
-Χρειάζεται να προσθέσεις εσύ: πραγματικά screenshots από τη συσκευή σου, και
-να ανεβάσεις την πολιτική απορρήτου κάπου δημόσια (π.χ. GitHub Pages) για να
-πάρεις το URL που ζητάει το Play Console.
-
-### Επόμενα βήματα / ιδέες επέκτασης
-
-- Roguelike "Mystery Packages" (Volatile Battery, Fragile Vase, Gravity Core) — η βάση
-  (`packages` counter, delivery system) υπάρχει, λείπει μόνο η ειδική λογική per-package.
-  Καλή θέση να προσθέσεις: `src/game/useGameLoop.js`, μέσα στο `tryDeliver`/`ensureChunksAhead`.
-- Weather/time themes (Neon Rain, Rush Hour, Deep Night) — θα μπει σαν modifier στο `DIFFICULTY`
-  config και στο `ParallaxBackground`.
-- Daily Contracts — απλό, βασισμένο στο υπάρχον save system (`storage.js`).
-- Αν θες μελλοντικά πραγματικά PNG sprites αντί για SVG, βάλε το spritesheet
-  στο `assets/sprites/` και αντικατέστησε το περιεχόμενο των components στο
-  `src/components/`.
-
 ---
 
 ## 🇬🇧 English
@@ -244,8 +252,11 @@ flying taxis, and police drones, managing your glider's weight as you go.
    anywhere in the code. If you ever want to add real in-app purchases,
    you'd need to integrate a separate billing plugin (e.g. `react-native-iap`)
    — nothing like that exists here.
-1. **No music at all.** As requested, there is no background track and no
-   place to add one. Only short SFX.
+1. **Background music.** There is a looping background track
+   (`assets/audio/music.mp3`, supplied by you, no-copyright/royalty-free)
+   that plays continuously from app launch (Menu + in-run), at a lower
+   volume than the SFX so it never buries them. Controlled by the same mute
+   button as the SFX (`src/audio/AudioManager.js`).
 2. **The SFX are 100% synthesized**, generated programmatically (sine/square
    waves + filtered noise) via `tools/gen_sfx.py` — no samples from the
    internet, so zero copyright concerns. Files: `assets/audio/*.wav`
@@ -373,27 +384,3 @@ TurboModules), which is mandatory in this version of React Native.
 
 The game makes zero network calls — it works fully in Airplane Mode.
 
-### Store listing / Publishing to Google Play
-
-In `store_assets/` (if provided to you separately) you'll find:
-- Full store listing copy (name, descriptions, category, content rating, data safety)
-- A privacy policy ready to host (`privacy_policy.html`, Greek + English)
-- Feature graphic (1024×500) and hi-res icon (512×512)
-
-You still need to add: real screenshots from your device, and host the
-privacy policy somewhere public (e.g. GitHub Pages) to get the URL that Play
-Console requires.
-
-### Next steps / extension ideas
-
-- Roguelike "Mystery Packages" (Volatile Battery, Fragile Vase, Gravity Core)
-  — the foundation (`packages` counter, delivery system) already exists,
-  only the per-package special logic is missing. Good place to add it:
-  `src/game/useGameLoop.js`, inside `tryDeliver`/`ensureChunksAhead`.
-- Weather/time themes (Neon Rain, Rush Hour, Deep Night) — would plug in as a
-  modifier on the `DIFFICULTY` config and in `ParallaxBackground`.
-- Daily Contracts — straightforward, building on the existing save system
-  (`storage.js`).
-- If you want real PNG sprites instead of SVG down the line, drop the
-  spritesheet in `assets/sprites/` and swap the contents of the components in
-  `src/components/`.

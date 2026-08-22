@@ -3,10 +3,10 @@ import { View, Text, StyleSheet } from "react-native";
 import { COLORS, DIFFICULTY } from "../constants/gameConfig";
 import MuteButton from "./MuteButton";
 
-export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo }) {
+export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed }) {
   const zone = DIFFICULTY.zones[zoneIndex] || DIFFICULTY.zones[0];
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View style={[styles.wrap, dimmed && styles.wrapDimmed]} pointerEvents="box-none">
       <View style={styles.row}>
         <View style={styles.pill}>
           <Text style={styles.pillText}>{Math.floor(meters)}m</Text>
@@ -41,6 +41,12 @@ const styles = StyleSheet.create({
     top: 44,
     left: 12,
     right: 12,
+  },
+  // During Blackout, the readouts fade almost out of view (still faintly
+  // legible) instead of disappearing entirely — a "flying blind" feel
+  // without making the game literally unplayable.
+  wrapDimmed: {
+    opacity: 0.12,
   },
   row: {
     flexDirection: "row",
