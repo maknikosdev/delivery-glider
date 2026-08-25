@@ -10,12 +10,14 @@ export default function GameOverScreen({
   isNewHighScore,
   newAchievements,
   newContracts,
+  newMilestones,
   onRetry,
   onMenu,
 }) {
   const qualified = result.meters >= MIN_METERS_FOR_REWARDS;
   const hasNewAchievements = newAchievements && newAchievements.length > 0;
   const hasNewContracts = newContracts && newContracts.length > 0;
+  const hasNewMilestones = newMilestones && newMilestones.length > 0;
   const shareRef = useRef(null);
   const [sharing, setSharing] = useState(false);
 
@@ -61,6 +63,19 @@ export default function GameOverScreen({
           <Text style={styles.notCounted}>
             Χρειάζεσαι τουλάχιστον {MIN_METERS_FOR_REWARDS}m για να μετρήσουν τα credits.
           </Text>
+        )}
+
+        {hasNewMilestones && (
+          <View style={[styles.achievementsBox, { borderColor: COLORS.neonPink, backgroundColor: "rgba(255,46,168,0.08)" }]}>
+            <Text style={[styles.achievementsTitle, { color: COLORS.neonPink }]}>
+              🎁 FREE GLIDER UNLOCKED!
+            </Text>
+            {newMilestones.map((m) => (
+              <Text key={m.id} style={[styles.achievementName, { color: COLORS.neonPink }]}>
+                {m.gliderName} · {m.label}
+              </Text>
+            ))}
+          </View>
         )}
 
         {hasNewAchievements && (

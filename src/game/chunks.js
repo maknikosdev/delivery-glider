@@ -107,7 +107,32 @@ const blackoutSprawl = {
   droneStations: [{ relX: 1550, relY: SCREEN.height * 0.75 }],
 };
 
-export const CHUNK_POOL = [quiet, industrial, avenue, megacityCore, chaos, blackoutSprawl];
+// Metro Undercity: the playable vertical band is narrowed by permanent
+// tunnel walls (see DIFFICULTY.zones.tunnelTop/tunnelBottom in
+// gameConfig.js — 24%..80% of screen height here), so all obstacles below
+// are laid out INSIDE that band with small sine amplitudes. The challenge
+// is precision weaving through a corridor, not raw speed or density.
+const metroUndercity = {
+  id: "metro_undercity",
+  weight: 1,
+  minZoneIndex: 5,
+  obstacles: [
+    { type: "static_antenna", relX: 200, relY: SCREEN.height * 0.3 },
+    { type: "police_drone", relX: 450, relY: SCREEN.height * 0.65, movePattern: "sine", moveAmp: 55, moveSpeed: 2.4 },
+    { type: "static_billboard", relX: 700, relY: SCREEN.height * 0.32 },
+    { type: "robo_pigeon", relX: 950, relY: SCREEN.height * 0.6, movePattern: "sine", moveAmp: 50, moveSpeed: 2.9 },
+    { type: "static_antenna", relX: 1200, relY: SCREEN.height * 0.7 },
+    { type: "police_drone", relX: 1450, relY: SCREEN.height * 0.35, movePattern: "sine", moveAmp: 55, moveSpeed: 2.5 },
+    { type: "static_billboard", relX: 1700, relY: SCREEN.height * 0.62 },
+  ],
+  balconies: [
+    { color: "red", relX: 350, relY: SCREEN.height * 0.45 },
+    { color: "yellow", relX: 1100, relY: SCREEN.height * 0.5 },
+  ],
+  droneStations: [{ relX: 1600, relY: SCREEN.height * 0.4 }],
+};
+
+export const CHUNK_POOL = [quiet, industrial, avenue, megacityCore, chaos, blackoutSprawl, metroUndercity];
 
 let uidCounter = 1;
 function nextUid() {
@@ -133,7 +158,7 @@ const HAZARD_POOL = ["flying_taxi", "police_drone", "robo_pigeon", "static_anten
 // sprinkles in additional random obstacles on top of the template's fixed
 // layout, scaled by how deep into the run the player is — this is what
 // actually makes later zones feel denser/harder, not just faster.
-export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0) {
+export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, yBounds) {
   const obstacles = template.obstacles.map((o) => ({
     ...o,
     id: `obs_${nextUid()}`,
@@ -143,10 +168,16 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0) {
     hit: false,
   }));
 
+  // Extra random hazards default to the normal 15%-80% vertical spread, but
+  // a tunnel zone (see Metro Undercity) passes a tighter yBounds so these
+  // never spawn inside the tunnel walls where the player physically can't
+  // reach them.
+  const yMin = yBounds ? yBounds.min : 0.15;
+  const yMax = yBounds ? yBounds.max : 0.8;
   for (let i = 0; i < extraHazardCount; i++) {
     const type = HAZARD_POOL[Math.floor(Math.random() * HAZARD_POOL.length)];
     const relX = 150 + Math.random() * (CHUNK_WIDTH - 300);
-    const relY = SCREEN.height * (0.15 + Math.random() * 0.65);
+    const relY = SCREEN.height * (yMin + Math.random() * (yMax - yMin));
     const moving = type !== "static_antenna";
     obstacles.push({
       type,
@@ -238,6 +269,7 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0) {
 
 export function getZoneIndex(meters) {
   // matches DIFFICULTY.zones ordering in gameConfig.js
+  if (meters >= 3200) return 5;
   if (meters >= 2200) return 4;
   if (meters >= 1300) return 3;
   if (meters >= 650) return 2;

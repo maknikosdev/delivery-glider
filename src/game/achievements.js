@@ -20,6 +20,10 @@ export const SKIN_COLORS = {
   veteran_courier: "#8affc1",
   high_roller: "#ffd700",
   contract_champion: "#66ffe0",
+  storm_chaser: "#ffcf6b",
+  ghost_runner: "#7d5cff",
+  blind_flight: "#6c6ce0",
+  zone_5: "#8f00ff",
 };
 
 export const ACHIEVEMENTS = [
@@ -112,6 +116,30 @@ export const ACHIEVEMENTS = [
     name: "Contract Champion",
     description: "Ολοκλήρωσε 10 Daily Contracts συνολικά.",
     check: (runStats, save) => (save.stats?.totalContractsCompleted || 0) >= 10,
+  },
+  {
+    id: "storm_chaser",
+    name: "Storm Chaser",
+    description: "Επιβίωσε σε 3 weather events στο ίδιο run.",
+    check: (runStats) => (runStats.weatherEventsSurvivedCount || 0) >= 3,
+  },
+  {
+    id: "ghost_runner",
+    name: "Ghost Runner",
+    description: "Μάζεψε 20+ νομίσματα με ένα Phase Shift activation.",
+    check: (runStats) => (runStats.maxPhaseShiftCoins || 0) >= 20,
+  },
+  {
+    id: "blind_flight",
+    name: "Blind Flight",
+    description: "Διάνυσε συνολικά 500m+ μέσα σε Blackout (όλα τα runs).",
+    check: (runStats, save) => (save.stats?.totalBlackoutMeters || 0) + (runStats.blackoutMetersThisRun || 0) >= 500,
+  },
+  {
+    id: "zone_5",
+    name: "Zone 5",
+    description: "Έφτασε στο Blackout Sprawl (2200m) σε ένα run.",
+    check: (runStats) => runStats.meters >= 2200,
   },
 ];
 

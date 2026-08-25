@@ -14,7 +14,7 @@ import FloatingText from "../components/FloatingText";
 import HUD from "../components/HUD";
 import SkillIndicator from "../components/SkillIndicator";
 import RevivePrompt from "../components/RevivePrompt";
-import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER } from "../constants/gameConfig";
+import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
 
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
@@ -133,6 +133,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
   const shakeX = world.shake > 0 ? (Math.random() - 0.5) * 14 * world.shake : 0;
   const shakeY = world.shake > 0 ? (Math.random() - 0.5) * 10 * world.shake : 0;
+  const currentZone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -241,6 +242,32 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         />
       )}
 
+      {/* Metro Undercity tunnel walls: permanent solid ceiling/floor that
+          narrow the playable band — touching either one crashes, same as
+          the normal screen edges do everywhere else. */}
+      {currentZone.tunnelMode && (
+        <>
+          <View
+            style={[
+              styles.tunnelWall,
+              { top: 0, height: SCREEN.height * currentZone.tunnelTop, borderBottomWidth: 3 },
+            ]}
+            pointerEvents="none"
+          />
+          <View
+            style={[
+              styles.tunnelWall,
+              {
+                top: SCREEN.height * currentZone.tunnelBottom,
+                height: SCREEN.height * (1 - currentZone.tunnelBottom),
+                borderTopWidth: 3,
+              },
+            ]}
+            pointerEvents="none"
+          />
+        </>
+      )}
+
       {/* Danger-edge glow: pulses red near the top/bottom bounds as an early
           tension cue, before the crash itself. */}
       {world.edgeDanger > 0.01 && (
@@ -253,6 +280,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
       <WantedStars level={world.wantedLevel} />
 
       <WeatherBanner
+        eventId={world.weatherEvent ? world.weatherEvent.id : null}
         label={world.weatherEvent ? WEATHER.events[world.weatherEvent.id].label : null}
         corrosion={world.weatherEvent && world.weatherEvent.id === "acid_rain" ? world.corrosion : null}
       />
@@ -308,5 +336,12 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: COLORS.danger,
     opacity: 0.22,
+  },
+  tunnelWall: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: "#0d0a1a",
+    borderColor: "#3a2f5c",
   },
 });

@@ -18,7 +18,7 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - ✅ "Close call" bonus πόντοι όταν περνάς ξυστά από εμπόδιο χωρίς να χτυπήσεις
 - ✅ Zone milestone banners με μπόνους πόντους κάθε φορά που μπαίνεις σε πιο δύσκολη ζώνη
 - ✅ Screen shake στο crash + προειδοποιητική κόκκινη λάμψη στις άκρες της οθόνης όταν πλησιάζεις όριο (πριν κρασάρεις)
-- ✅ Dynamic difficulty σε **5 ζώνες** (Rookie District → Hyper-Speed Chaos → **Blackout Sprawl**), πιο απότομη καμπύλη δυσκολίας
+- ✅ Dynamic difficulty σε **6 ζώνες** (Rookie District → Hyper-Speed Chaos → Blackout Sprawl → **Metro Undercity**), πιο απότομη καμπύλη δυσκολίας
 - ✅ Drone refuel stations, delivery particles, collisions (AABB)
 - ✅ **Weather/City Events**: Solar Flare (αντεστραμμένοι χειρισμοί), Acid Rain (μέτρημα διάβρωσης, κρύψου χαμηλά), Police Blockade (προειδοποίηση + ζώνη-θανάτου), **Sandstorm** (τυρβώδεις άνεμοι/turbulence στον έλεγχο ύψους), **Blackout** (σκοτεινιάζει η οθόνη + ξεθωριάζει το HUD) — τυχαία κάθε 60-120"
 - ✅ **Power-up orbs** στην πίστα: Overclock (ταχύτητα + ατρωσία + καταστρέφει εμπόδια), Nano-Repair (ασπίδα 1 χτυπήματος), Grav-Inverter (αντιστροφή βαρύτητας)
@@ -30,7 +30,7 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - ✅ **Gadgets/Loadout** πριν το run: Ejector Seat, Package Magnet, Fuel Canister — αγοράζονται μία φορά με πόντους, εξοπλίζεις έως 2 ανά run
 - ✅ Garage: **14 ξεκλειδώσιμα gliders** (6 βασικά + 8 με μοναδικά Active/Passive Skills: EMP Blast, Decoy Drone, Mass Reduction, Coin Magnet & Boost, Turbo Dash, Reinforced Hull, **Phase Shift**, **Storm Immunity**), μόνο με πόντους (credits) που μαζεύει ο παίκτης παίζοντας — **καμία αγορά με πραγματικά χρήματα, καμία in-app purchase, κανένα billing SDK**
 - ✅ **Skill Upgrade Tree**: κάθε skill glider αναβαθμίζεται 0→3 (μικρότερο cooldown, μεγαλύτερη ακτίνα/διάρκεια/μαγνήτης) με πόντους, στο Garage
-- ✅ **15 Achievements** που ξεκλειδώνουν αμιγώς cosmetic skins (χρώματα glider) — οθόνη "ACHIEVEMENTS" από το Menu
+- ✅ **19 Achievements** που ξεκλειδώνουν αμιγώς cosmetic skins (χρώματα glider) — οθόνη "ACHIEVEMENTS" από το Menu
 - ✅ **Στατιστικά Παίκτη**: νέα οθόνη "STATS" από το Menu — συνολική απόσταση, συνολικές παραδόσεις, καλύτερο combo, νομίσματα lifetime, EMP/Slipstream/Revive μετρητές, κ.λπ. (100% offline, AsyncStorage)
 - ✅ Neo-Coins/Data-Cubes διάσπαρτα στην πίστα σε "coin trails", μαζεύονται πετώντας από πάνω τους
 - ✅ "Second Chance" Revive: στο πρώτο crash, αν έχεις ≥100 νομίσματα, μπορείς να συνεχίσεις από το ίδιο σημείο με 3" ατρωσία — αυστηρά μία φορά ανά run
@@ -106,6 +106,28 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
    `App.js`, νέα πεδία στο `stats` object του `src/store/storage.js` (safe
    merge — δεν χάνεται το save file υπαρχόντων παικτών).
 
+### 🆕 Πρόσφατος εμπλουτισμός #2
+
+1. **4 νέα Achievements**: Storm Chaser (3 weather events σε 1 run), Ghost
+   Runner (20+ νομίσματα σε ένα Phase Shift), Blind Flight (500m+ lifetime
+   μέσα σε Blackout), Zone 5 (έφτασε στο Blackout Sprawl). Δες
+   `src/game/achievements.js`.
+2. **6η ζώνη "Metro Undercity"** (από τα 3200m) — μόνιμοι "τοίχοι σήραγγας"
+   περιορίζουν τον κάθετο χώρο στο 56% της οθόνης (24%-80%), με μικρότερα
+   sine amplitudes στα εμπόδια· η πρόκληση είναι ακρίβεια, όχι ταχύτητα (η
+   `speedMult` είναι σκόπιμα χαμηλότερη από της Zone 5). Δες
+   `DIFFICULTY.zones` στο `gameConfig.js`, `metroUndercity` chunk στο
+   `chunks.js`, τα νέα tunnel-aware όρια crash στο `useGameLoop.js`, και τα
+   οπτικά "τοίχους" στο `GameScreen.js`.
+3. **Milestone rewards στο Stats screen** — δωρεάν glider (Phantom) στα
+   10.000m lifetime distance, χωρίς credits. Progress bar στο ίδιο το Stats
+   screen, notice card στο Game Over. Δες `MILESTONES`/`checkMilestones` στο
+   `storage.js`.
+4. **Colorblind-friendly UI**: `WantedStars` πλέον δείχνει γεμάτα (★) vs
+   κενά (☆) αστέρια — σχήμα, όχι μόνο χρώμα/φωτεινότητα — συν αριθμητικό
+   badge. `WeatherBanner` πλέον έχει μοναδικό icon ανά weather event (☀ ☣ 🚨
+   🌪 ☾) ώστε να αναγνωρίζεται χωρίς να διαβάζεις χρώμα.
+
 ### Δομή Project
 
 ```
@@ -139,10 +161,6 @@ cd delivery-glider
 npm install
 npx expo start
 ```
-
-Σκάναρε το QR code με το Expo Go app στο Android κινητό σου για δοκιμή,
-ή πάτα `a` για Android emulator αν έχεις στημένο Android Studio.
-
 ### Πώς να το κάνεις export μέσω Android Studio (τοπικό build)
 
 Αυτό το project **περιλαμβάνει ήδη τον έτοιμο native `android/` φάκελο**
@@ -309,9 +327,6 @@ cd delivery-glider
 npm install
 npx expo start
 ```
-
-Scan the QR code with the Expo Go app on your Android phone to test it, or
-press `a` for an Android emulator if you have Android Studio set up.
 
 ### How to export it via Android Studio (local build)
 

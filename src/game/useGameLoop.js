@@ -35,6 +35,9 @@ function buildRunResult(world) {
     maxWantedLevel: world.maxWantedLevel,
     usedRevive: world.revivesUsed > 0 || world.usedFreeRevive === true,
     longestNoDiveMs: Math.max(world.longestNoDiveMs, Date.now() - world.lastDiveAt),
+    weatherEventsSurvivedCount: world.weatherEventsSurvivedCount,
+    maxPhaseShiftCoins: world.maxPhaseShiftCoins,
+    blackoutMetersThisRun: world.blackoutMetersThisRun,
   };
 }
 
@@ -77,6 +80,9 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
     weatherEvent: null, // { id, until, warmupUntil, bandY }
     nextWeatherAt: Date.now() + WEATHER.minGapMs + Math.random() * (WEATHER.maxGapMs - WEATHER.minGapMs),
     corrosion: 0,
+    weatherEventsSurvivedCount: 0, // weather events that ran to completion without a crash (Storm Chaser)
+    maxPhaseShiftCoins: 0, // most coins pulled in by a single Phase Shift activation (Ghost Runner)
+    blackoutMetersThisRun: 0, // distance flown while Blackout was active, this run (feeds lifetime "Blind Flight" stat)
     // power-ups
     overclockUntil: 0,
     gravInvertUntil: 0,
@@ -226,7 +232,8 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
       const extra = zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0);
       const template = pickChunk(world.zoneIndex);
-      const chunk = instantiateChunk(template, world.lastChunkEndX, extra);
+      const yBounds = zone.tunnelMode ? { min: zone.tunnelTop + 0.04, max: zone.tunnelBottom - 0.04 } : undefined;
+      const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds);
       world.chunks.push(chunk);
       world.lastChunkEndX = chunk.endX;
     }
@@ -488,6 +495,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       if (pulled > 0) {
         world.credits += pulled * COIN.value;
       }
+      world.maxPhaseShiftCoins = Math.max(world.maxPhaseShiftCoins, pulled);
       addFloatingText(world, "PHASE SHIFT!", riderWorldX, world.riderY - 40, "banner");
       world.particles.push({ id: `phase_${now}`, x: riderWorldX, y: world.riderY, born: now, kind: "phase" });
       AudioManager.play("swipe");
@@ -502,7 +510,13 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       const id = ids[Math.floor(Math.random() * ids.length)];
       const def = WEATHER.events[id];
       if (id === "police_blockade") {
-        const bandY = SCREEN.height * (0.2 + Math.random() * 0.5);
+        // In a tunnel zone (Metro Undercity), keep the blockade band inside
+        // the tunnel walls so it's always reachable/dodgeable, instead of
+        // the normal full-screen 20%-70% range.
+        const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
+        const bandMin = zone.tunnelMode ? zone.tunnelTop + 0.08 : 0.2;
+        const bandMax = zone.tunnelMode ? zone.tunnelBottom - 0.08 : 0.7;
+        const bandY = SCREEN.height * (bandMin + Math.random() * Math.max(0.05, bandMax - bandMin));
         world.weatherEvent = { id, warmupUntil: now + def.warmupMs, resolved: false, bandY, until: now + def.warmupMs + 400 };
       } else {
         world.weatherEvent = { id, until: now + def.durationMs };
@@ -537,7 +551,10 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
               handleCrash(world);
             }
           }
-          if (now >= ev.until) world.weatherEvent = null;
+          if (now >= ev.until) {
+            if (world.status === "playing") world.weatherEventsSurvivedCount += 1;
+            world.weatherEvent = null;
+          }
         } else if (ev.id === "acid_rain") {
           const cfg = WEATHER.events.acid_rain;
           const sheltered = world.riderY + RIDER.height / 2 > SCREEN.height * cfg.shelterY;
@@ -549,7 +566,10 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
               handleCrash(world);
             }
           }
-          if (now >= ev.until) world.weatherEvent = null;
+          if (now >= ev.until) {
+            if (world.status === "playing") world.weatherEventsSurvivedCount += 1;
+            world.weatherEvent = null;
+          }
         } else if (ev.id === "sandstorm") {
           if (!invincible) {
             const cfg = WEATHER.events.sandstorm;
@@ -559,9 +579,18 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
             const turbulence = Math.sin(now / 140 + world.cameraX * 0.015) * cfg.turbulenceAccel * turbulenceMult;
             world.velocityY += turbulence * dt;
           }
-          if (now >= ev.until) world.weatherEvent = null;
+          if (now >= ev.until) {
+            if (world.status === "playing") world.weatherEventsSurvivedCount += 1;
+            world.weatherEvent = null;
+          }
         } else {
-          if (now >= ev.until) world.weatherEvent = null;
+          if (ev.id === "blackout" && world.status === "playing") {
+            world.blackoutMetersThisRun += currentSpeed(world) * dt * METERS_PER_PX;
+          }
+          if (now >= ev.until) {
+            if (world.status === "playing") world.weatherEventsSurvivedCount += 1;
+            world.weatherEvent = null;
+          }
         }
       }
 
@@ -621,11 +650,19 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       const closest = Math.min(marginTop, marginBottom);
       world.edgeDanger = invincible ? 0 : Math.max(0, 1 - closest / 90);
 
-      if (!invincible && (world.riderY <= 0 || world.riderY + RIDER.height >= SCREEN.height)) {
-        world.riderY = Math.max(0, Math.min(SCREEN.height - RIDER.height, world.riderY));
+      // Metro Undercity (and any future tunnel zone) narrows the crash
+      // bounds to the tunnel walls instead of the full screen edges.
+      const zoneForBounds = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
+      const boundTop = zoneForBounds.tunnelMode ? SCREEN.height * zoneForBounds.tunnelTop : 0;
+      const boundBottom = zoneForBounds.tunnelMode
+        ? SCREEN.height * zoneForBounds.tunnelBottom - RIDER.height
+        : SCREEN.height - RIDER.height;
+
+      if (!invincible && (world.riderY <= boundTop || world.riderY >= boundBottom)) {
+        world.riderY = Math.max(boundTop, Math.min(boundBottom, world.riderY));
         handleCrash(world);
       } else {
-        world.riderY = Math.max(0, Math.min(SCREEN.height - RIDER.height, world.riderY));
+        world.riderY = Math.max(boundTop, Math.min(boundBottom, world.riderY));
       }
 
       ensureChunksAhead(world);

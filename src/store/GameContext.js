@@ -35,11 +35,13 @@ export function GameProvider({ children }) {
   // Accepts the full run result (not just meters/deliveries/creditsEarned)
   // so storage.js can also fold the extra counters (combo, coins, wanted
   // level, etc.) into the lifetime stats shown on the STATS screen.
+  // Returns the newly-crossed lifetime-distance milestones (if any) so the
+  // caller can show a "free glider unlocked!" notice on the Game Over screen.
   const finishRun = useCallback(async (result) => {
-    const updated = await recordRunResult(result);
+    const { save: updated, newMilestones } = await recordRunResult(result);
     setSave(updated);
     setLastRun(result);
-    return updated;
+    return newMilestones;
   }, []);
 
   // Unlocks a glider using CREDITS EARNED BY PLAYING ONLY. There is no real

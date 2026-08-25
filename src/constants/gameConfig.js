@@ -40,6 +40,21 @@ export const DIFFICULTY = {
     { name: "Megacity Core", minMeters: 650, speedMult: 1.55, movingObstacles: true, density: 1.1, extraHazards: 2 },
     { name: "Hyper-Speed Chaos", minMeters: 1300, speedMult: 1.95, movingObstacles: true, density: 1.4, extraHazards: 3 },
     { name: "Blackout Sprawl", minMeters: 2200, speedMult: 2.3, movingObstacles: true, density: 1.7, extraHazards: 4 },
+    {
+      name: "Metro Undercity",
+      minMeters: 3200,
+      speedMult: 2.15, // deliberately NOT the fastest zone — the challenge here is precision, not speed
+      movingObstacles: true,
+      density: 1.6,
+      extraHazards: 3,
+      // Permanent tunnel walls narrow the playable vertical band to 56% of
+      // the screen (tunnelTop..tunnelBottom, as a fraction of SCREEN.height)
+      // instead of the usual full-height 0..100%. Touching either wall
+      // crashes just like the normal top/bottom bounds do.
+      tunnelMode: true,
+      tunnelTop: 0.24,
+      tunnelBottom: 0.8,
+    },
   ],
 };
 

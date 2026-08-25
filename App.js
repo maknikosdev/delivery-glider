@@ -11,7 +11,7 @@ import AchievementsScreen from "./src/screens/AchievementsScreen";
 import StatsScreen from "./src/screens/StatsScreen";
 import TutorialScreen from "./src/screens/TutorialScreen";
 import DailyContractsScreen from "./src/screens/DailyContractsScreen";
-import { GLIDERS } from "./src/game/gliders";
+import { GLIDERS, gliderById } from "./src/game/gliders";
 import { evaluateNewAchievements, SKIN_COLORS, achievementById } from "./src/game/achievements";
 import { contractById } from "./src/game/contracts";
 import { COLORS, MIN_METERS_FOR_REWARDS } from "./src/constants/gameConfig";
@@ -33,6 +33,7 @@ function Root() {
   const [runBonuses, setRunBonuses] = useState({ reviveToken: false, tempSkinColor: null });
   const [newAchievements, setNewAchievements] = useState([]);
   const [newContracts, setNewContracts] = useState([]);
+  const [newMilestones, setNewMilestones] = useState([]);
   // Where the Tutorial screen should send the player once they finish it —
   // straight into a run (first launch) or back to Menu (re-opened manually).
   const [tutorialReturnTo, setTutorialReturnTo] = useState("loadout");
@@ -83,6 +84,7 @@ function Root() {
     setRunBonuses(bonuses);
     setNewAchievements([]);
     setNewContracts([]);
+    setNewMilestones([]);
     setRunKey((k) => k + 1);
     setScreen("game");
   }, [consumeRunBonuses]);
@@ -105,7 +107,8 @@ function Root() {
       const completedContractIds = await updateDailyContracts(result);
       setNewContracts(completedContractIds.map((id) => contractById(id)).filter(Boolean));
 
-      await finishRun(savedResult);
+      const milestones = await finishRun(savedResult);
+      setNewMilestones(milestones || []);
       setRunResult({ ...result, isNewHighScore: wasHigh });
       setScreen("gameover");
     },
@@ -206,6 +209,7 @@ function Root() {
           isNewHighScore={runResult.isNewHighScore}
           newAchievements={newAchievements.map((id) => achievementById(id)).filter(Boolean)}
           newContracts={newContracts}
+          newMilestones={newMilestones.map((m) => ({ ...m, gliderName: gliderById(m.gliderId)?.name || m.gliderId }))}
           onRetry={handleGoToLoadout}
           onMenu={() => setScreen("menu")}
         />

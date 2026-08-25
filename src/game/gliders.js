@@ -207,3 +207,7 @@ export const GLIDERS = [
     description: "Τεράστια χωρητικότητα 10 δεμάτων για μαζικές παραδόσεις — αλλά βαραίνει πολύ και στρίβει αργά.",
   },
 ];
+
+export function gliderById(id) {
+  return GLIDERS.find((g) => g.id === id);
+}

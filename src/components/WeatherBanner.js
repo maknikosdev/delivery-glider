@@ -2,11 +2,36 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 
-export default function WeatherBanner({ label, corrosion }) {
+// Accessibility: each weather event gets its own glyph so it's identifiable
+// by SHAPE, not just by color/text — useful for colorblind players and for
+// a quick glance during fast gameplay. The border/background color still
+// varies per event (nice-to-have), but nothing here is conveyed by color
+// alone; the icon + the Greek label text both fully describe the event.
+const EVENT_ICONS = {
+  solar_flare: "☀",
+  acid_rain: "☣",
+  police_blockade: "🚨",
+  sandstorm: "🌪",
+  blackout: "☾",
+};
+
+const EVENT_COLORS = {
+  solar_flare: COLORS.danger,
+  acid_rain: COLORS.neonGreen,
+  police_blockade: COLORS.danger,
+  sandstorm: "#ffcf6b",
+  blackout: "#8a8aff",
+};
+
+export default function WeatherBanner({ eventId, label, corrosion }) {
   if (!label) return null;
+  const icon = EVENT_ICONS[eventId] || "⚠";
+  const tint = EVENT_COLORS[eventId] || COLORS.danger;
   return (
     <View style={styles.wrap} pointerEvents="none">
-      <Text style={styles.label}>⚠ {label}</Text>
+      <Text style={[styles.label, { color: tint, borderColor: tint }]}>
+        {icon} {label}
+      </Text>
       {typeof corrosion === "number" && (
         <View style={styles.meterTrack}>
           <View style={[styles.meterFill, { width: `${Math.min(100, corrosion)}%` }]} />
@@ -25,7 +50,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   label: {
-    color: COLORS.danger,
     fontWeight: "900",
     fontSize: 13,
     textAlign: "center",
@@ -34,7 +58,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.danger,
     overflow: "hidden",
   },
   meterTrack: {

@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import { MILESTONES } from "../store/storage";
+import { gliderById } from "../game/gliders";
 
 // Purely informational — no gameplay effect, just a record of everything the
 // player has done across every run ever played on this device (offline,
@@ -14,6 +16,8 @@ export default function StatsScreen({ onBack }) {
   const stats = save.stats || {};
   const gliderCount = (save.ownedGliders || []).length;
   const achievementCount = (save.unlockedAchievements || []).length;
+  const totalMeters = stats.totalMeters || 0;
+  const nextMilestone = MILESTONES.find((m) => !(save.ownedGliders || []).includes(m.gliderId) && totalMeters < m.meters);
 
   const rows = [
     { label: "High Score", value: `${Math.floor(save.highScoreMeters || 0)}m`, color: COLORS.neonCyan },
@@ -30,6 +34,9 @@ export default function StatsScreen({ onBack }) {
     { label: "Slipstream Ενεργοποιήσεις", value: `${stats.totalSlipstreamTriggers || 0}`, color: COLORS.neonCyan },
     { label: "Revives Χρησιμοποιήθηκαν", value: `${stats.totalRevivesUsed || 0}`, color: "#c98bff" },
     { label: "Daily Contracts Ολοκληρωμένα", value: `${stats.totalContractsCompleted || 0}`, color: "#66ffe0" },
+    { label: "Weather Events Επιβίωσε", value: `${stats.totalWeatherEventsSurvived || 0}`, color: "#ffcf6b" },
+    { label: "Απόσταση σε Blackout", value: `${Math.floor(stats.totalBlackoutMeters || 0)}m`, color: "#8a8a9e" },
+    { label: "Καλύτερο Phase Shift (νομίσματα)", value: `${stats.bestPhaseShiftCoins || 0}`, color: "#7d5cff" },
     { label: "Gliders Ξεκλειδωμένα", value: `${gliderCount}`, color: COLORS.neonPink },
     { label: "Achievements Ξεκλειδωμένα", value: `${achievementCount}/15`, color: "#9dff4d" },
   ];
@@ -51,6 +58,25 @@ export default function StatsScreen({ onBack }) {
 
       <Text style={styles.hint}>Στατιστικά ζωής — συγκεντρώνονται από όλα τα runs σου, τοπικά στη συσκευή.</Text>
 
+      {nextMilestone && (
+        <View style={styles.milestoneBox}>
+          <Text style={styles.milestoneTitle}>
+            🎁 Επόμενο Δώρο: {gliderById(nextMilestone.gliderId)?.name || nextMilestone.gliderId}
+          </Text>
+          <View style={styles.milestoneTrack}>
+            <View
+              style={[
+                styles.milestoneFill,
+                { width: `${Math.min(100, (totalMeters / nextMilestone.meters) * 100)}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.milestoneProgress}>
+            {Math.floor(totalMeters)}m / {nextMilestone.meters}m
+          </Text>
+        </View>
+      )}
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         {rows.map((r) => (
           <View key={r.label} style={styles.row}>
@@ -69,6 +95,23 @@ const styles = StyleSheet.create({
   back: { color: COLORS.neonCyan, fontWeight: "700" },
   title: { color: COLORS.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: 1.5 },
   hint: { color: COLORS.textDim, fontSize: 11, marginTop: 6, marginBottom: 16, lineHeight: 16 },
+  milestoneBox: {
+    backgroundColor: "rgba(255,46,168,0.08)",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.neonPink,
+    padding: 14,
+    marginBottom: 16,
+  },
+  milestoneTitle: { color: COLORS.neonPink, fontWeight: "800", fontSize: 12, marginBottom: 8 },
+  milestoneTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+  },
+  milestoneFill: { height: "100%", backgroundColor: COLORS.neonPink, borderRadius: 4 },
+  milestoneProgress: { color: COLORS.textDim, fontSize: 11, marginTop: 6, textAlign: "right" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

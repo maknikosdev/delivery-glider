@@ -41,6 +41,9 @@ const DEFAULT_SAVE = {
     totalEmpUsed: 0,
     totalSlipstreamTriggers: 0,
     totalRevivesUsed: 0,
+    totalWeatherEventsSurvived: 0,
+    totalBlackoutMeters: 0,
+    bestPhaseShiftCoins: 0,
   },
   // First-launch onboarding.
   hasSeenTutorial: false,
@@ -79,25 +82,52 @@ export function getCachedSave() {
   return cache || DEFAULT_SAVE;
 }
 
+// Lifetime-distance milestones that grant a glider for FREE — no credits
+// needed, purely a reward for accumulated play time. Checked every run
+// against the player's total lifetime meters (across all runs, not just
+// qualifying ones), so it can never be bought or skipped with credits.
+export const MILESTONES = [
+  { id: "milestone_10k", meters: 10000, gliderId: "phantom", label: "10.000m Lifetime Distance" },
+];
+
+function checkMilestones(prevTotalMeters, newTotalMeters, ownedGliders) {
+  const owned = new Set(ownedGliders || []);
+  const reached = [];
+  for (const m of MILESTONES) {
+    if (prevTotalMeters < m.meters && newTotalMeters >= m.meters && !owned.has(m.gliderId)) {
+      reached.push(m);
+    }
+  }
+  return reached;
+}
+
 // Accepts the full game-over result object (meters, deliveries, creditsEarned,
 // plus the extra per-run counters from useGameLoop.js: maxCombo, coinsThisRun,
-// maxWantedLevel, empUsedCount, slipstreamTriggerCount, usedRevive) and folds
-// everything into both the "best" records and the lifetime totals used by
-// the STATS screen. Extra fields are optional/defaulted so this stays safe
-// to call even from older result shapes.
+// maxWantedLevel, empUsedCount, slipstreamTriggerCount, usedRevive,
+// weatherEventsSurvivedCount, maxPhaseShiftCoins, blackoutMetersThisRun) and
+// folds everything into both the "best" records and the lifetime totals used
+// by the STATS screen. Extra fields are optional/defaulted so this stays
+// safe to call even from older result shapes.
+// Returns { save, newMilestones } — newMilestones is the list of milestone
+// defs (see MILESTONES above) that were just crossed by this run, so the UI
+// can show a "free glider unlocked!" notice.
 export async function recordRunResult(result) {
   const { meters, deliveries, creditsEarned } = result;
   const s = await loadSave();
   const prevStats = s.stats || {};
+  const newTotalMeters = (prevStats.totalMeters || 0) + Math.max(0, meters);
+  const newMilestones = checkMilestones(prevStats.totalMeters || 0, newTotalMeters, s.ownedGliders || []);
+  const grantedGliderIds = newMilestones.map((m) => m.gliderId);
   const updated = {
     highScoreMeters: Math.max(s.highScoreMeters, Math.floor(meters)),
     bestDeliveries: Math.max(s.bestDeliveries, deliveries),
     credits: s.credits + creditsEarned,
     totalRuns: s.totalRuns + 1,
+    ownedGliders: grantedGliderIds.length > 0 ? [...new Set([...(s.ownedGliders || []), ...grantedGliderIds])] : s.ownedGliders,
     stats: {
       ...prevStats,
       totalDeliveries: (prevStats.totalDeliveries || 0) + deliveries,
-      totalMeters: (prevStats.totalMeters || 0) + Math.max(0, meters),
+      totalMeters: newTotalMeters,
       totalCoinsCollected: (prevStats.totalCoinsCollected || 0) + (result.coinsThisRun || 0),
       totalCreditsEarnedLifetime: (prevStats.totalCreditsEarnedLifetime || 0) + (creditsEarned || 0),
       bestComboEver: Math.max(prevStats.bestComboEver || 0, result.maxCombo || 0),
@@ -105,9 +135,13 @@ export async function recordRunResult(result) {
       totalEmpUsed: (prevStats.totalEmpUsed || 0) + (result.empUsedCount || 0),
       totalSlipstreamTriggers: (prevStats.totalSlipstreamTriggers || 0) + (result.slipstreamTriggerCount || 0),
       totalRevivesUsed: (prevStats.totalRevivesUsed || 0) + (result.usedRevive ? 1 : 0),
+      totalWeatherEventsSurvived: (prevStats.totalWeatherEventsSurvived || 0) + (result.weatherEventsSurvivedCount || 0),
+      totalBlackoutMeters: (prevStats.totalBlackoutMeters || 0) + Math.max(0, result.blackoutMetersThisRun || 0),
+      bestPhaseShiftCoins: Math.max(prevStats.bestPhaseShiftCoins || 0, result.maxPhaseShiftCoins || 0),
     },
   };
-  return saveSave(updated);
+  const saved = await saveSave(updated);
+  return { save: saved, newMilestones };
 }
 
 // Rolls today's 3 Daily Contracts (regenerating them if the device date has
