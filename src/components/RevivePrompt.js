@@ -1,20 +1,20 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { COLORS, REVIVE } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
 export default function RevivePrompt({ credits, isFree, onContinue, onGiveUp }) {
+  const { t } = useGame();
   const canAfford = isFree || credits >= REVIVE.cost;
   return (
     <View style={styles.overlay}>
       <View style={styles.panel}>
-        <Text style={styles.title}>CRASH DETECTED!</Text>
+        <Text style={styles.title}>{t("revive.title")}</Text>
         <Text style={styles.question}>
-          {isFree
-            ? "Έχεις ένα δωρεάν Revive Token — θες να συνεχίσεις;"
-            : `Θέλεις να χρησιμοποιήσεις ${REVIVE.cost} νομίσματα για να συνεχίσεις;`}
+          {isFree ? t("revive.questionFree") : t("revive.questionPaid", { n: REVIVE.cost })}
         </Text>
-        {!isFree && <Text style={styles.balance}>Έχεις: ◆ {credits}</Text>}
+        {!isFree && <Text style={styles.balance}>{t("revive.balance", { n: credits })}</Text>}
 
         <Pressable
           disabled={!canAfford}
@@ -25,7 +25,7 @@ export default function RevivePrompt({ credits, isFree, onContinue, onGiveUp }) 
           }}
         >
           <Text style={styles.continueText}>
-            {isFree ? "CONTINUE (FREE TOKEN)" : `CONTINUE (◆ ${REVIVE.cost})`}
+            {isFree ? t("revive.continueFree") : t("revive.continuePaid", { n: REVIVE.cost })}
           </Text>
         </Pressable>
 
@@ -36,12 +36,10 @@ export default function RevivePrompt({ credits, isFree, onContinue, onGiveUp }) 
             onGiveUp();
           }}
         >
-          <Text style={styles.giveUpText}>GIVE UP</Text>
+          <Text style={styles.giveUpText}>{t("revive.giveUp")}</Text>
         </Pressable>
 
-        {!canAfford && (
-          <Text style={styles.hint}>Δεν έχεις αρκετά νομίσματα.</Text>
-        )}
+        {!canAfford && <Text style={styles.hint}>{t("revive.notEnough")}</Text>}
       </View>
     </View>
   );

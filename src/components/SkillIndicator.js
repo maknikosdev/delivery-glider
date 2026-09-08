@@ -1,8 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { COLORS } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 
 export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemainingMs }) {
+  const { t } = useGame();
   if (!skill) return null;
 
   if (skill.type === "passive") {
@@ -15,7 +17,7 @@ export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemai
 
   const isActive = activeRemainingMs > 0;
   const isCoolingDown = cooldownRemainingMs > 0;
-  const triggerLabel = skill.trigger === "double_tap" ? "Double Tap" : "Swipe Down & Hold";
+  const triggerLabel = skill.trigger === "double_tap" ? t("skillIndicator.doubleTap") : t("skillIndicator.swipeDownHold");
 
   return (
     <View
@@ -28,7 +30,7 @@ export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemai
       <Text style={styles.skillName}>{skill.name}</Text>
       <Text style={styles.skillState}>
         {isActive
-          ? "ΕΝΕΡΓΟ!"
+          ? t("skillIndicator.active")
           : isCoolingDown
           ? `${Math.ceil(cooldownRemainingMs / 1000)}s`
           : `${triggerLabel} ✓`}

@@ -1,12 +1,14 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { COLORS } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 
 // Accessibility: each weather event gets its own glyph so it's identifiable
 // by SHAPE, not just by color/text — useful for colorblind players and for
 // a quick glance during fast gameplay. The border/background color still
 // varies per event (nice-to-have), but nothing here is conveyed by color
-// alone; the icon + the Greek label text both fully describe the event.
+// alone; the icon + the label text both fully describe the event, and the
+// label itself is looked up via t() so it follows the EL/EN toggle.
 const EVENT_ICONS = {
   solar_flare: "☀",
   acid_rain: "☣",
@@ -23,10 +25,12 @@ const EVENT_COLORS = {
   blackout: "#8a8aff",
 };
 
-export default function WeatherBanner({ eventId, label, corrosion }) {
-  if (!label) return null;
+export default function WeatherBanner({ eventId, corrosion }) {
+  const { t } = useGame();
+  if (!eventId) return null;
   const icon = EVENT_ICONS[eventId] || "⚠";
   const tint = EVENT_COLORS[eventId] || COLORS.danger;
+  const label = t(`weather.${eventId}`);
   return (
     <View style={styles.wrap} pointerEvents="none">
       <Text style={[styles.label, { color: tint, borderColor: tint }]}>

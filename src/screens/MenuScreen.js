@@ -3,22 +3,26 @@ import { View, Text, StyleSheet, Pressable, Image } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import MuteButton from "../components/MuteButton";
+import LanguageToggleButton from "../components/LanguageToggleButton";
 import AudioManager from "../audio/AudioManager";
 
 export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial }) {
-  const { save } = useGame();
+  const { save, t } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
 
   return (
     <View style={styles.container}>
-      <MuteButton style={styles.mute} />
+      <View style={styles.topRight}>
+        <LanguageToggleButton style={{ marginRight: 8 }} />
+        <MuteButton />
+      </View>
       <Image source={require("../../assets/icon.png")} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.title}>THE DELIVERY GLIDER</Text>
-      <Text style={styles.subtitle}>Neo-Athens Grid · 2088</Text>
+      <Text style={styles.title}>{t("menu.title")}</Text>
+      <Text style={styles.subtitle}>{t("menu.subtitle")}</Text>
 
       <View style={styles.statsRow}>
-        <Stat label="High Score" value={`${save?.highScoreMeters ?? 0}m`} color={COLORS.neonCyan} />
-        <Stat label="Credits" value={`◆ ${save?.credits ?? 0}`} color={COLORS.neonYellow} />
+        <Stat label={t("menu.highScore")} value={`${save?.highScoreMeters ?? 0}m`} color={COLORS.neonCyan} />
+        <Stat label={t("menu.credits")} value={`◆ ${save?.credits ?? 0}`} color={COLORS.neonYellow} />
       </View>
 
       <Pressable
@@ -28,7 +32,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
           onPlay();
         }}
       >
-        <Text style={styles.buttonText}>ΞΕΚΙΝΑ ΠΑΡΑΔΟΣΗ</Text>
+        <Text style={styles.buttonText}>{t("menu.play")}</Text>
       </Pressable>
 
       <View style={styles.grid}>
@@ -39,7 +43,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             onGarage();
           }}
         >
-          <Text style={[styles.gridButtonText, { color: COLORS.neonPink }]}>GARAGE</Text>
+          <Text style={[styles.gridButtonText, { color: COLORS.neonPink }]}>{t("menu.garage")}</Text>
         </Pressable>
 
         <Pressable
@@ -49,7 +53,9 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             onAchievements();
           }}
         >
-          <Text style={[styles.gridButtonText, { color: "#9dff4d" }]}>ACHIEVEMENTS {achievementCount}/15</Text>
+          <Text style={[styles.gridButtonText, { color: "#9dff4d" }]}>
+            {t("menu.achievements")} {achievementCount}/19
+          </Text>
         </Pressable>
 
         <Pressable
@@ -59,7 +65,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             onContracts();
           }}
         >
-          <Text style={[styles.gridButtonText, { color: COLORS.neonYellow }]}>DAILY CONTRACTS</Text>
+          <Text style={[styles.gridButtonText, { color: COLORS.neonYellow }]}>{t("menu.contracts")}</Text>
         </Pressable>
 
         <Pressable
@@ -69,7 +75,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             onStats();
           }}
         >
-          <Text style={[styles.gridButtonText, { color: COLORS.neonCyan }]}>STATS</Text>
+          <Text style={[styles.gridButtonText, { color: COLORS.neonCyan }]}>{t("menu.stats")}</Text>
         </Pressable>
 
         <Pressable
@@ -79,7 +85,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             onTutorial();
           }}
         >
-          <Text style={[styles.gridButtonText, { color: COLORS.textDim }]}>ΠΩΣ ΠΑΙΖΕΤΑΙ</Text>
+          <Text style={[styles.gridButtonText, { color: COLORS.textDim }]}>{t("menu.tutorial")}</Text>
         </Pressable>
       </View>
     </View>
@@ -103,7 +109,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
-  mute: { position: "absolute", top: 50, right: 20 },
+  topRight: { position: "absolute", top: 50, right: 20, flexDirection: "row", alignItems: "center" },
   logo: { width: 120, height: 120, borderRadius: 22, marginBottom: 14 },
   title: {
     color: COLORS.textPrimary,

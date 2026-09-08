@@ -5,12 +5,13 @@ import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import { MILESTONES } from "../store/storage";
 import { gliderById } from "../game/gliders";
+import { ACHIEVEMENTS } from "../game/achievements";
 
 // Purely informational — no gameplay effect, just a record of everything the
 // player has done across every run ever played on this device (offline,
 // AsyncStorage only, matching the rest of the save file).
 export default function StatsScreen({ onBack }) {
-  const { save } = useGame();
+  const { save, t } = useGame();
   if (!save) return null;
 
   const stats = save.stats || {};
@@ -20,25 +21,25 @@ export default function StatsScreen({ onBack }) {
   const nextMilestone = MILESTONES.find((m) => !(save.ownedGliders || []).includes(m.gliderId) && totalMeters < m.meters);
 
   const rows = [
-    { label: "High Score", value: `${Math.floor(save.highScoreMeters || 0)}m`, color: COLORS.neonCyan },
-    { label: "Συνολική Απόσταση", value: `${Math.floor(stats.totalMeters || 0)}m`, color: COLORS.neonCyan },
-    { label: "Συνολικά Runs", value: `${save.totalRuns || 0}`, color: COLORS.textPrimary },
-    { label: "Καλύτερες Παραδόσεις (1 run)", value: `${save.bestDeliveries || 0}`, color: COLORS.neonYellow },
-    { label: "Συνολικές Παραδόσεις", value: `${stats.totalDeliveries || 0}`, color: COLORS.neonYellow },
-    { label: "Καλύτερο Combo", value: `x${stats.bestComboEver || 1}`, color: "#ffe14d" },
-    { label: "Νομίσματα (τρέχον υπόλοιπο)", value: `◆ ${save.credits || 0}`, color: COLORS.neonYellow },
-    { label: "Συνολικά Νομίσματα (lifetime)", value: `◆ ${stats.totalCreditsEarnedLifetime || 0}`, color: COLORS.neonYellow },
-    { label: "Νομίσματα Μαζεμένα (coins)", value: `${stats.totalCoinsCollected || 0}`, color: "#ffd166" },
-    { label: "Μέγιστο Wanted Level", value: `${"★".repeat(stats.bestWantedLevelEver || 0) || "—"}`, color: COLORS.danger },
-    { label: "EMP Blasts Χρησιμοποιήθηκαν", value: `${stats.totalEmpUsed || 0}`, color: "#9dff4d" },
-    { label: "Slipstream Ενεργοποιήσεις", value: `${stats.totalSlipstreamTriggers || 0}`, color: COLORS.neonCyan },
-    { label: "Revives Χρησιμοποιήθηκαν", value: `${stats.totalRevivesUsed || 0}`, color: "#c98bff" },
-    { label: "Daily Contracts Ολοκληρωμένα", value: `${stats.totalContractsCompleted || 0}`, color: "#66ffe0" },
-    { label: "Weather Events Επιβίωσε", value: `${stats.totalWeatherEventsSurvived || 0}`, color: "#ffcf6b" },
-    { label: "Απόσταση σε Blackout", value: `${Math.floor(stats.totalBlackoutMeters || 0)}m`, color: "#8a8a9e" },
-    { label: "Καλύτερο Phase Shift (νομίσματα)", value: `${stats.bestPhaseShiftCoins || 0}`, color: "#7d5cff" },
-    { label: "Gliders Ξεκλειδωμένα", value: `${gliderCount}`, color: COLORS.neonPink },
-    { label: "Achievements Ξεκλειδωμένα", value: `${achievementCount}/15`, color: "#9dff4d" },
+    { label: t("stats.rows.highScore"), value: `${Math.floor(save.highScoreMeters || 0)}m`, color: COLORS.neonCyan },
+    { label: t("stats.rows.totalDistance"), value: `${Math.floor(stats.totalMeters || 0)}m`, color: COLORS.neonCyan },
+    { label: t("stats.rows.totalRuns"), value: `${save.totalRuns || 0}`, color: COLORS.textPrimary },
+    { label: t("stats.rows.bestDeliveriesRun"), value: `${save.bestDeliveries || 0}`, color: COLORS.neonYellow },
+    { label: t("stats.rows.totalDeliveries"), value: `${stats.totalDeliveries || 0}`, color: COLORS.neonYellow },
+    { label: t("stats.rows.bestCombo"), value: `x${stats.bestComboEver || 1}`, color: "#ffe14d" },
+    { label: t("stats.rows.creditsBalance"), value: `◆ ${save.credits || 0}`, color: COLORS.neonYellow },
+    { label: t("stats.rows.totalCreditsLifetime"), value: `◆ ${stats.totalCreditsEarnedLifetime || 0}`, color: COLORS.neonYellow },
+    { label: t("stats.rows.coinsCollected"), value: `${stats.totalCoinsCollected || 0}`, color: "#ffd166" },
+    { label: t("stats.rows.maxWanted"), value: `${"★".repeat(stats.bestWantedLevelEver || 0) || "—"}`, color: COLORS.danger },
+    { label: t("stats.rows.empUsed"), value: `${stats.totalEmpUsed || 0}`, color: "#9dff4d" },
+    { label: t("stats.rows.slipstreamTriggers"), value: `${stats.totalSlipstreamTriggers || 0}`, color: COLORS.neonCyan },
+    { label: t("stats.rows.revivesUsed"), value: `${stats.totalRevivesUsed || 0}`, color: "#c98bff" },
+    { label: t("stats.rows.contractsCompleted"), value: `${stats.totalContractsCompleted || 0}`, color: "#66ffe0" },
+    { label: t("stats.rows.weatherSurvived"), value: `${stats.totalWeatherEventsSurvived || 0}`, color: "#ffcf6b" },
+    { label: t("stats.rows.blackoutDistance"), value: `${Math.floor(stats.totalBlackoutMeters || 0)}m`, color: "#8a8a9e" },
+    { label: t("stats.rows.bestPhaseShift"), value: `${stats.bestPhaseShiftCoins || 0}`, color: "#7d5cff" },
+    { label: t("stats.rows.glidersUnlocked"), value: `${gliderCount}`, color: COLORS.neonPink },
+    { label: t("stats.rows.achievementsUnlocked"), value: `${achievementCount}/${ACHIEVEMENTS.length}`, color: "#9dff4d" },
   ];
 
   return (
@@ -50,18 +51,18 @@ export default function StatsScreen({ onBack }) {
             onBack();
           }}
         >
-          <Text style={styles.back}>‹ MENU</Text>
+          <Text style={styles.back}>{t("common.menuBack")}</Text>
         </Pressable>
-        <Text style={styles.title}>STATS</Text>
+        <Text style={styles.title}>{t("stats.title")}</Text>
         <View style={{ width: 50 }} />
       </View>
 
-      <Text style={styles.hint}>Στατιστικά ζωής — συγκεντρώνονται από όλα τα runs σου, τοπικά στη συσκευή.</Text>
+      <Text style={styles.hint}>{t("stats.hint")}</Text>
 
       {nextMilestone && (
         <View style={styles.milestoneBox}>
           <Text style={styles.milestoneTitle}>
-            🎁 Επόμενο Δώρο: {gliderById(nextMilestone.gliderId)?.name || nextMilestone.gliderId}
+            {t("stats.nextGift", { name: gliderById(nextMilestone.gliderId)?.name || nextMilestone.gliderId })}
           </Text>
           <View style={styles.milestoneTrack}>
             <View

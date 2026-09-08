@@ -26,7 +26,7 @@ const quiet = {
 const industrial = {
   id: "industrial_zone",
   weight: 2,
-  minZoneIndex: 1,
+  minZoneIndex: 2,
   obstacles: [
     { type: "static_billboard", relX: 250, relY: SCREEN.height * 0.2 },
     { type: "static_antenna", relX: 700, relY: SCREEN.height * 0.65 },
@@ -40,10 +40,33 @@ const industrial = {
   droneStations: [{ relX: 950, relY: SCREEN.height * 0.15 }],
 };
 
+// Rookie District — Traffic Begins (60m+): the first place moving obstacles
+// ever appear. Deliberately gentle — small sine amplitudes, slow speeds,
+// generous static/green balconies mixed in — so it reads as "things move
+// now" rather than a difficulty spike. These obstacle types keep appearing
+// in every later zone too (this template just introduces the concept).
+const earlyTraffic = {
+  id: "early_traffic",
+  weight: 3,
+  minZoneIndex: 1,
+  obstacles: [
+    { type: "static_antenna", relX: 350, relY: SCREEN.height * 0.25 },
+    { type: "robo_pigeon", relX: 700, relY: SCREEN.height * 0.45, movePattern: "sine", moveAmp: 45, moveSpeed: 1.1 },
+    { type: "static_laundry", relX: 1050, relY: SCREEN.height * 0.6 },
+    { type: "flying_taxi", relX: 1400, relY: SCREEN.height * 0.35, movePattern: "sine", moveAmp: 55, moveSpeed: 0.9 },
+  ],
+  balconies: [
+    { color: "green", relX: 200, relY: SCREEN.height * 0.6 },
+    { color: "green", relX: 900, relY: SCREEN.height * 0.3 },
+    { color: "yellow", relX: 1600, relY: SCREEN.height * 0.55 },
+  ],
+  droneStations: [],
+};
+
 const avenue = {
   id: "avenue_lanes",
   weight: 2,
-  minZoneIndex: 1,
+  minZoneIndex: 2,
   obstacles: [
     { type: "flying_taxi", relX: 400, relY: SCREEN.height * 0.3, movePattern: "sine", moveAmp: 60, moveSpeed: 1.4 },
     { type: "flying_taxi", relX: 1000, relY: SCREEN.height * 0.55, movePattern: "sine", moveAmp: 80, moveSpeed: 1.1 },
@@ -54,12 +77,16 @@ const avenue = {
     { color: "yellow", relX: 1600, relY: SCREEN.height * 0.4 },
   ],
   droneStations: [],
+  // Gentle permanent updraft funneled between the two rows of buildings —
+  // a fixed, always-there feature of this chunk (not a random weather
+  // event), so "Avenue Lanes" starts to feel like a specific place.
+  windCorridors: [{ relX: 750, width: 260, forceY: -300 }],
 };
 
 const megacityCore = {
   id: "megacity_core",
   weight: 2,
-  minZoneIndex: 2,
+  minZoneIndex: 3,
   obstacles: [
     { type: "flying_taxi", relX: 300, relY: SCREEN.height * 0.4, movePattern: "sine", moveAmp: 100, moveSpeed: 1.7 },
     { type: "police_drone", relX: 800, relY: SCREEN.height * 0.25, movePattern: "sine", moveAmp: 120, moveSpeed: 2.0 },
@@ -71,12 +98,15 @@ const megacityCore = {
     { color: "red", relX: 1450, relY: SCREEN.height * 0.3 },
   ],
   droneStations: [{ relX: 1000, relY: SCREEN.height * 0.72 }],
+  // Downdraft off the big broadcasting tower — pushes down, forcing a
+  // deliberate counter-thrust through this stretch.
+  windCorridors: [{ relX: 1000, width: 300, forceY: 340 }],
 };
 
 const chaos = {
   id: "hyperspeed_chaos",
   weight: 1,
-  minZoneIndex: 3,
+  minZoneIndex: 4,
   obstacles: [
     { type: "police_drone", relX: 250, relY: SCREEN.height * 0.3, movePattern: "sine", moveAmp: 130, moveSpeed: 2.4 },
     { type: "robo_pigeon", relX: 600, relY: SCREEN.height * 0.5, movePattern: "sine", moveAmp: 70, moveSpeed: 2.8 },
@@ -86,12 +116,15 @@ const chaos = {
   ],
   balconies: [{ color: "red", relX: 750, relY: SCREEN.height * 0.6 }],
   droneStations: [],
+  // Vent updraft right where the obstacle density spikes — rewards players
+  // who've learned to read this zone's rhythm.
+  windCorridors: [{ relX: 500, width: 240, forceY: -360 }],
 };
 
 const blackoutSprawl = {
   id: "blackout_sprawl",
   weight: 1,
-  minZoneIndex: 4,
+  minZoneIndex: 5,
   obstacles: [
     { type: "police_drone", relX: 200, relY: SCREEN.height * 0.25, movePattern: "sine", moveAmp: 140, moveSpeed: 2.6 },
     { type: "robo_pigeon", relX: 500, relY: SCREEN.height * 0.55, movePattern: "sine", moveAmp: 90, moveSpeed: 3.0 },
@@ -105,6 +138,9 @@ const blackoutSprawl = {
     { color: "red", relX: 1000, relY: SCREEN.height * 0.6 },
   ],
   droneStations: [{ relX: 1550, relY: SCREEN.height * 0.75 }],
+  // Crosswind pouring through blown-out ventilation grates — one of the
+  // strongest corridors in the game, matching this zone's intensity.
+  windCorridors: [{ relX: 900, width: 260, forceY: -400 }],
 };
 
 // Metro Undercity: the playable vertical band is narrowed by permanent
@@ -115,7 +151,7 @@ const blackoutSprawl = {
 const metroUndercity = {
   id: "metro_undercity",
   weight: 1,
-  minZoneIndex: 5,
+  minZoneIndex: 6,
   obstacles: [
     { type: "static_antenna", relX: 200, relY: SCREEN.height * 0.3 },
     { type: "police_drone", relX: 450, relY: SCREEN.height * 0.65, movePattern: "sine", moveAmp: 55, moveSpeed: 2.4 },
@@ -130,9 +166,12 @@ const metroUndercity = {
     { color: "yellow", relX: 1100, relY: SCREEN.height * 0.5 },
   ],
   droneStations: [{ relX: 1600, relY: SCREEN.height * 0.4 }],
+  // Weak downdraft from a passing train shaft — deliberately gentler than
+  // other corridors since the tunnel walls already narrow your margin.
+  windCorridors: [{ relX: 1000, width: 220, forceY: 220 }],
 };
 
-export const CHUNK_POOL = [quiet, industrial, avenue, megacityCore, chaos, blackoutSprawl, metroUndercity];
+export const CHUNK_POOL = [quiet, industrial, earlyTraffic, avenue, megacityCore, chaos, blackoutSprawl, metroUndercity];
 
 let uidCounter = 1;
 function nextUid() {
@@ -216,6 +255,15 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
     used: false,
   }));
 
+  // Permanent, fixed-position vertical air currents (NOT a random weather
+  // event) — some chunk templates define one to give that stretch of city
+  // a bit of personality. forceY > 0 pushes the rider down, < 0 pushes up.
+  const windCorridors = (template.windCorridors || []).map((w) => ({
+    ...w,
+    id: `wind_${nextUid()}`,
+    worldX: worldOffsetX + w.relX,
+  }));
+
   // Scattered Neo-Coin / Data-Cube pickups, laid out as a short gentle arc
   // ("coin trail") rather than fully random points, so they read as a path
   // to follow rather than clutter.
@@ -264,15 +312,17 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
     droneStations,
     coins,
     powerups,
+    windCorridors,
   };
 }
 
 export function getZoneIndex(meters) {
   // matches DIFFICULTY.zones ordering in gameConfig.js
-  if (meters >= 3200) return 5;
-  if (meters >= 2200) return 4;
-  if (meters >= 1300) return 3;
-  if (meters >= 650) return 2;
-  if (meters >= 250) return 1;
+  if (meters >= 3200) return 6;
+  if (meters >= 2200) return 5;
+  if (meters >= 1300) return 4;
+  if (meters >= 650) return 3;
+  if (meters >= 250) return 2;
+  if (meters >= 60) return 1;
   return 0;
 }

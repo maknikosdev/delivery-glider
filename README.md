@@ -10,6 +10,16 @@ Offline 2D endless-runner για Android, χτισμένο με Expo / React Nat
 Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας ανάμεσα σε μπαλκόνια,
 ιπτάμενα ταξί και drones της αστυνομίας, διαχειριζόμενος το βάρος του glider σου.
 
+### 🎮 Πώς παίζεται (γρήγορος οδηγός)
+
+- **Κράτα πατημένο** στην οθόνη για να ανέβει το glider σου — άσε το και πέφτει (όσα περισσότερα δέματα κουβαλάς, τόσο πιο γρήγορα πέφτεις).
+- **Swipe δεξιά** κοντά σε φωτισμένο μπαλκόνι για να παραδώσεις ένα δέμα.
+- **Swipe κάτω** για απότομη βουτιά — χρήσιμο για να αποφύγεις εμπόδια από πάνω σου.
+- Μάζεψε **νομίσματα** πετώντας από πάνω τους, και πρόσεχε τα **weather events** (π.χ. Acid Rain, Blackout) που αλλάζουν προσωρινά τους κανόνες.
+- Συνεχόμενες παραδόσεις χωρίς crash χτίζουν **combo multiplier** — όσο πιο risky παίζεις, τόσο περισσότερους πόντους μαζεύεις.
+- Κάθε glider στο Garage έχει ένα μοναδικό **active/passive skill** (π.χ. EMP Blast, Phase Shift) — δες περιγραφή στο Garage πριν διαλέξεις.
+- Ένα πλήρες interactive tutorial με παραδείγματα υπάρχει **μέσα στην εφαρμογή** (Menu → "ΠΩΣ ΠΑΙΖΕΤΑΙ"), οπότε οι νέοι παίκτες δεν χρειάζεται να διαβάσουν τίποτα εκτός εφαρμογής.
+
 ### Τι περιλαμβάνει αυτό το project
 
 - ✅ Πλήρης game loop: βαρύτητα ανάλογη με τα δέματα, tap/hold-to-fly, swipe-to-deliver, swipe-down dive
@@ -106,6 +116,53 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
    `App.js`, νέα πεδία στο `stats` object του `src/store/storage.js` (safe
    merge — δεν χάνεται το save file υπαρχόντων παικτών).
 
+### 🆕 Πρόσφατος εμπλουτισμός #4
+
+1. **Φθίνουσα καμπύλη εκκίνησης** — Στην αρχή κάθε run, η βαρύτητα δεν είναι
+   πλέον flat 0 (στατικό αιώρημα) που σκάει απότομα σε πλήρη βαρύτητα μετά
+   από ~1.5s. Αντ' αυτού, "μπαίνει" ομαλά μέσα σε 1.9s με quadratic ease-in
+   curve — μια φυσική, φθίνουσα καμπύλη, όχι απότομη. Δες `START_GRACE_MS`
+   στο `gameConfig.js`, `currentGravity()` στο `useGameLoop.js`.
+2. **Νωρίτερα κινούμενα εμπόδια (60m+)** — Νέα ενδιάμεση ζώνη "Rookie
+   District — Traffic Begins" στα 60m, με απαλά κινούμενα εμπόδια (μικρό
+   sine amplitude/ταχύτητα) που παραμένουν για όλο το υπόλοιπο παιχνίδι.
+   Χρειάστηκε renumbering όλων των zone indices (7 ζώνες πλέον). Δες
+   `DIFFICULTY.zones`, `getZoneIndex()`, νέο `earlyTraffic` chunk template
+   στο `chunks.js`.
+3. **Language Toggle (EL/EN)** — Πλήρες i18n σύστημα σε όλη την εφαρμογή.
+   Κουμπί πάνω-δεξιά στο Menu, δίπλα στο mute, εναλλάσσει άμεσα ΟΛΟ το
+   κείμενο (menu, tutorial, game over, stats, garage, loadout, daily
+   contracts, achievements, mystery crate, revive prompt, skill indicator,
+   weather banners, glider/gadget/achievement/contract περιγραφές). Η
+   προτίμηση αποθηκεύεται στο save file (`language: "el"|"en"`). Νέα
+   αρχεία: `src/i18n/translations.js` (κεντρικό dictionary), `src/i18n/i18n.js`
+   (translator helper με `{var}` interpolation), `src/components/LanguageToggleButton.js`.
+   Τα ονόματα ζωνών (π.χ. "Metro Undercity") και gliders/achievements/contracts
+   (π.χ. "Riftwalker", "Century Club") παραμένουν ίδια και στις δύο γλώσσες
+   σκόπιμα — είναι ονόματα, όχι περιγραφές.
+
+### 🆕 Πρόσφατος εμπλουτισμός #3
+
+1. **Wind Corridors** — μόνιμα (όχι weather event) κάθετα ρεύματα αέρα σε
+   συγκεκριμένα σημεία 5 από τα chunk templates (Avenue Lanes, Megacity
+   Core, Hyper-Speed Chaos, Blackout Sprawl, Metro Undercity), το καθένα με
+   δική του κατεύθυνση/ένταση· οπτικά με βέλη (↑/↓) και διάφανη ζώνη πριν
+   μπεις μέσα. Δες `windCorridors` στο `chunks.js`, φυσική στο
+   `useGameLoop.js`, render στο `GameScreen.js`.
+2. **Vignette/color grading ανά ζώνη** — κάθε ζώνη έχει ένα ελαφρύ μόνιμο
+   χρωματικό tint (π.χ. Metro Undercity ψυχρό μπλε, Blackout Sprawl μοβ) το
+   οποίο δεν επηρεάζει την αναγνωσιμότητα, απλά δίνει οπτική ταυτότητα. Η
+   Rookie District δεν έχει tint σκόπιμα, για καθαρή πρώτη εντύπωση. Δες
+   `tint` σε κάθε ζώνη στο `gameConfig.js`, render στο `GameScreen.js`.
+3. **Soft difficulty ramp** — οι πρώτες `runsThreshold` (5) προσπάθειες ενός
+   νέου παίκτη έχουν πιο αργή ταχύτητα κόσμου και λιγότερα τυχαία extra
+   hazards, με γραμμική επιστροφή στο 100% δυσκολία μέχρι το 5ο run. Τα
+   zone thresholds (μέτρα) δεν αλλάζουν — απλά παίρνουν φυσικά περισσότερο
+   χρόνο να φτάσουν στη χαμηλότερη ταχύτητα, δίνοντας οργανικά περισσότερο
+   χρόνο εξοικείωσης. Δες `DIFFICULTY.softRamp` στο `gameConfig.js` και το
+   `totalRuns` prop που περνάει από το `App.js` → `GameScreen.js` →
+   `useGameLoop.js`.
+
 ### 🆕 Πρόσφατος εμπλουτισμός #2
 
 1. **4 νέα Achievements**: Storm Chaser (3 weather events σε 1 run), Ghost
@@ -161,6 +218,10 @@ cd delivery-glider
 npm install
 npx expo start
 ```
+
+Σκάναρε το QR code με το Expo Go app στο Android κινητό σου για δοκιμή,
+ή πάτα `a` για Android emulator αν έχεις στημένο Android Studio.
+
 ### Πώς να το κάνεις export μέσω Android Studio (τοπικό build)
 
 Αυτό το project **περιλαμβάνει ήδη τον έτοιμο native `android/` φάκελο**
@@ -240,6 +301,16 @@ TurboModules), υποχρεωτικό σε αυτή την έκδοση του R
 An offline 2D endless-runner for Android, built with Expo / React Native.
 Neo-Athens Grid, 2088 — deliver packages while gliding between balconies,
 flying taxis, and police drones, managing your glider's weight as you go.
+
+### 🎮 How to play (quick guide)
+
+- **Hold down** on the screen to make your glider ascend — release and it falls (the more packages you're carrying, the faster you fall).
+- **Swipe right** near a lit-up balcony to deliver a package.
+- **Swipe down** for a sharp dive — useful for dodging obstacles above you.
+- Collect **coins** by flying over them, and watch out for **weather events** (e.g. Acid Rain, Blackout) that temporarily change the rules.
+- Chaining deliveries without crashing builds a **combo multiplier** — the riskier you play, the more points you rack up.
+- Every glider in the Garage has a unique **active/passive skill** (e.g. EMP Blast, Phase Shift) — check its description in the Garage before picking one.
+- A full interactive tutorial with examples is built **into the app** (Menu → "ΠΩΣ ΠΑΙΖΕΤΑΙ", i.e. "HOW TO PLAY" — the in-game UI is Greek-only, not localized), so new players never need to read anything outside the app.
 
 ### What this project includes
 
@@ -327,6 +398,9 @@ cd delivery-glider
 npm install
 npx expo start
 ```
+
+Scan the QR code with the Expo Go app on your Android phone to test it, or
+press `a` for an Android emulator if you have Android Studio set up.
 
 ### How to export it via Android Studio (local build)
 

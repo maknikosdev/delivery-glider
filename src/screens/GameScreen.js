@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from "react";
-import { View, StyleSheet, PanResponder } from "react-native";
+import { View, Text, StyleSheet, PanResponder } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
@@ -19,7 +19,7 @@ import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULT
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
-export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, onGameOver }) {
+export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, totalRuns, onGameOver }) {
   const handleGameOver = useCallback(
     (result) => {
       onGameOver && onGameOver(result);
@@ -43,6 +43,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     gadgetIds,
     freeRevive,
     skillLevel,
+    totalRuns,
     onGameOver: handleGameOver,
   });
 
@@ -141,6 +142,38 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         <ParallaxBackground cameraX={world.cameraX} />
 
         {world.chunks.map((chunk) =>
+          (chunk.windCorridors || []).map((w) => {
+            const screenX = w.worldX - world.cameraX;
+            if (screenX + w.width < -20 || screenX > SCREEN.width + 20) return null;
+            const isDown = w.forceY > 0;
+            return (
+              <View
+                key={w.id}
+                style={[
+                  styles.windCorridor,
+                  {
+                    left: screenX,
+                    width: w.width,
+                    backgroundColor: isDown ? "rgba(255,140,60,0.10)" : "rgba(60,220,255,0.10)",
+                    borderColor: isDown ? "rgba(255,140,60,0.35)" : "rgba(60,220,255,0.35)",
+                  },
+                ]}
+                pointerEvents="none"
+              >
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Text
+                    key={i}
+                    style={[styles.windArrow, { color: isDown ? "#ff8c3c" : "#3cdcff", top: `${18 + i * 28}%` }]}
+                  >
+                    {isDown ? "↓" : "↑"}
+                  </Text>
+                ))}
+              </View>
+            );
+          })
+        )}
+
+        {world.chunks.map((chunk) =>
           chunk.obstacles.map((o) => {
             if (o.hit) return null;
             const screenX = o.worldX - world.cameraX;
@@ -209,6 +242,19 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           thrusting={world.thrustHeld}
         />
       </View>
+
+      {/* Per-zone color grading: a very light, permanent full-screen wash
+          giving each zone its own visual identity (see DIFFICULTY.zones
+          tint in gameConfig.js). Rookie District has none on purpose. */}
+      {currentZone.tint && (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: currentZone.tint.color, opacity: currentZone.tint.opacity },
+          ]}
+          pointerEvents="none"
+        />
+      )}
 
       {/* Weather tint: subtle full-screen color wash while an event is active */}
       {world.weatherEvent && world.weatherEvent.id === "acid_rain" && (
@@ -281,7 +327,6 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
       <WeatherBanner
         eventId={world.weatherEvent ? world.weatherEvent.id : null}
-        label={world.weatherEvent ? WEATHER.events[world.weatherEvent.id].label : null}
         corrosion={world.weatherEvent && world.weatherEvent.id === "acid_rain" ? world.corrosion : null}
       />
 
@@ -343,5 +388,22 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: "#0d0a1a",
     borderColor: "#3a2f5c",
+  },
+  windCorridor: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderStyle: "dashed",
+  },
+  windArrow: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    textAlign: "center",
+    fontSize: 20,
+    fontWeight: "900",
+    opacity: 0.55,
   },
 });

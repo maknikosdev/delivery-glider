@@ -34,12 +34,62 @@ export const CARGO = {
 export const DIFFICULTY = {
   baseSpeed: 225,
   speedPerMeter: 0.055, // continuous ramp — noticeably faster over distance now
+  // Each zone carries a light full-screen color wash ("tint") purely for
+  // atmosphere — subtle enough to never affect readability, but enough
+  // that each zone has its own visual identity beyond "faster/harder".
+  // Rookie District has none on purpose, keeping the very first stretch
+  // visually clean for new players.
   zones: [
     { name: "Rookie District", minMeters: 0, speedMult: 1.0, movingObstacles: false, density: 0.5, extraHazards: 0 },
-    { name: "Transit Lanes", minMeters: 250, speedMult: 1.25, movingObstacles: true, density: 0.8, extraHazards: 1 },
-    { name: "Megacity Core", minMeters: 650, speedMult: 1.55, movingObstacles: true, density: 1.1, extraHazards: 2 },
-    { name: "Hyper-Speed Chaos", minMeters: 1300, speedMult: 1.95, movingObstacles: true, density: 1.4, extraHazards: 3 },
-    { name: "Blackout Sprawl", minMeters: 2200, speedMult: 2.3, movingObstacles: true, density: 1.7, extraHazards: 4 },
+    {
+      // From 60m onward, gentle moving obstacles are introduced (on top of
+      // the purely-static Rookie District start) and stay part of the game
+      // for the rest of the run — see the "earlyTraffic" chunk template in
+      // chunks.js. Speed barely increases here on purpose: the point of
+      // this zone is teaching movement-reading, not raw challenge yet.
+      name: "Rookie District — Traffic Begins",
+      minMeters: 60,
+      speedMult: 1.08,
+      movingObstacles: true,
+      density: 0.55,
+      extraHazards: 0,
+    },
+    {
+      name: "Transit Lanes",
+      minMeters: 250,
+      speedMult: 1.25,
+      movingObstacles: true,
+      density: 0.8,
+      extraHazards: 1,
+      tint: { color: "#ffb347", opacity: 0.04 },
+    },
+    {
+      name: "Megacity Core",
+      minMeters: 650,
+      speedMult: 1.55,
+      movingObstacles: true,
+      density: 1.1,
+      extraHazards: 2,
+      tint: { color: "#ff2ea8", opacity: 0.05 },
+    },
+    {
+      name: "Hyper-Speed Chaos",
+      minMeters: 1300,
+      speedMult: 1.95,
+      movingObstacles: true,
+      density: 1.4,
+      extraHazards: 3,
+      tint: { color: "#ff3b3b", opacity: 0.06 },
+    },
+    {
+      name: "Blackout Sprawl",
+      minMeters: 2200,
+      speedMult: 2.3,
+      movingObstacles: true,
+      density: 1.7,
+      extraHazards: 4,
+      tint: { color: "#8f00ff", opacity: 0.08 }, // cold purple — matches the zone's name/mood
+    },
     {
       name: "Metro Undercity",
       minMeters: 3200,
@@ -47,6 +97,7 @@ export const DIFFICULTY = {
       movingObstacles: true,
       density: 1.6,
       extraHazards: 3,
+      tint: { color: "#3a6bff", opacity: 0.09 }, // cool underground blue
       // Permanent tunnel walls narrow the playable vertical band to 56% of
       // the screen (tunnelTop..tunnelBottom, as a fraction of SCREEN.height)
       // instead of the usual full-height 0..100%. Touching either wall
@@ -56,6 +107,20 @@ export const DIFFICULTY = {
       tunnelBottom: 0.8,
     },
   ],
+  // Soft difficulty ramp for brand-new players: on the very first run
+  // (totalRuns === 0, from storage.js) the world speed is dampened by
+  // startMult and extra random hazard density by extraHazardsStartMult;
+  // both linearly ease back up to 100% by the time the player has
+  // completed `runsThreshold` runs. Zone thresholds (minMeters) are
+  // untouched — they naturally take longer to reach at lower speed, which
+  // gives new players extra runway in the easy zones without any special
+  // logic there. Skill and glider stats are also completely unaffected —
+  // this only softens the world, not the player.
+  softRamp: {
+    runsThreshold: 5,
+    startMult: 0.72,
+    extraHazardsStartMult: 0.45,
+  },
 };
 
 // Risk/reward combo system: consecutive deliveries without crashing build a
@@ -153,10 +218,12 @@ export const DOUBLE_TAP_MS = 300;
 // How long a swipe-down must be held to count as "swipe & hold" (vs a dive).
 export const HOLD_SKILL_MS = 400;
 
-// How long, in ms, gravity is suppressed right at the start of a run so the
-// player gets a beat of straight, level flight before falling begins. Only
-// applies once, at the very start of the run — not after a revive.
-export const START_GRACE_MS = 1500;
+// How long, in ms, gravity eases in (quadratic ease-in — a smooth
+// forward-descending curve, not an abrupt drop) right at the start of a
+// run, giving the player a gentle beat to get their finger on the screen
+// before full weight kicks in. Only applies once, at the very start of the
+// run — not after a revive.
+export const START_GRACE_MS = 1900;
 
 // Minimum distance a run must reach before it "counts" for the Mystery
 // Crate popup and for banking the credits earned that run — avoids
@@ -165,6 +232,12 @@ export const MIN_METERS_FOR_REWARDS = 170;
 
 // --- Weather / City Events --------------------------------------------
 // Roughly every 60-120s a random event fires, adding variety run-to-run.
+//
+// NOTE ON i18n: the `label` field on each event below is a Greek fallback
+// (and inline documentation), but the UI does NOT read it directly —
+// WeatherBanner and the floating start-of-event text both look up
+// t(`weather.${id}`) instead, so the displayed text follows the EL/EN
+// toggle. See src/i18n/translations.js.
 export const WEATHER = {
   minGapMs: 60000,
   maxGapMs: 120000,

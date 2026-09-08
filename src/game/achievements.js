@@ -3,6 +3,11 @@
 // pressure attached to them. Each achievement has a `check(runStats, save)`
 // function evaluated once when a run ends; `runStats` extends the normal
 // game-over result with extra per-run counters tracked in useGameLoop.js.
+//
+// NOTE ON i18n: `description` below is a Greek fallback / inline doc — the
+// UI reads t(`achievements.${a.id}`) instead (AchievementsScreen), so the
+// shown text follows the EL/EN toggle. `name` stays as-is in both languages
+// (already English). See src/i18n/translations.js.
 
 export const SKIN_COLORS = {
   century_club: "#ff9d2e",
@@ -137,7 +142,7 @@ export const ACHIEVEMENTS = [
   },
   {
     id: "zone_5",
-    name: "Zone 5",
+    name: "Blackout Sprawl",
     description: "Έφτασε στο Blackout Sprawl (2200m) σε ένα run.",
     check: (runStats) => runStats.meters >= 2200,
   },

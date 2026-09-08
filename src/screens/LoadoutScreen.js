@@ -4,9 +4,10 @@ import { COLORS, GADGETS, MAX_EQUIPPED_GADGETS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import MuteButton from "../components/MuteButton";
+import LanguageToggleButton from "../components/LanguageToggleButton";
 
 export default function LoadoutScreen({ onBack, onPlay }) {
-  const { save, buyGadget, toggleEquippedGadget } = useGame();
+  const { save, buyGadget, toggleEquippedGadget, t } = useGame();
   if (!save) return null;
 
   const equipped = save.equippedGadgets || [];
@@ -20,16 +21,17 @@ export default function LoadoutScreen({ onBack, onPlay }) {
             onBack();
           }}
         >
-          <Text style={styles.back}>‹ MENU</Text>
+          <Text style={styles.back}>{t("common.menuBack")}</Text>
         </Pressable>
         <Text style={styles.credits}>◆ {save.credits}</Text>
-        <MuteButton />
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <LanguageToggleButton style={{ marginRight: 8 }} />
+          <MuteButton />
+        </View>
       </View>
 
-      <Text style={styles.sectionTitle}>GADGETS</Text>
-      <Text style={styles.sectionHint}>
-        Αγόρασε gadgets με νομίσματα (μία φορά), μετά εξόπλισε έως {MAX_EQUIPPED_GADGETS} για κάθε run.
-      </Text>
+      <Text style={styles.sectionTitle}>{t("loadout.gadgets")}</Text>
+      <Text style={styles.sectionHint}>{t("loadout.gadgetsHint", { n: MAX_EQUIPPED_GADGETS })}</Text>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         {Object.values(GADGETS).map((g) => {
@@ -41,7 +43,7 @@ export default function LoadoutScreen({ onBack, onPlay }) {
             <View key={g.id} style={[styles.card, isEquipped && { borderColor: COLORS.neonYellow }]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{g.name}</Text>
-                <Text style={styles.desc}>{g.description}</Text>
+                <Text style={styles.desc}>{t(`gadgets.${g.id}`)}</Text>
               </View>
               {owned ? (
                 <Pressable
@@ -52,7 +54,7 @@ export default function LoadoutScreen({ onBack, onPlay }) {
                     toggleEquippedGadget(g.id, MAX_EQUIPPED_GADGETS);
                   }}
                 >
-                  <Text style={styles.buttonText}>{isEquipped ? "ΑΦΑΙΡΕΣΗ" : "ΕΞΟΠΛΙΣΜΟΣ"}</Text>
+                  <Text style={styles.buttonText}>{isEquipped ? t("loadout.remove") : t("loadout.equip")}</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -78,7 +80,9 @@ export default function LoadoutScreen({ onBack, onPlay }) {
           onPlay();
         }}
       >
-        <Text style={styles.playText}>ΞΕΚΙΝΑ ΠΑΡΑΔΟΣΗ ({equipped.length}/{MAX_EQUIPPED_GADGETS} gadgets)</Text>
+        <Text style={styles.playText}>
+          {t("loadout.startDelivery", { n: equipped.length, m: MAX_EQUIPPED_GADGETS })}
+        </Text>
       </Pressable>
     </View>
   );

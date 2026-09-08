@@ -1,5 +1,10 @@
 // Unlockable gliders — matches design doc ("The Heavy Lifter", "The Swift", etc.)
 //
+// NOTE ON i18n: the `description` field below is kept as a Greek fallback
+// (and inline documentation of what the glider does), but the UI does NOT
+// read it directly — GarageScreen looks up t(`gliders.${g.id}`) instead, so
+// the displayed text follows the EL/EN toggle. See src/i18n/translations.js.
+//
 // IMPORTANT: There is NO real-money purchase anywhere in this game. No
 // payment SDK, no billing library, no network call. "unlockCost" below is
 // spent using CREDITS earned purely by playing (successful deliveries +

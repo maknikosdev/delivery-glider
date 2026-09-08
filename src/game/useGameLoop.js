@@ -22,6 +22,7 @@ import {
 } from "../constants/gameConfig";
 import { pickChunk, instantiateChunk, getZoneIndex } from "./chunks";
 import AudioManager from "../audio/AudioManager";
+import { useGame } from "../store/GameContext";
 
 function buildRunResult(world) {
   return {
@@ -114,12 +115,13 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
   };
 }
 
-export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, onGameOver }) {
+export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, totalRuns = 0, onGameOver }) {
   const worldRef = useRef(makeInitialWorld(gliderConfig, gadgetIds, freeRevive));
   const [, forceRender] = useState(0);
   const rafRef = useRef(null);
   const lastTsRef = useRef(null);
   const runningRef = useRef(true);
+  const { t } = useGame();
 
   const skillDef = gliderConfig.skill;
   const isCoinMagnetBoost = skillDef && skillDef.id === "coin_magnet_boost";
@@ -128,6 +130,14 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
   const startingShieldCharges = isReinforcedHull
     ? SKILLS.reinforced_hull.baseShieldCharges + SKILL_UPGRADES.effects.reinforced_hull.extraChargePerLevel * level
     : 0;
+
+  // Soft difficulty ramp: eases world speed and extra-hazard density for a
+  // player's first few runs ever (see DIFFICULTY.softRamp in gameConfig.js),
+  // then gets out of the way completely once runsThreshold is reached.
+  const rampProgress = Math.min(1, totalRuns / DIFFICULTY.softRamp.runsThreshold);
+  const softSpeedMult = DIFFICULTY.softRamp.startMult + (1 - DIFFICULTY.softRamp.startMult) * rampProgress;
+  const softHazardMult =
+    DIFFICULTY.softRamp.extraHazardsStartMult + (1 - DIFFICULTY.softRamp.extraHazardsStartMult) * rampProgress;
 
   // Effective (post-upgrade) skill stats. Levels only ever improve things —
   // shorter cooldowns, bigger radius/duration/magnet — never a downside.
@@ -230,7 +240,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
   const ensureChunksAhead = useCallback((world) => {
     while (world.lastChunkEndX < world.cameraX + SCREEN.width * 3) {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
-      const extra = zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0);
+      const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult);
       const template = pickChunk(world.zoneIndex);
       const yBounds = zone.tunnelMode ? { min: zone.tunnelTop + 0.04, max: zone.tunnelBottom - 0.04 } : undefined;
       const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds);
@@ -238,7 +248,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       world.lastChunkEndX = chunk.endX;
     }
     world.chunks = world.chunks.filter((c) => c.endX > world.cameraX - SCREEN.width);
-  }, []);
+  }, [softHazardMult]);
 
   useEffect(() => {
     const w = makeInitialWorld(gliderConfig, gadgetIds, freeRevive);
@@ -256,8 +266,19 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
-      if (now - world.startedAt < START_GRACE_MS) return 0;
       const base = PHYSICS.gravityBase + world.packages * weightFactor;
+      const elapsed = now - world.startedAt;
+      if (elapsed < START_GRACE_MS) {
+        // Start-of-run grace period: instead of floating flat (0 gravity)
+        // and then snapping abruptly to full weight, gravity eases in along
+        // a gentle forward-descending curve (quadratic ease-in) — the
+        // glider drifts down smoothly, giving the player time to get their
+        // finger on the screen before real weight kicks in, without any
+        // jarring "instant drop" moment at the end of the window.
+        const progress = Math.max(0, Math.min(1, elapsed / START_GRACE_MS));
+        const eased = progress * progress;
+        return (now < world.gravInvertUntil ? -base : base) * eased;
+      }
       return now < world.gravInvertUntil ? -base : base;
     },
     [weightFactor]
@@ -270,9 +291,9 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       const now = Date.now();
       const overclock = now < world.overclockUntil ? POWERUP.types.overclock.speedMult : 1;
       const turboDash = now < world.turboDashUntil ? SKILLS.turbo_dash.speedMult : 1;
-      return DIFFICULTY.baseSpeed * zone.speedMult * ramp * startSpeedMult * overclock * turboDash;
+      return DIFFICULTY.baseSpeed * zone.speedMult * ramp * startSpeedMult * overclock * turboDash * softSpeedMult;
     },
-    [startSpeedMult]
+    [startSpeedMult, softSpeedMult]
   );
 
   const addFloatingText = useCallback((world, text, worldX, y, kind = "score") => {
@@ -317,7 +338,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
         world.status = "ejected";
         world.invincibleUntil = Date.now() + 60000; // ghost through everything during the ejector run
         world.ejectorTargetMeters = world.score + 100;
-        addFloatingText(world, "EJECTED! Αυτόματη πτήση 100m...", world.cameraX + RIDER.screenX, world.riderY - 40, "banner");
+        addFloatingText(world, t("floating.ejected"), world.cameraX + RIDER.screenX, world.riderY - 40, "banner");
         runningRef.current = true;
         lastTsRef.current = null;
         return;
@@ -325,7 +346,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
 
       finalizeGameOver(world, result);
     },
-    [finalizeGameOver, addFloatingText]
+    [finalizeGameOver, addFloatingText, t]
   );
 
   const tryDeliver = useCallback(
@@ -521,10 +542,10 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       } else {
         world.weatherEvent = { id, until: now + def.durationMs };
       }
-      addFloatingText(world, def.label, world.cameraX + RIDER.screenX, SCREEN.height * 0.2, "banner");
+      addFloatingText(world, t(`weather.${id}`), world.cameraX + RIDER.screenX, SCREEN.height * 0.2, "banner");
       world.nextWeatherAt = now + def.durationMs + WEATHER.minGapMs + Math.random() * (WEATHER.maxGapMs - WEATHER.minGapMs);
     },
-    [addFloatingText]
+    [addFloatingText, t]
   );
 
   const step = useCallback(
@@ -641,6 +662,25 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, o
       if (world.thrustHeld) {
         g += controlsInverted ? -PHYSICS.thrustAccel : PHYSICS.thrustAccel;
       }
+
+      // Wind Corridors: permanent, fixed-position air currents baked into
+      // specific chunk templates (see chunks.js) — NOT a random weather
+      // event. Adds their vertical force whenever the rider's world-space
+      // X sits inside the corridor's span, giving that stretch of city a
+      // bit of personality (an updraft canyon, a downdraft under a tower...).
+      const riderWorldXForWind = world.cameraX + RIDER.screenX;
+      for (const chunk of world.chunks) {
+        let hit = false;
+        for (const w of chunk.windCorridors || []) {
+          if (riderWorldXForWind >= w.worldX && riderWorldXForWind <= w.worldX + w.width) {
+            g += w.forceY;
+            hit = true;
+            break;
+          }
+        }
+        if (hit) break;
+      }
+
       world.velocityY += g * dt;
       world.velocityY = Math.max(PHYSICS.maxRiseSpeed, Math.min(PHYSICS.maxFallSpeed, world.velocityY));
       world.riderY += world.velocityY * dt;

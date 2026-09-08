@@ -5,6 +5,7 @@ import { GLIDERS } from "../game/gliders";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import MuteButton from "../components/MuteButton";
+import LanguageToggleButton from "../components/LanguageToggleButton";
 
 function skillUpgradeCost(level) {
   return Math.round(SKILL_UPGRADES.baseCost * Math.pow(SKILL_UPGRADES.costGrowth, level));
@@ -14,7 +15,7 @@ function skillUpgradeCost(level) {
 // player earns purely by playing (successful deliveries + drone refuels).
 // Nothing here calls a payment/billing API.
 export default function GarageScreen({ onBack }) {
-  const { save, buyGlider, selectGlider, buySkillLevel, selectSkin } = useGame();
+  const { save, buyGlider, selectGlider, buySkillLevel, selectSkin, t } = useGame();
   if (!save) return null;
 
   const unlockedSkins = save.unlockedSkins || [];
@@ -28,17 +29,18 @@ export default function GarageScreen({ onBack }) {
             onBack();
           }}
         >
-          <Text style={styles.back}>‹ MENU</Text>
+          <Text style={styles.back}>{t("common.menuBack")}</Text>
         </Pressable>
         <Text style={styles.credits}>◆ {save.credits} pts</Text>
-        <MuteButton />
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <LanguageToggleButton style={{ marginRight: 8 }} />
+          <MuteButton />
+        </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-        <Text style={styles.sectionTitle}>GLIDERS</Text>
-        <Text style={styles.sectionHint}>
-          Ξεκλείδωσε νέα gliders μαζεύοντας πόντους (◆) από παραδόσεις μέσα στο παιχνίδι. Καμία αγορά με πραγματικά χρήματα.
-        </Text>
+        <Text style={styles.sectionTitle}>{t("garage.gliders")}</Text>
+        <Text style={styles.sectionHint}>{t("garage.glidersHint")}</Text>
 
         {GLIDERS.map((g) => {
           const owned = save.ownedGliders.includes(g.id);
@@ -58,13 +60,15 @@ export default function GarageScreen({ onBack }) {
                   {g.skill && (
                     <View style={[styles.skillBadge, g.skill.type === "active" ? styles.skillActive : styles.skillPassive]}>
                       <Text style={styles.skillBadgeText}>
-                        {g.skill.type === "active" ? "⚡ ACTIVE" : "✦ PASSIVE"} · {g.skill.name}
+                        {g.skill.type === "active" ? `⚡ ${t("garage.active")}` : `✦ ${t("garage.passive")}`} · {g.skill.name}
                         {g.skill && ` · Lv.${skillLevel}/${SKILL_UPGRADES.maxLevel}`}
                       </Text>
                     </View>
                   )}
-                  <Text style={styles.gliderDesc}>{g.description}</Text>
-                  <Text style={styles.gliderStat}>Χωρητικότητα: {g.capacity}</Text>
+                  <Text style={styles.gliderDesc}>{t(`gliders.${g.id}`)}</Text>
+                  <Text style={styles.gliderStat}>
+                    {t("garage.capacity")}: {g.capacity}
+                  </Text>
                 </View>
 
                 {owned ? (
@@ -76,7 +80,7 @@ export default function GarageScreen({ onBack }) {
                       selectGlider(g.id);
                     }}
                   >
-                    <Text style={styles.smallButtonText}>{selected ? "ΕΝΕΡΓΟ" : "ΕΠΙΛΟΓΗ"}</Text>
+                    <Text style={styles.smallButtonText}>{selected ? t("garage.selected") : t("garage.select")}</Text>
                   </Pressable>
                 ) : (
                   <Pressable
@@ -111,7 +115,7 @@ export default function GarageScreen({ onBack }) {
                     }}
                   >
                     <Text style={styles.upgradeButtonText}>
-                      {skillMaxed ? "MAX LEVEL" : `Upgrade Skill · ◆ ${upgradeCost}`}
+                      {skillMaxed ? t("garage.maxLevel") : `${t("garage.upgradeSkill")} · ◆ ${upgradeCost}`}
                     </Text>
                   </Pressable>
                 </View>
@@ -120,10 +124,8 @@ export default function GarageScreen({ onBack }) {
           );
         })}
 
-        <Text style={styles.sectionTitle}>SKINS</Text>
-        <Text style={styles.sectionHint}>
-          Χρώματα που ξεκλειδώνεις μέσα από Achievements — εφαρμόζονται πάνω στο επιλεγμένο glider σου.
-        </Text>
+        <Text style={styles.sectionTitle}>{t("garage.skins")}</Text>
+        <Text style={styles.sectionHint}>{t("garage.skinsHint")}</Text>
         <View style={styles.skinRow}>
           <Pressable
             onPress={() => {
@@ -132,7 +134,7 @@ export default function GarageScreen({ onBack }) {
             }}
             style={[styles.skinSwatch, styles.skinDefault, !save.selectedSkin && styles.skinSelected]}
           >
-            <Text style={styles.skinDefaultText}>Default</Text>
+            <Text style={styles.skinDefaultText}>{t("garage.default")}</Text>
           </Pressable>
           {unlockedSkins.map((color) => (
             <Pressable
@@ -144,9 +146,7 @@ export default function GarageScreen({ onBack }) {
               style={[styles.skinSwatch, { backgroundColor: color }, save.selectedSkin === color && styles.skinSelected]}
             />
           ))}
-          {unlockedSkins.length === 0 && (
-            <Text style={styles.noSkinsText}>Δεν έχεις ξεκλειδώσει κανένα skin ακόμα — παίξε για Achievements!</Text>
-          )}
+          {unlockedSkins.length === 0 && <Text style={styles.noSkinsText}>{t("garage.noSkins")}</Text>}
         </View>
       </ScrollView>
     </View>

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { COLORS, MYSTERY_CRATE } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
 function rollReward() {
@@ -18,13 +19,14 @@ function rollReward() {
   return { type: "temp_skin", color: colors[Math.floor(Math.random() * colors.length)] };
 }
 
-function rewardLabel(reward) {
-  if (reward.type === "coins") return `◆ ${reward.amount} νομίσματα!`;
-  if (reward.type === "revive_token") return "🪙 Δωρεάν Revive στο επόμενο run!";
-  return "🎨 Προσωρινό skin χρώμα για το επόμενο run!";
+function rewardLabel(reward, t) {
+  if (reward.type === "coins") return t("mysteryCrate.rewardCoins", { n: reward.amount });
+  if (reward.type === "revive_token") return t("mysteryCrate.rewardRevive");
+  return t("mysteryCrate.rewardSkin");
 }
 
 export default function MysteryCrateScreen({ onDone }) {
+  const { t } = useGame();
   const [openedIndex, setOpenedIndex] = useState(null);
   const [reward, setReward] = useState(null);
 
@@ -42,8 +44,8 @@ export default function MysteryCrateScreen({ onDone }) {
   return (
     <View style={styles.overlay}>
       <View style={styles.panel}>
-        <Text style={styles.title}>MYSTERY CRATE</Text>
-        <Text style={styles.subtitle}>Διάλεξε ένα δωρεάν κουτί</Text>
+        <Text style={styles.title}>{t("mysteryCrate.title")}</Text>
+        <Text style={styles.subtitle}>{t("mysteryCrate.subtitle")}</Text>
 
         <View style={styles.crateRow}>
           {[0, 1, 2].map((i) => {
@@ -62,7 +64,7 @@ export default function MysteryCrateScreen({ onDone }) {
           })}
         </View>
 
-        {reward && <Text style={styles.rewardText}>{rewardLabel(reward)}</Text>}
+        {reward && <Text style={styles.rewardText}>{rewardLabel(reward, t)}</Text>}
 
         {reward && (
           <Pressable
@@ -72,7 +74,7 @@ export default function MysteryCrateScreen({ onDone }) {
               onDone(reward);
             }}
           >
-            <Text style={styles.continueText}>ΣΥΝΕΧΕΙΑ</Text>
+            <Text style={styles.continueText}>{t("mysteryCrate.continue")}</Text>
           </Pressable>
         )}
       </View>

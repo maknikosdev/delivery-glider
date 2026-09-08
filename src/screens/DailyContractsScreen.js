@@ -6,7 +6,7 @@ import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
 export default function DailyContractsScreen({ onBack }) {
-  const { save } = useGame();
+  const { save, t } = useGame();
   if (!save) return null;
 
   const today = getTodayKey();
@@ -24,13 +24,13 @@ export default function DailyContractsScreen({ onBack }) {
             onBack();
           }}
         >
-          <Text style={styles.back}>‹ MENU</Text>
+          <Text style={styles.back}>{t("common.menuBack")}</Text>
         </Pressable>
-        <Text style={styles.title}>DAILY CONTRACTS</Text>
+        <Text style={styles.title}>{t("contractsScreen.title")}</Text>
         <View style={{ width: 50 }} />
       </View>
 
-      <Text style={styles.hint}>Ανανεώνονται αυτόματα κάθε μέρα. 3 τυχαία από δεξαμενή 12.</Text>
+      <Text style={styles.hint}>{t("contractsScreen.hint")}</Text>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         {ids.map((id) => {
@@ -48,7 +48,7 @@ export default function DailyContractsScreen({ onBack }) {
                 </Text>
                 <Text style={styles.reward}>◆ {c.reward}</Text>
               </View>
-              <Text style={styles.desc}>{c.description}</Text>
+              <Text style={styles.desc}>{t(`contracts.${c.id}`)}</Text>
               <View style={styles.progressTrack}>
                 <View
                   style={[

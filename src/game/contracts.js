@@ -3,6 +3,11 @@
 // 12. Regenerated automatically the first time the app is opened on a new
 // day (device clock). Rewards are in-game points only, granted the moment
 // a run's stats satisfy the target — same pattern as Achievements.
+//
+// NOTE ON i18n: `description` below is a Greek fallback / inline doc — the
+// UI reads t(`contracts.${c.id}`) instead (DailyContractsScreen), so the
+// shown text follows the EL/EN toggle. `name` stays as-is in both languages
+// (already English). See src/i18n/translations.js.
 
 export const CONTRACT_POOL = [
   {

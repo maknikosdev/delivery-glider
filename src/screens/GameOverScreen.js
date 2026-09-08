@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { COLORS, MIN_METERS_FOR_REWARDS } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
 export default function GameOverScreen({
@@ -14,6 +15,7 @@ export default function GameOverScreen({
   onRetry,
   onMenu,
 }) {
+  const { t } = useGame();
   const qualified = result.meters >= MIN_METERS_FOR_REWARDS;
   const hasNewAchievements = newAchievements && newAchievements.length > 0;
   const hasNewContracts = newContracts && newContracts.length > 0;
@@ -31,7 +33,7 @@ export default function GameOverScreen({
       const uri = await captureRef(shareRef, { format: "png", quality: 0.95 });
       await Sharing.shareAsync(uri, {
         mimeType: "image/png",
-        dialogTitle: "The Delivery Glider — Το σκορ μου",
+        dialogTitle: "The Delivery Glider",
       });
     } catch (e) {
       // Sharing can fail/be cancelled by the user — fail silently, nothing
@@ -44,31 +46,29 @@ export default function GameOverScreen({
   return (
     <View style={styles.overlay}>
       <View style={styles.panel} ref={shareRef} collapsable={false}>
-        <Text style={styles.title}>CRASH!</Text>
-        {isNewHighScore && <Text style={styles.newRecord}>★ ΝΕΟ ΡΕΚΟΡ ★</Text>}
+        <Text style={styles.title}>{t("gameover.title")}</Text>
+        {isNewHighScore && <Text style={styles.newRecord}>{t("gameover.newRecord")}</Text>}
 
         <View style={styles.row}>
-          <Text style={styles.label}>Απόσταση</Text>
+          <Text style={styles.label}>{t("gameover.distance")}</Text>
           <Text style={styles.value}>{Math.floor(result.meters)}m</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Παραδόσεις</Text>
+          <Text style={styles.label}>{t("gameover.deliveries")}</Text>
           <Text style={styles.value}>{result.deliveries}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>Credits</Text>
+          <Text style={styles.label}>{t("gameover.credits")}</Text>
           <Text style={[styles.value, { color: COLORS.neonYellow }]}>◆ {result.creditsEarned}</Text>
         </View>
         {!qualified && (
-          <Text style={styles.notCounted}>
-            Χρειάζεσαι τουλάχιστον {MIN_METERS_FOR_REWARDS}m για να μετρήσουν τα credits.
-          </Text>
+          <Text style={styles.notCounted}>{t("gameover.notCounted", { n: MIN_METERS_FOR_REWARDS })}</Text>
         )}
 
         {hasNewMilestones && (
           <View style={[styles.achievementsBox, { borderColor: COLORS.neonPink, backgroundColor: "rgba(255,46,168,0.08)" }]}>
             <Text style={[styles.achievementsTitle, { color: COLORS.neonPink }]}>
-              🎁 FREE GLIDER UNLOCKED!
+              {t("gameover.freeGliderUnlocked")}
             </Text>
             {newMilestones.map((m) => (
               <Text key={m.id} style={[styles.achievementName, { color: COLORS.neonPink }]}>
@@ -80,7 +80,9 @@ export default function GameOverScreen({
 
         {hasNewAchievements && (
           <View style={styles.achievementsBox}>
-            <Text style={styles.achievementsTitle}>🏆 ΝΕΟ ACHIEVEMENT{newAchievements.length > 1 ? "S" : ""}!</Text>
+            <Text style={styles.achievementsTitle}>
+              {t("gameover.newAchievement", { s: newAchievements.length > 1 ? "S" : "" })}
+            </Text>
             {newAchievements.map((a) => (
               <Text key={a.id} style={styles.achievementName}>
                 {a.name}
@@ -92,7 +94,7 @@ export default function GameOverScreen({
         {hasNewContracts && (
           <View style={[styles.achievementsBox, { borderColor: COLORS.neonYellow, backgroundColor: "rgba(255,225,77,0.08)" }]}>
             <Text style={[styles.achievementsTitle, { color: COLORS.neonYellow }]}>
-              📋 DAILY CONTRACT{newContracts.length > 1 ? "S" : ""} ΟΛΟΚΛΗΡΩΘΗΚΕ!
+              {t("gameover.dailyContractCompleted", { s: newContracts.length > 1 ? "S" : "" })}
             </Text>
             {newContracts.map((c) => (
               <Text key={c.id} style={[styles.achievementName, { color: COLORS.neonYellow }]}>
@@ -110,7 +112,7 @@ export default function GameOverScreen({
           disabled={sharing}
         >
           <Text style={[styles.buttonText, { color: COLORS.neonPink }]}>
-            {sharing ? "..." : "📤 ΚΟΙΝΟΠΟΙΗΣΗ"}
+            {sharing ? t("gameover.sharing") : t("gameover.share")}
           </Text>
         </Pressable>
         <Pressable
@@ -120,7 +122,7 @@ export default function GameOverScreen({
             onRetry();
           }}
         >
-          <Text style={styles.buttonText}>ΝΕΟ RUN</Text>
+          <Text style={styles.buttonText}>{t("gameover.newRun")}</Text>
         </Pressable>
         <Pressable
           style={[styles.button, styles.menuButton]}
@@ -129,7 +131,7 @@ export default function GameOverScreen({
             onMenu();
           }}
         >
-          <Text style={[styles.buttonText, { color: COLORS.textDim }]}>MENU</Text>
+          <Text style={[styles.buttonText, { color: COLORS.textDim }]}>{t("gameover.menu")}</Text>
         </Pressable>
       </View>
     </View>

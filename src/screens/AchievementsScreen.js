@@ -6,7 +6,7 @@ import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
 export default function AchievementsScreen({ onBack }) {
-  const { save } = useGame();
+  const { save, t } = useGame();
   if (!save) return null;
 
   const unlocked = new Set(save.unlockedAchievements || []);
@@ -21,7 +21,7 @@ export default function AchievementsScreen({ onBack }) {
             onBack();
           }}
         >
-          <Text style={styles.back}>‹ MENU</Text>
+          <Text style={styles.back}>{t("common.menuBack")}</Text>
         </Pressable>
         <Text style={styles.progress}>
           {unlockedCount}/{ACHIEVEMENTS.length}
@@ -29,8 +29,8 @@ export default function AchievementsScreen({ onBack }) {
         <View style={{ width: 50 }} />
       </View>
 
-      <Text style={styles.title}>ACHIEVEMENTS</Text>
-      <Text style={styles.hint}>Κάθε ένα ξεκλειδώνει ένα cosmetic skin χρώμα — καθαρά συλλεκτικό.</Text>
+      <Text style={styles.title}>{t("achievementsScreen.title")}</Text>
+      <Text style={styles.hint}>{t("achievementsScreen.hint")}</Text>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         {ACHIEVEMENTS.map((a) => {
@@ -43,7 +43,7 @@ export default function AchievementsScreen({ onBack }) {
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.name, done && { color: skin }]}>{a.name}</Text>
-                <Text style={styles.desc}>{a.description}</Text>
+                <Text style={styles.desc}>{t(`achievements.${a.id}`)}</Text>
               </View>
             </View>
           );

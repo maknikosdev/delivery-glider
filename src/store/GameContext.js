@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from "./storage";
 import AudioManager from "../audio/AudioManager";
+import { getTranslator } from "../i18n/i18n";
 
 const GameContext = createContext(null);
 
@@ -28,6 +29,25 @@ export function GameProvider({ children }) {
       const next = { ...prev, muted: !prev.muted };
       AudioManager.setMuted(next.muted);
       saveSave({ muted: next.muted });
+      return next;
+    });
+  }, []);
+
+  // Persists the chosen UI language ("el" | "en") and swaps it in
+  // immediately for every screen via `t()` below — no restart needed.
+  const setLanguage = useCallback(async (lang) => {
+    setSave((prev) => {
+      const next = { ...prev, language: lang };
+      saveSave({ language: lang });
+      return next;
+    });
+  }, []);
+
+  const toggleLanguage = useCallback(() => {
+    setSave((prev) => {
+      const nextLang = prev.language === "en" ? "el" : "en";
+      const next = { ...prev, language: nextLang };
+      saveSave({ language: nextLang });
       return next;
     });
   }, []);
@@ -176,11 +196,21 @@ export function GameProvider({ children }) {
     return newlyCompleted;
   }, []);
 
+  // Bound once per language change (not per render) so components using
+  // `t()` in dependency arrays don't re-run effects on every unrelated
+  // context update.
+  const language = save?.language || "el";
+  const t = useMemo(() => getTranslator(language), [language]);
+
   const value = {
     save,
     loading,
     lastRun,
     toggleMute,
+    language,
+    setLanguage,
+    toggleLanguage,
+    t,
     finishRun,
     buyGlider,
     selectGlider,

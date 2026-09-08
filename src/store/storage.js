@@ -15,6 +15,7 @@ const DEFAULT_SAVE = {
   ownedGliders: ["starter"],
   selectedGlider: "starter",
   muted: false,
+  language: "el", // "el" | "en" — toggled from the Menu screen, next to Mute
   totalRuns: 0,
   ownedGadgets: [],
   equippedGadgets: [],

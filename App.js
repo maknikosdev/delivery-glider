@@ -197,6 +197,7 @@ function Root() {
           gadgetIds={save.equippedGadgets || []}
           freeRevive={runBonuses.reviveToken}
           skillLevel={skillLevel}
+          totalRuns={save.totalRuns || 0}
           onGameOver={handleGameOver}
         />
       )}

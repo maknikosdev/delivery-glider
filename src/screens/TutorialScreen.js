@@ -1,40 +1,15 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { COLORS } from "../constants/gameConfig";
+import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 
-const STEPS = [
-  {
-    icon: "👆",
-    title: "Κράτα πατημένο",
-    body: "Κράτα το δάχτυλό σου στην οθόνη για να ανέβει το glider σου. Άσε το για να πέσει — όσα περισσότερα δέματα κουβαλάς, τόσο πιο γρήγορα πέφτεις.",
-  },
-  {
-    icon: "➡️",
-    title: "Swipe δεξιά",
-    body: "Όταν βρίσκεσαι κοντά σε φωτισμένο μπαλκόνι, κάνε γρήγορο swipe δεξιά για να παραδώσεις το δέμα σου.",
-  },
-  {
-    icon: "⬇️",
-    title: "Swipe κάτω",
-    body: "Κάνε γρήγορο swipe κάτω για μια απότομη βουτιά — χρήσιμο για να αποφύγεις εμπόδια από πάνω σου.",
-  },
-  {
-    icon: "⚡",
-    title: "Ειδικές ικανότητες",
-    body: "Κάποια gliders έχουν skill: διπλό-tap ή swipe-κάτω-και-κράτα (ανάλογα με το glider) για να το ενεργοποιήσεις. Δες λεπτομέρειες στο Garage.",
-  },
-  {
-    icon: "◆",
-    title: "Νομίσματα & Revive",
-    body: "Μάζεψε νομίσματα πετώντας από πάνω τους. Αν τρακάρεις και έχεις αρκετά, μπορείς να συνεχίσεις από εκεί που έμεινες μία φορά ανά run.",
-  },
-];
-
 export default function TutorialScreen({ onDone }) {
+  const { t } = useGame();
+  const steps = t("tutorial.steps");
   const [step, setStep] = useState(0);
-  const isLast = step === STEPS.length - 1;
-  const current = STEPS[step];
+  const isLast = step === steps.length - 1;
+  const current = steps[step];
 
   const advance = () => {
     AudioManager.play("click");
@@ -54,7 +29,7 @@ export default function TutorialScreen({ onDone }) {
           onDone();
         }}
       >
-        <Text style={styles.skipText}>ΠΑΡΑΛΕΙΨΗ</Text>
+        <Text style={styles.skipText}>{t("tutorial.skip")}</Text>
       </Pressable>
 
       <View style={styles.card}>
@@ -64,13 +39,13 @@ export default function TutorialScreen({ onDone }) {
       </View>
 
       <View style={styles.dots}>
-        {STEPS.map((_, i) => (
+        {steps.map((_, i) => (
           <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
         ))}
       </View>
 
       <Pressable style={styles.nextButton} onPress={advance}>
-        <Text style={styles.nextText}>{isLast ? "ΠΑΙΞΕ!" : "ΕΠΟΜΕΝΟ"}</Text>
+        <Text style={styles.nextText}>{isLast ? t("tutorial.play") : t("tutorial.next")}</Text>
       </Pressable>
     </View>
   );
