@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { View, StyleSheet, StatusBar, BackHandler } from "react-native";
+import { View, Image, StyleSheet, StatusBar, BackHandler } from "react-native";
+import * as SplashScreen from "expo-splash-screen";
 import { GameProvider, useGame } from "./src/store/GameContext";
 import MenuScreen from "./src/screens/MenuScreen";
 import LoadoutScreen from "./src/screens/LoadoutScreen";
@@ -15,6 +16,35 @@ import { GLIDERS, gliderById } from "./src/game/gliders";
 import { evaluateNewAchievements, SKIN_COLORS, achievementById } from "./src/game/achievements";
 import { contractById } from "./src/game/contracts";
 import { COLORS, MIN_METERS_FOR_REWARDS } from "./src/constants/gameConfig";
+
+// Keeps the native splash screen (the full, uncropped logo — see the
+// expo-splash-screen plugin config in app.json) visible past the moment
+// React/JS would normally be ready, so we can enforce our own minimum
+// display time below instead of letting it vanish almost instantly.
+// Must be called at module scope, before anything renders.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Safe to ignore — this only fails if it was already called/resolved,
+  // which just means the splash is already being handled.
+});
+
+// The logo must stay on screen for at least this long, regardless of how
+// fast the save file finishes loading from AsyncStorage.
+const MIN_SPLASH_MS = 1000;
+
+// Android 12+'s native SplashScreen API constrains the image to a small,
+// icon-sized area (~240dp max) no matter what resizeMode is configured —
+// that's an OS-level restriction, not something app.json can override. So
+// as soon as JS is ready we hide the (small, OS-constrained) native splash
+// immediately and hand off to this full-size overlay instead, which is a
+// normal React Native view with no such size limit — the logo can be shown
+// as large as we want, for exactly as long as we want.
+function SplashOverlay() {
+  return (
+    <View style={styles.splashOverlay}>
+      <Image source={require("./assets/splash.png")} style={styles.splashImage} resizeMode="contain" />
+    </View>
+  );
+}
 
 function Root() {
   const {
@@ -37,6 +67,26 @@ function Root() {
   // Where the Tutorial screen should send the player once they finish it —
   // straight into a run (first launch) or back to Menu (re-opened manually).
   const [tutorialReturnTo, setTutorialReturnTo] = useState("loadout");
+
+  // Enforces the minimum 1-second splash display, independent of how fast
+  // (or slow) the save file loads. The splash only actually hides once
+  // BOTH the save has loaded AND this timer has elapsed.
+  const [minSplashElapsed, setMinSplashElapsed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setMinSplashElapsed(true), MIN_SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const appReady = !loading && !!save && minSplashElapsed;
+
+  // Hide the native (small, OS-constrained) splash the moment JS has
+  // mounted — don't wait for appReady. Our own full-size SplashOverlay
+  // below takes over immediately and stays visible for the rest of the
+  // minimum display time, so the logo reads as large the whole time
+  // instead of only for an instant before the OS splash disappears.
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   const baseGlider = useMemo(() => {
     if (!save) return GLIDERS[0];
@@ -166,8 +216,8 @@ function Root() {
     return () => sub.remove();
   }, [screen, handleTutorialDone]);
 
-  if (loading || !save) {
-    return <View style={styles.loading} />;
+  if (!appReady) {
+    return <SplashOverlay />;
   }
 
   return (
@@ -237,5 +287,11 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgDeep },
-  loading: { flex: 1, backgroundColor: COLORS.bgDeep },
+  splashOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.bgDeep,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  splashImage: { width: "82%", height: "82%" },
 });

@@ -9,7 +9,7 @@
     "backgroundColor": "#05030d",
     "splash": {
       "image": "./assets/splash.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#05030d"
     },
     "assetBundlePatterns": [
@@ -34,6 +34,14 @@
             "compileSdkVersion": 36,
             "targetSdkVersion": 36
           }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#05030d"
         }
       ]
     ],
