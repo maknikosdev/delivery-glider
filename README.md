@@ -50,7 +50,8 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - Neo-Coins/Data-Cubes διάσπαρτα στην πίστα σε "coin trails", μαζεύονται πετώντας από πάνω τους
 - "Second Chance" Revive: στο πρώτο crash, αν έχεις ≥100 νομίσματα, μπορείς να συνεχίσεις από το ίδιο σημείο με 3" ατρωσία — αυστηρά μία φορά ανά run
 - 100% offline τοπική αποθήκευση (AsyncStorage) — high score, credits, owned gliders, επιλεγμένο glider, mute, γλώσσα
-- Neon/cyberpunk vector γραφικά (react-native-svg) — parallax background, glider, εμπόδια, μπαλκόνια, floating score/combo text
+- Neon/cyberpunk vector γραφικά (react-native-svg) — glider, εμπόδια, μπαλκόνια, floating score/combo text
+- Πλούσιο, πολυεπίπεδο parallax background: starfield με twinkle, μακρινό "megastructure" layer, μακρινή εναέρια κίνηση (ιπτάμενα ταξί με light trails), fog/haze bands, περιστασιακό searchlight sweep, αιωρούμενα holographic ads, ambient dust particles — όλα καθαρά διακοσμητικά, μηδενική επίδραση σε collision/δυσκολία
 - Background μουσική (looping, χαμηλότερη ένταση από τα SFX) + πλήρως συνθετικά ηχητικά εφέ — δείτε παρακάτω
 - Πλήρες Language Toggle (EL/EN) σε όλη την εφαρμογή — menu, tutorial, game over, stats, garage, loadout, daily contracts, achievements, mystery crate, revive prompt, weather banners, όλες οι περιγραφές gliders/gadgets/achievements/contracts. Τα κύρια ονόματα (π.χ. "Riftwalker", "Metro Undercity", "Century Club") παραμένουν ίδια και στις δύο γλώσσες σκόπιμα, ως proper nouns
 - App icon / adaptive icon / splash ρυθμισμένα
@@ -251,7 +252,8 @@ flying taxis, and police drones, managing your glider's weight as you go.
 - Neo-Coins/Data-Cubes scattered along the track in "coin trails", collected by flying over them
 - "Second Chance" Revive: on your first crash, if you have ≥100 coins, you can continue from the exact same spot with 3s of invincibility — strictly once per run
 - 100% offline local storage (AsyncStorage) — high score, credits, owned gliders, selected glider, mute preference, language
-- Neon/cyberpunk vector graphics (react-native-svg) — parallax background, glider, obstacles, balconies, floating score/combo text
+- Neon/cyberpunk vector graphics (react-native-svg) — glider, obstacles, balconies, floating score/combo text
+- Rich, multi-layer parallax background: a twinkling starfield, a distant "megastructure" silhouette layer, faraway background air traffic (tiny flying taxis with light trails), fog/haze bands, an occasional sweeping searchlight, floating holographic ads, and ambient dust particles — all purely decorative, zero effect on collisions/difficulty
 - A looping background track (quieter than the SFX) plus fully synthesized sound effects — see below
 - A full EL/EN language toggle across the entire app — menu, tutorial, game over, stats, garage, loadout, daily contracts, achievements, mystery crate, revive prompt, weather banners, every glider/gadget/achievement/contract description. Proper nouns (e.g. "Riftwalker", "Metro Undercity", "Century Club") intentionally stay the same in both languages
 - App icon / adaptive icon / splash screen configured
