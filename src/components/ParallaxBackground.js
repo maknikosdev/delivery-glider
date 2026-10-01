@@ -1,23 +1,25 @@
-import React, { useMemo } from "react";
+import React, { useMemo, memo } from "react";
 import { View, StyleSheet } from "react-native";
-import Svg, { Rect, Line, Circle, Polygon } from "react-native-svg";
+import Svg, { Rect, Line, Circle, Polygon, G } from "react-native-svg";
 import { SCREEN, COLORS } from "../constants/gameConfig";
 
 // Layered, fully decorative sky-filling background. Every element here is
 // purely cosmetic — none of it is read by useGameLoop.js, so none of it can
 // ever affect collisions, gaps, or difficulty.
 //
-// PERFORMANCE NOTE: everything below renders into a SINGLE <Svg> root.
-// react-native-svg's <Svg> is a real native view with its own bridge/shadow
-// -tree overhead — mounting several of them every animation frame (this
-// component re-renders on every game-loop tick, ~60x/sec) is what caused a
-// visible stutter in an earlier version of this file, which used 9 separate
-// <Svg> roots (one per decorative layer). Consolidating to one root with
-// all layers as ordered children fixes that, since SVG draws its children
-// in document order — the z-ordering below (deepest/furthest first) is
-// exactly equivalent to the old separately-mounted layers, just cheaper.
-// Only the fog bands stay as plain <View> overlays (never were SVG, and
-// plain Views are far cheaper than an extra Svg root).
+// PERFORMANCE: this component re-renders on every game-loop tick (~60x/sec).
+// An earlier version mounted 9 separate <Svg> roots (fixed: now just 1 —
+// react-native-svg's <Svg> is a real native view with bridge overhead, and
+// multiple roots re-mounting every frame was the main cost). This version
+// goes a step further: layers that barely move on screen frame-to-frame
+// (stars, the far megastructure silhouette, the far skyline, the holo-ads)
+// are split into their own React.memo'd sub-components, keyed off their
+// position ROUNDED to a coarse step. Rounding means React sees "same
+// props" on most frames for these slow layers and skips re-rendering them
+// entirely — no new elements created, no diff, no bridge traffic — until
+// they've actually moved far enough to matter visually. Fast/foreground
+// layers (near + mid buildings, traffic, dust, the searchlight) still
+// recompute every frame since their motion needs to stay fluid.
 
 function makeRng(seed) {
   let s = seed;
@@ -45,14 +47,13 @@ function buildStars(seed, count, maxY) {
   const arr = [];
   for (let i = 0; i < count; i++) {
     arr.push({
-      x: rnd() * SCREEN.width * 3,
+      x: rnd() * SCREEN.width * 2.2,
       y: rnd() * maxY,
       r: 0.6 + rnd() * 1.3,
-      phase: rnd() * Math.PI * 2,
-      baseOpacity: 0.35 + rnd() * 0.45,
+      baseOpacity: 0.4 + rnd() * 0.45,
     });
   }
-  return { arr, totalWidth: SCREEN.width * 3 };
+  return { arr, totalWidth: SCREEN.width * 2.2 };
 }
 
 function buildTraffic(seed, count) {
@@ -61,14 +62,14 @@ function buildTraffic(seed, count) {
   const colors = [COLORS.neonCyan, COLORS.neonPink, COLORS.neonYellow];
   for (let i = 0; i < count; i++) {
     arr.push({
-      x: rnd() * SCREEN.width * 3,
+      x: rnd() * SCREEN.width * 2.2,
       y: SCREEN.height * (0.08 + rnd() * 0.3),
       speed: 8 + rnd() * 14,
       color: colors[i % colors.length],
       size: 5 + rnd() * 3,
     });
   }
-  return { arr, totalWidth: SCREEN.width * 3 };
+  return { arr, totalWidth: SCREEN.width * 2.2 };
 }
 
 function buildHoloAds(seed, count) {
@@ -80,7 +81,7 @@ function buildHoloAds(seed, count) {
     const w = 46 + rnd() * 26;
     const h = 30 + rnd() * 16;
     arr.push({ x, y: SCREEN.height * (0.18 + rnd() * 0.22), w, h, color: colors[i % colors.length] });
-    x += 320 + rnd() * 260;
+    x += 360 + rnd() * 280;
   }
   return { arr, totalWidth: x };
 }
@@ -101,12 +102,10 @@ function buildDust(seed, count) {
   return arr;
 }
 
-// Renders one skyline layer's buildings + window-glow lines as a flat array
-// of elements (no own <Svg> wrapper — the caller's single Svg owns that).
-function skylineElements(layer, offset, keyPrefix) {
+function skylineElements(layer, offset, keyPrefix, reps = 2) {
   const w = layer.totalWidth;
   const out = [];
-  for (let rep = 0; rep < 3; rep++) {
+  for (let rep = 0; rep < reps; rep++) {
     for (let i = 0; i < layer.arr.length; i++) {
       const b = layer.arr[i];
       out.push(
@@ -139,37 +138,97 @@ function skylineElements(layer, offset, keyPrefix) {
   return out;
 }
 
+// --- Memoized slow/distant layers -----------------------------------
+// Each receives an already-ROUNDED offset (coarse step), so React.memo's
+// default shallow prop comparison naturally skips re-rendering on frames
+// where the rounded value hasn't changed — these layers only move a tiny
+// bit per frame anyway, so this is visually seamless.
+
+const StarsLayer = memo(function StarsLayer({ stars, offset }) {
+  return (
+    <G>
+      {[0, 1].map((rep) =>
+        stars.arr.map((s, i) => (
+          <Circle
+            key={`star-${rep}-${i}`}
+            cx={offset + rep * stars.totalWidth + s.x}
+            cy={s.y}
+            r={s.r}
+            fill="#eaf6ff"
+            opacity={s.baseOpacity}
+          />
+        ))
+      )}
+    </G>
+  );
+});
+
+const MegaLayer = memo(function MegaLayer({ megastructure, offset }) {
+  return <G>{skylineElements(megastructure, offset, "mega", 2)}</G>;
+});
+
+const FarLayer = memo(function FarLayer({ far, offset }) {
+  return <G>{skylineElements(far, offset, "far", 2)}</G>;
+});
+
+const HoloAdsLayer = memo(function HoloAdsLayer({ holoAds, offset }) {
+  return (
+    <G>
+      {[0, 1].map((rep) =>
+        holoAds.arr.map((a, i) => {
+          const x = offset + rep * holoAds.totalWidth + a.x;
+          return (
+            <React.Fragment key={`holo-${rep}-${i}`}>
+              <Rect x={x} y={a.y} width={a.w} height={a.h} rx={3} fill={COLORS.bgPurple} opacity={0.5} stroke={a.color} strokeWidth={1} strokeOpacity={0.5} />
+              <Line x1={x + 6} y1={a.y + a.h * 0.35} x2={x + a.w - 6} y2={a.y + a.h * 0.35} stroke={a.color} strokeWidth={1.2} opacity={0.6} />
+              <Line x1={x + 6} y1={a.y + a.h * 0.65} x2={x + a.w - 16} y2={a.y + a.h * 0.65} stroke={a.color} strokeWidth={1.2} opacity={0.4} />
+            </React.Fragment>
+          );
+        })
+      )}
+    </G>
+  );
+});
+
+// Coarse rounding step for the memoized layers — 3px is well under one
+// visible pixel of perceived jitter at normal viewing distance for things
+// this far away, but cuts re-renders by roughly 3x on average.
+const ROUND_STEP = 3;
+const round = (v) => Math.round(v / ROUND_STEP) * ROUND_STEP;
+
 export default function ParallaxBackground({ cameraX }) {
   const now = Date.now();
 
-  const stars = useMemo(() => buildStars(5, 70, SCREEN.height * 0.62), []);
+  const stars = useMemo(() => buildStars(5, 40, SCREEN.height * 0.62), []);
   const megastructure = useMemo(
-    () => buildSkyline({ seed: 99, buildingCount: 6, minH: 560, maxH: 980, color: COLORS.bgPurple, opacity: 0.22 }),
+    () => buildSkyline({ seed: 99, buildingCount: 5, minH: 560, maxH: 980, color: COLORS.bgPurple, opacity: 0.22 }),
     []
   );
   const far = useMemo(
-    () => buildSkyline({ seed: 7, buildingCount: 24, minH: 120, maxH: 300, color: COLORS.bgPurple, opacity: 0.55 }),
+    () => buildSkyline({ seed: 7, buildingCount: 16, minH: 120, maxH: 300, color: COLORS.bgPurple, opacity: 0.55 }),
     []
   );
   const mid = useMemo(
-    () => buildSkyline({ seed: 42, buildingCount: 18, minH: 180, maxH: 460, color: "#241650", opacity: 0.75 }),
+    () => buildSkyline({ seed: 42, buildingCount: 14, minH: 180, maxH: 460, color: "#241650", opacity: 0.75 }),
     []
   );
   const near = useMemo(
-    () => buildSkyline({ seed: 13, buildingCount: 12, minH: 220, maxH: 620, color: "#1a0f38", opacity: 0.95 }),
+    () => buildSkyline({ seed: 13, buildingCount: 10, minH: 220, maxH: 620, color: "#1a0f38", opacity: 0.95 }),
     []
   );
-  const traffic = useMemo(() => buildTraffic(23, 6), []);
-  const holoAds = useMemo(() => buildHoloAds(31, 4), []);
-  const dust = useMemo(() => buildDust(17, 18), []);
+  const traffic = useMemo(() => buildTraffic(23, 4), []);
+  const holoAds = useMemo(() => buildHoloAds(31, 3), []);
+  const dust = useMemo(() => buildDust(17, 10), []);
 
-  const starOffset = -((cameraX * 0.015) % stars.totalWidth);
-  const megaOffset = -((cameraX * 0.04) % megastructure.totalWidth);
-  const farOffset = -((cameraX * 0.08) % far.totalWidth);
+  const starOffset = round(-((cameraX * 0.015) % stars.totalWidth));
+  const megaOffset = round(-((cameraX * 0.04) % megastructure.totalWidth));
+  const farOffset = round(-((cameraX * 0.08) % far.totalWidth));
+  const holoOffset = round(-((cameraX * 0.22) % holoAds.totalWidth));
+
+  // Fast layers: recomputed every frame, no rounding, for fluid motion.
   const midOffset = -((cameraX * 0.22) % mid.totalWidth);
   const nearOffset = -((cameraX * 0.45) % near.totalWidth);
   const trafficOffset = -((cameraX * 0.12) % traffic.totalWidth);
-  const holoOffset = -((cameraX * 0.22) % holoAds.totalWidth);
 
   const SL_PERIOD = 14000;
   const SL_ACTIVE = 3500;
@@ -183,39 +242,15 @@ export default function ParallaxBackground({ cameraX }) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.bgDeep }]} />
 
-      {/* Fog bands sit behind everything SVG-drawn — plain Views, cheap,
-          no extra Svg root. Their exact z-slot relative to the buildings
-          doesn't matter visually at this opacity. */}
       <View style={[styles.fogBand, { top: SCREEN.height * 0.1, height: 130, backgroundColor: COLORS.bgPurple, opacity: 0.1 }]} />
       <View style={[styles.fogBand, { top: SCREEN.height * 0.38, height: 170, backgroundColor: COLORS.neonPink, opacity: 0.035 }]} />
       <View style={[styles.fogBand, { top: SCREEN.height * 0.6, height: 150, backgroundColor: COLORS.neonCyan, opacity: 0.04 }]} />
 
-      {/* Single consolidated Svg root — every decorative layer below is
-          just a group of children inside it, drawn in order (deepest /
-          most distant first), which is visually identical to separate
-          layers but mounts one native view instead of nine. */}
       <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
-        {/* Stars — deepest, slowest layer */}
-        {[0, 1].map((rep) =>
-          stars.arr.map((s, i) => {
-            const twinkle = 0.55 + 0.45 * Math.sin(now / 900 + s.phase);
-            return (
-              <Circle
-                key={`star-${rep}-${i}`}
-                cx={starOffset + rep * stars.totalWidth + s.x}
-                cy={s.y}
-                r={s.r}
-                fill="#eaf6ff"
-                opacity={s.baseOpacity * twinkle}
-              />
-            );
-          })
-        )}
+        <StarsLayer stars={stars} offset={starOffset} />
+        <MegaLayer megastructure={megastructure} offset={megaOffset} />
 
-        {/* Very distant megastructure silhouette */}
-        {skylineElements(megastructure, megaOffset, "mega")}
-
-        {/* Distant flying traffic, own slow drift on top of parallax */}
+        {/* Distant flying traffic — updates every frame (needs to read as moving) */}
         {[0, 1].map((rep) =>
           traffic.arr.map((t, i) => {
             const driftX = (now * t.speed) / 1000;
@@ -229,26 +264,13 @@ export default function ParallaxBackground({ cameraX }) {
           })
         )}
 
-        {skylineElements(far, farOffset, "far")}
+        <FarLayer far={far} offset={farOffset} />
+        <HoloAdsLayer holoAds={holoAds} offset={holoOffset} />
 
-        {/* Floating holographic ad panels, mid-depth */}
-        {[0, 1].map((rep) =>
-          holoAds.arr.map((a, i) => {
-            const x = holoOffset + rep * holoAds.totalWidth + a.x;
-            return (
-              <React.Fragment key={`holo-${rep}-${i}`}>
-                <Rect x={x} y={a.y} width={a.w} height={a.h} rx={3} fill={COLORS.bgPurple} opacity={0.5} stroke={a.color} strokeWidth={1} strokeOpacity={0.5} />
-                <Line x1={x + 6} y1={a.y + a.h * 0.35} x2={x + a.w - 6} y2={a.y + a.h * 0.35} stroke={a.color} strokeWidth={1.2} opacity={0.6} />
-                <Line x1={x + 6} y1={a.y + a.h * 0.65} x2={x + a.w - 16} y2={a.y + a.h * 0.65} stroke={a.color} strokeWidth={1.2} opacity={0.4} />
-              </React.Fragment>
-            );
-          })
-        )}
+        {/* Fast foreground layers — every frame, for fluid scrolling */}
+        {skylineElements(mid, midOffset, "mid", 2)}
+        {skylineElements(near, nearOffset, "near", 2)}
 
-        {skylineElements(mid, midOffset, "mid")}
-        {skylineElements(near, nearOffset, "near")}
-
-        {/* Searchlight sweep — occasional, faded in/out */}
         {slFade > 0.02 && (
           <Polygon
             points={`${SCREEN.width * 0.5},${SCREEN.height} ${SCREEN.width * 0.5 - 60},${-SCREEN.height} ${SCREEN.width * 0.5 + 60},${-SCREEN.height}`}
@@ -258,7 +280,6 @@ export default function ParallaxBackground({ cameraX }) {
           />
         )}
 
-        {/* Ambient dust / embers — always present, not tied to weather */}
         {dust.map((d, i) => {
           const loopY = ((now / 1000) * d.speed + d.seedY * SCREEN.height) % (SCREEN.height + 40);
           const x = d.x + Math.sin(now / 1400 + i) * d.drift - cameraX * 0.05;
@@ -267,7 +288,6 @@ export default function ParallaxBackground({ cameraX }) {
         })}
       </Svg>
 
-      {/* faint scanline / neon haze strip near the "street" horizon */}
       <View style={styles.horizonGlow} />
     </View>
   );
