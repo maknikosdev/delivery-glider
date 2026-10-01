@@ -5,13 +5,20 @@ import { SCREEN, COLORS } from "../constants/gameConfig";
 
 // Layered, fully decorative sky-filling background. Every element here is
 // purely cosmetic — none of it is read by useGameLoop.js, so none of it can
-// ever affect collisions, gaps, or difficulty. The goal is just to replace
-// the big empty void above the skyline with atmosphere: stars, a very
-// distant megastructure silhouette, tiny background air traffic, haze, an
-// occasional searchlight sweep, floating holo-ads, and drifting dust.
+// ever affect collisions, gaps, or difficulty.
+//
+// PERFORMANCE NOTE: everything below renders into a SINGLE <Svg> root.
+// react-native-svg's <Svg> is a real native view with its own bridge/shadow
+// -tree overhead — mounting several of them every animation frame (this
+// component re-renders on every game-loop tick, ~60x/sec) is what caused a
+// visible stutter in an earlier version of this file, which used 9 separate
+// <Svg> roots (one per decorative layer). Consolidating to one root with
+// all layers as ordered children fixes that, since SVG draws its children
+// in document order — the z-ordering below (deepest/furthest first) is
+// exactly equivalent to the old separately-mounted layers, just cheaper.
+// Only the fog bands stay as plain <View> overlays (never were SVG, and
+// plain Views are far cheaper than an extra Svg root).
 
-// Deterministic pseudo-random generator so every layer is stable across
-// re-renders (same shapes every frame) without needing to store state.
 function makeRng(seed) {
   let s = seed;
   return () => {
@@ -33,10 +40,6 @@ function buildSkyline({ seed, buildingCount, minH, maxH, color, opacity }) {
   return { arr, totalWidth: x, color, opacity };
 }
 
-// Stars scattered across the upper sky — spread over a wide virtual strip
-// so the tiling loop isn't obviously repetitive, scrolling at the slowest
-// parallax speed of anything on screen (they're the most distant thing
-// there is). Twinkle is a cheap sine-of-time trick, no animation state.
 function buildStars(seed, count, maxY) {
   const rnd = makeRng(seed);
   const arr = [];
@@ -52,10 +55,6 @@ function buildStars(seed, count, maxY) {
   return { arr, totalWidth: SCREEN.width * 3 };
 }
 
-// Tiny distant aircraft silhouettes with a light-trail streak, drifting
-// independently of the parallax scroll (their own slow horizontal drift on
-// top of it) so they read as genuinely "flying" rather than just scrolling
-// past with the city.
 function buildTraffic(seed, count) {
   const rnd = makeRng(seed);
   const arr = [];
@@ -72,9 +71,6 @@ function buildTraffic(seed, count) {
   return { arr, totalWidth: SCREEN.width * 3 };
 }
 
-// Sparse floating holographic ad panels — distinct from the in-lane
-// Billboard obstacle: these sit further back, never in the flight path,
-// pure atmosphere.
 function buildHoloAds(seed, count) {
   const rnd = makeRng(seed);
   const arr = [];
@@ -89,8 +85,6 @@ function buildHoloAds(seed, count) {
   return { arr, totalWidth: x };
 }
 
-// Slow-drifting ambient dust/ember particles, always present at low
-// opacity (not tied to any weather event) for a bit of living-air texture.
 function buildDust(seed, count) {
   const rnd = makeRng(seed);
   const arr = [];
@@ -105,6 +99,44 @@ function buildDust(seed, count) {
     });
   }
   return arr;
+}
+
+// Renders one skyline layer's buildings + window-glow lines as a flat array
+// of elements (no own <Svg> wrapper — the caller's single Svg owns that).
+function skylineElements(layer, offset, keyPrefix) {
+  const w = layer.totalWidth;
+  const out = [];
+  for (let rep = 0; rep < 3; rep++) {
+    for (let i = 0; i < layer.arr.length; i++) {
+      const b = layer.arr[i];
+      out.push(
+        <Rect
+          key={`${keyPrefix}-${rep}-${i}`}
+          x={offset + rep * w + b.x}
+          y={SCREEN.height - b.h}
+          width={b.w}
+          height={b.h}
+          fill={layer.color}
+          opacity={layer.opacity}
+        />
+      );
+      if (i % 3 === 0) {
+        out.push(
+          <Line
+            key={`${keyPrefix}-glow-${rep}-${i}`}
+            x1={offset + rep * w + b.x + b.w * 0.3}
+            y1={SCREEN.height - b.h + 6}
+            x2={offset + rep * w + b.x + b.w * 0.3}
+            y2={SCREEN.height}
+            stroke={COLORS.neonCyan}
+            strokeWidth={1.5}
+            opacity={0.25}
+          />
+        );
+      }
+    }
+  }
+  return out;
 }
 
 export default function ParallaxBackground({ cameraX }) {
@@ -139,22 +171,31 @@ export default function ParallaxBackground({ cameraX }) {
   const trafficOffset = -((cameraX * 0.12) % traffic.totalWidth);
   const holoOffset = -((cameraX * 0.22) % holoAds.totalWidth);
 
-  // Searchlight: sweeps every ~14s for about 3.5s, fading in/out at the
-  // edges of its active window — purely time-driven, no extra state.
   const SL_PERIOD = 14000;
   const SL_ACTIVE = 3500;
   const slPhase = now % SL_PERIOD;
   const slActive = slPhase < SL_ACTIVE;
-  const slT = slPhase / SL_ACTIVE; // 0..1 while active
+  const slT = slPhase / SL_ACTIVE;
   const slFade = slActive ? Math.sin(Math.PI * Math.min(1, slT)) : 0;
-  const slAngle = -35 + slT * 70; // degrees, sweeps left to right
+  const slAngle = -35 + slT * 70;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.bgDeep }]} />
 
-      {/* Stars — the deepest, slowest layer */}
+      {/* Fog bands sit behind everything SVG-drawn — plain Views, cheap,
+          no extra Svg root. Their exact z-slot relative to the buildings
+          doesn't matter visually at this opacity. */}
+      <View style={[styles.fogBand, { top: SCREEN.height * 0.1, height: 130, backgroundColor: COLORS.bgPurple, opacity: 0.1 }]} />
+      <View style={[styles.fogBand, { top: SCREEN.height * 0.38, height: 170, backgroundColor: COLORS.neonPink, opacity: 0.035 }]} />
+      <View style={[styles.fogBand, { top: SCREEN.height * 0.6, height: 150, backgroundColor: COLORS.neonCyan, opacity: 0.04 }]} />
+
+      {/* Single consolidated Svg root — every decorative layer below is
+          just a group of children inside it, drawn in order (deepest /
+          most distant first), which is visually identical to separate
+          layers but mounts one native view instead of nine. */}
       <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
+        {/* Stars — deepest, slowest layer */}
         {[0, 1].map((rep) =>
           stars.arr.map((s, i) => {
             const twinkle = 0.55 + 0.45 * Math.sin(now / 900 + s.phase);
@@ -170,19 +211,11 @@ export default function ParallaxBackground({ cameraX }) {
             );
           })
         )}
-      </Svg>
 
-      {/* Very distant megastructure silhouette — faint, extends above the
-          top of the screen on purpose, just to fill the void with scale */}
-      {renderLayer(megastructure, megaOffset)}
+        {/* Very distant megastructure silhouette */}
+        {skylineElements(megastructure, megaOffset, "mega")}
 
-      {/* Fog / haze bands — static, atmospheric depth cues */}
-      <View style={[styles.fogBand, { top: SCREEN.height * 0.1, height: 130, backgroundColor: COLORS.bgPurple, opacity: 0.1 }]} />
-      <View style={[styles.fogBand, { top: SCREEN.height * 0.38, height: 170, backgroundColor: COLORS.neonPink, opacity: 0.035 }]} />
-      <View style={[styles.fogBand, { top: SCREEN.height * 0.6, height: 150, backgroundColor: COLORS.neonCyan, opacity: 0.04 }]} />
-
-      {/* Distant flying traffic, independent slow drift on top of parallax */}
-      <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
+        {/* Distant flying traffic, own slow drift on top of parallax */}
         {[0, 1].map((rep) =>
           traffic.arr.map((t, i) => {
             const driftX = (now * t.speed) / 1000;
@@ -195,12 +228,10 @@ export default function ParallaxBackground({ cameraX }) {
             );
           })
         )}
-      </Svg>
 
-      {renderLayer(far, farOffset)}
+        {skylineElements(far, farOffset, "far")}
 
-      {/* Floating holographic ad panels, mid-depth, never in the flight lane's obstacle set */}
-      <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
+        {/* Floating holographic ad panels, mid-depth */}
         {[0, 1].map((rep) =>
           holoAds.arr.map((a, i) => {
             const x = holoOffset + rep * holoAds.totalWidth + a.x;
@@ -213,26 +244,21 @@ export default function ParallaxBackground({ cameraX }) {
             );
           })
         )}
-      </Svg>
 
-      {renderLayer(mid, midOffset)}
-      {renderLayer(near, nearOffset)}
+        {skylineElements(mid, midOffset, "mid")}
+        {skylineElements(near, nearOffset, "near")}
 
-      {/* Searchlight sweep — occasional, faded in/out, purely atmospheric */}
-      {slFade > 0.02 && (
-        <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
+        {/* Searchlight sweep — occasional, faded in/out */}
+        {slFade > 0.02 && (
           <Polygon
             points={`${SCREEN.width * 0.5},${SCREEN.height} ${SCREEN.width * 0.5 - 60},${-SCREEN.height} ${SCREEN.width * 0.5 + 60},${-SCREEN.height}`}
             fill={COLORS.neonCyan}
             opacity={0.05 * slFade}
             transform={`rotate(${slAngle}, ${SCREEN.width * 0.5}, ${SCREEN.height})`}
           />
-        </Svg>
-      )}
+        )}
 
-      {/* Ambient dust / embers — always-present light atmosphere, not tied
-          to Acid Rain or any weather event */}
-      <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
+        {/* Ambient dust / embers — always present, not tied to weather */}
         {dust.map((d, i) => {
           const loopY = ((now / 1000) * d.speed + d.seedY * SCREEN.height) % (SCREEN.height + 40);
           const x = d.x + Math.sin(now / 1400 + i) * d.drift - cameraX * 0.05;
@@ -244,43 +270,6 @@ export default function ParallaxBackground({ cameraX }) {
       {/* faint scanline / neon haze strip near the "street" horizon */}
       <View style={styles.horizonGlow} />
     </View>
-  );
-}
-
-function renderLayer(layer, offset) {
-  const w = layer.totalWidth;
-  return (
-    <Svg width={SCREEN.width} height={SCREEN.height} style={StyleSheet.absoluteFill}>
-      {[0, 1, 2].map((rep) => (
-        <React.Fragment key={rep}>
-          {layer.arr.map((b, i) => (
-            <Rect
-              key={`${rep}-${i}`}
-              x={offset + rep * w + b.x}
-              y={SCREEN.height - b.h}
-              width={b.w}
-              height={b.h}
-              fill={layer.color}
-              opacity={layer.opacity}
-            />
-          ))}
-          {layer.arr.map((b, i) =>
-            i % 3 === 0 ? (
-              <Line
-                key={`glow-${rep}-${i}`}
-                x1={offset + rep * w + b.x + b.w * 0.3}
-                y1={SCREEN.height - b.h + 6}
-                x2={offset + rep * w + b.x + b.w * 0.3}
-                y2={SCREEN.height}
-                stroke={COLORS.neonCyan}
-                strokeWidth={1.5}
-                opacity={0.25}
-              />
-            ) : null
-          )}
-        </React.Fragment>
-      ))}
-    </Svg>
   );
 }
 
