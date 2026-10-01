@@ -1,21 +1,18 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
-import { COLORS } from "../constants/gameConfig";
+import { View, Image, StyleSheet } from "react-native";
 
-const SIZE = 30;
+const SIZE = 30; // matches the original SVG's display size exactly
+const IMG = require("../../assets/sprites/coin.png");
 
 export default function CoinSprite({ screenX, y }) {
   return (
     <View style={[styles.wrap, { left: screenX - SIZE / 2, top: y - SIZE / 2 }]} pointerEvents="none">
-      <Svg width={SIZE} height={SIZE} viewBox="0 0 30 30">
-        <Circle cx="15" cy="15" r="12" fill="#241650" stroke={COLORS.neonYellow} strokeWidth="2" />
-        <Path d="M15 8 L18 13 L15 22 L12 13 Z" fill={COLORS.neonYellow} opacity={0.9} />
-      </Svg>
+      <Image source={IMG} style={styles.img} resizeMode="contain" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "absolute" },
+  wrap: { position: "absolute", width: SIZE, height: SIZE },
+  img: { width: "100%", height: "100%" },
 });

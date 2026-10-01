@@ -1,49 +1,68 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import Svg, { Rect, Circle, Line } from "react-native-svg";
+import { View, Image, StyleSheet } from "react-native";
+import Svg, { Circle } from "react-native-svg";
 import { COLORS } from "../constants/gameConfig";
 
-const COLOR_MAP = {
-  green: COLORS.neonGreen,
-  yellow: COLORS.neonYellow,
-  red: COLORS.danger,
+const BALCONY_SIZE = 60; // matches the original SVG's display size exactly
+const STATION_SIZE = 52; // matches the original SVG's display size exactly
+
+// Maps the game's balcony color keys to the matching illustrated art.
+// "green" = regular delivery, "yellow" = express (VIP), "red" = illegal
+// (wanted-level-lowering) — same semantic roles as before, just painted
+// artwork instead of flat SVG shapes now.
+const BALCONY_IMAGES = {
+  green: require("../../assets/sprites/balcony_green.png"),
+  yellow: require("../../assets/sprites/balcony_yellow.png"),
+  red: require("../../assets/sprites/balcony_red.png"),
 };
 
 export function BalconySprite({ color, screenX, y, delivered }) {
-  const glow = COLOR_MAP[color] || COLORS.neonGreen;
+  const source = BALCONY_IMAGES[color] || BALCONY_IMAGES.green;
   return (
-    <View style={[styles.wrap, { left: screenX - 30, top: y - 30 }]} pointerEvents="none">
-      <Svg width="60" height="60" viewBox="0 0 60 60">
-        <Rect
-          x="6"
-          y="10"
-          width="48"
-          height="34"
-          rx="3"
-          fill="#120a26"
-          stroke={glow}
-          strokeWidth="2"
-          opacity={delivered ? 0.25 : 1}
-        />
-        <Line x1="6" y1="44" x2="54" y2="44" stroke={glow} strokeWidth="2" opacity={delivered ? 0.2 : 0.7} />
-        <Circle cx="30" cy="27" r="6" fill={delivered ? "#2a2a3a" : glow} opacity={delivered ? 0.4 : 0.9} />
-      </Svg>
+    <View
+      style={[
+        styles.wrap,
+        {
+          left: screenX - BALCONY_SIZE / 2,
+          top: y - BALCONY_SIZE / 2,
+          width: BALCONY_SIZE,
+          height: BALCONY_SIZE,
+          opacity: delivered ? 0.3 : 1,
+        },
+      ]}
+      pointerEvents="none"
+    >
+      <Image source={source} style={styles.img} resizeMode="contain" />
     </View>
   );
 }
+
+const DRONE_STATION_IMG = require("../../assets/sprites/drone_station.png");
 
 export function DroneStationSprite({ screenX, y, used }) {
   return (
-    <View style={[styles.wrap, { left: screenX - 26, top: y - 26 }]} pointerEvents="none">
-      <Svg width="52" height="52" viewBox="0 0 52 52">
-        <Circle cx="26" cy="26" r="18" fill="#0d0820" stroke={COLORS.neonCyan} strokeWidth="2" opacity={used ? 0.3 : 1} />
-        <Line x1="26" y1="10" x2="26" y2="42" stroke={COLORS.neonCyan} strokeWidth="1.5" opacity={used ? 0.2 : 0.8} />
-        <Line x1="10" y1="26" x2="42" y2="26" stroke={COLORS.neonCyan} strokeWidth="1.5" opacity={used ? 0.2 : 0.8} />
-      </Svg>
+    <View
+      style={[
+        styles.wrap,
+        {
+          left: screenX - STATION_SIZE / 2,
+          top: y - STATION_SIZE / 2,
+          width: STATION_SIZE,
+          height: STATION_SIZE,
+          opacity: used ? 0.3 : 1,
+        },
+      ]}
+      pointerEvents="none"
+    >
+      <Image source={DRONE_STATION_IMG} style={styles.img} resizeMode="contain" />
     </View>
   );
 }
 
+// Small transient particle burst shown for a few frames on a successful
+// delivery. Kept as a lightweight code-drawn SVG (no matching illustrated
+// asset was provided for this one-off effect, and a plain glow circle
+// doesn't benefit much from painted detail at this size/duration anyway).
 export function DeliveryParticle({ screenX, y }) {
   return (
     <View style={[styles.wrap, { left: screenX - 18, top: y - 18 }]} pointerEvents="none">
@@ -57,4 +76,5 @@ export function DeliveryParticle({ screenX, y }) {
 
 const styles = StyleSheet.create({
   wrap: { position: "absolute" },
+  img: { width: "100%", height: "100%" },
 });

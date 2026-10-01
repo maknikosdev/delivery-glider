@@ -1,40 +1,59 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import Svg, { Path, Circle, Rect } from "react-native-svg";
+import { View, Image, StyleSheet } from "react-native";
 import { RIDER } from "../constants/gameConfig";
 
-export default function RiderSprite({ y, color = "#28e0ff", accentColor = "#ff2ea8", packages = 0, thrusting = false }) {
+// The illustrated art only has ONE drone design with a few pose/state
+// variants (Idle, Moving, Delivering, Incoming, Drop, Picked Up) — not 14
+// separately-colored gliders like the old procedural SVG had. We use the
+// Idle/Moving pair here, mapped from the existing `thrusting` flag (which
+// already fires at exactly the right moments). All 14 gliders currently
+// render identically — there's no per-glider recolor applied to the art
+// itself (a flat tintColor would wash out the painted detail), and the
+// colored background-glow aura that used to sit behind the drone was
+// removed per feedback (it read as an unwanted circle/badge behind the
+// glider). `color`/`accentColor` are still accepted as props for future
+// use but are currently unused here.
+//
+// The other three extracted states (Delivering, Incoming, Drop/Picked Up —
+// see assets/sprites/glider_*.png) aren't wired up yet; they'd fit nicely
+// as a brief flash on a successful delivery or at a drone refuel station in
+// a future pass, but that needs a bit more plumbing than this swap alone.
+const IDLE_IMG = require("../../assets/sprites/glider_idle.png");
+const MOVING_IMG = require("../../assets/sprites/glider_moving.png");
+
+// Matches the ORIGINAL SVG's exact geometry: width=RIDER.width (64),
+// height=RIDER.height+20 (60), positioned with top=y directly (no extra
+// centering offset). Keeping this identical to before means the collision
+// box, the swipe-to-deliver "near balcony" feel, and every difficulty/gap
+// calibration stay exactly as they were — only the pixels drawn inside
+// this box changed, not its footprint.
+const DISPLAY_W = RIDER.width;
+const DISPLAY_H = RIDER.height + 20;
+
+export default function RiderSprite({ y, color, accentColor, packages = 0, thrusting = false }) {
   return (
     <View
       style={[
         styles.wrap,
-        { left: RIDER.screenX - RIDER.width / 2, top: y, width: RIDER.width, height: RIDER.height + 20 },
+        {
+          left: RIDER.screenX - DISPLAY_W / 2,
+          top: y,
+          width: DISPLAY_W,
+          height: DISPLAY_H,
+        },
       ]}
       pointerEvents="none"
     >
-      <Svg width={RIDER.width} height={RIDER.height + 20} viewBox="0 0 64 60">
-        {/* thruster glow */}
-        {thrusting && (
-          <Circle cx="14" cy="46" r="10" fill={accentColor} opacity={0.5} />
-        )}
-        {/* glider wing */}
-        <Path d="M2 40 L46 30 L60 24 L60 30 L20 44 Z" fill={color} opacity={0.9} />
-        {/* body */}
-        <Rect x="18" y="14" width="22" height="20" rx="4" fill="#0d0820" stroke={color} strokeWidth="1.5" />
-        {/* rider helmet */}
-        <Circle cx="29" cy="8" r="7" fill="#0d0820" stroke={accentColor} strokeWidth="1.5" />
-        {/* cargo box */}
-        {packages > 0 && (
-          <Rect x="34" y="10" width="14" height="14" rx="2" fill="#1a1030" stroke={accentColor} strokeWidth="1.5" />
-        )}
-        {/* engine lights */}
-        <Circle cx="10" cy="42" r="3" fill={accentColor} />
-        <Circle cx="22" cy="46" r="3" fill={accentColor} />
-      </Svg>
+      <Image
+        source={thrusting ? MOVING_IMG : IDLE_IMG}
+        style={styles.img}
+        resizeMode="contain"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { position: "absolute" },
+  img: { width: "100%", height: "100%" },
 });
