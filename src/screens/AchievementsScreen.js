@@ -4,6 +4,8 @@ import { COLORS } from "../constants/gameConfig";
 import { ACHIEVEMENTS, SKIN_COLORS } from "../game/achievements";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import OctagonPanel from "../components/OctagonPanel";
+import ScreenBackground from "../components/ScreenBackground";
 
 export default function AchievementsScreen({ onBack }) {
   const { save, t } = useGame();
@@ -13,7 +15,7 @@ export default function AchievementsScreen({ onBack }) {
   const unlockedCount = unlocked.size;
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -37,7 +39,14 @@ export default function AchievementsScreen({ onBack }) {
           const done = unlocked.has(a.id);
           const skin = SKIN_COLORS[a.id];
           return (
-            <View key={a.id} style={[styles.card, done && { borderColor: skin }]}>
+            <OctagonPanel
+              key={a.id}
+              color={done ? skin : "#3a3155"}
+              size="wide"
+              fillOpacity={done ? 0.14 : 0.06}
+              style={styles.card}
+              contentStyle={styles.cardInner}
+            >
               <View style={[styles.icon, { backgroundColor: done ? skin : "#241a3f" }]}>
                 <Text style={styles.iconText}>{done ? "★" : "🔒"}</Text>
               </View>
@@ -45,11 +54,11 @@ export default function AchievementsScreen({ onBack }) {
                 <Text style={[styles.name, done && { color: skin }]}>{a.name}</Text>
                 <Text style={styles.desc}>{t(`achievements.${a.id}`)}</Text>
               </View>
-            </View>
+            </OctagonPanel>
           );
         })}
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -60,16 +69,8 @@ const styles = StyleSheet.create({
   progress: { color: COLORS.neonYellow, fontWeight: "800" },
   title: { color: COLORS.textPrimary, fontWeight: "900", fontSize: 20, letterSpacing: 1, marginTop: 8 },
   hint: { color: COLORS.textDim, fontSize: 11, marginTop: 4, marginBottom: 16, lineHeight: 16 },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.panel,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#2a2145",
-    padding: 14,
-    marginBottom: 12,
-  },
+  card: { marginBottom: 12 },
+  cardInner: { flexDirection: "row", alignItems: "center", padding: 14 },
   icon: {
     width: 40,
     height: 40,

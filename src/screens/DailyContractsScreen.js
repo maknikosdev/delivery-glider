@@ -4,6 +4,8 @@ import { COLORS } from "../constants/gameConfig";
 import { contractById, contractProgress, getTodayKey, pickDailyContracts } from "../game/contracts";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import OctagonPanel from "../components/OctagonPanel";
+import ScreenBackground from "../components/ScreenBackground";
 
 export default function DailyContractsScreen({ onBack }) {
   const { save, t } = useGame();
@@ -16,7 +18,7 @@ export default function DailyContractsScreen({ onBack }) {
   const dailyCumulative = isStale ? {} : save.dailyCumulative || {};
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -40,7 +42,14 @@ export default function DailyContractsScreen({ onBack }) {
           const progress = contractProgress(c, dailyCumulative, {});
           const pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
           return (
-            <View key={id} style={[styles.card, done && { borderColor: COLORS.neonGreen }]}>
+            <OctagonPanel
+              key={id}
+              color={done ? COLORS.neonGreen : "#3a3155"}
+              size="wide"
+              fillOpacity={done ? 0.14 : 0.06}
+              style={styles.card}
+              contentStyle={styles.cardInner}
+            >
               <View style={styles.rowTop}>
                 <Text style={[styles.name, done && { color: COLORS.neonGreen }]}>
                   {done ? "✓ " : ""}
@@ -61,11 +70,11 @@ export default function DailyContractsScreen({ onBack }) {
               <Text style={styles.progressText}>
                 {Math.floor(progress.current)}/{progress.target}
               </Text>
-            </View>
+            </OctagonPanel>
           );
         })}
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -75,14 +84,8 @@ const styles = StyleSheet.create({
   back: { color: COLORS.neonCyan, fontWeight: "700" },
   title: { color: COLORS.textPrimary, fontWeight: "900", fontSize: 15, letterSpacing: 1 },
   hint: { color: COLORS.textDim, fontSize: 11, marginTop: 4, marginBottom: 16, lineHeight: 16 },
-  card: {
-    backgroundColor: COLORS.panel,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: "#2a2145",
-    padding: 14,
-    marginBottom: 12,
-  },
+  card: { marginBottom: 12 },
+  cardInner: { padding: 14 },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   name: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 14 },
   reward: { color: COLORS.neonYellow, fontWeight: "700", fontSize: 13 },

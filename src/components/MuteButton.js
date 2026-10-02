@@ -3,6 +3,7 @@ import { Pressable, Text, StyleSheet } from "react-native";
 import { useGame } from "../store/GameContext";
 import { COLORS } from "../constants/gameConfig";
 import AudioManager from "../audio/AudioManager";
+import OctagonPanel from "./OctagonPanel";
 
 export default function MuteButton({ style }) {
   const { save, toggleMute } = useGame();
@@ -13,22 +14,17 @@ export default function MuteButton({ style }) {
         AudioManager.play("click");
         toggleMute();
       }}
-      style={[styles.btn, style]}
+      style={style}
       hitSlop={10}
     >
-      <Text style={styles.icon}>{save.muted ? "🔇" : "🔊"}</Text>
+      <OctagonPanel color={COLORS.neonCyan} size="medium" contentStyle={styles.inner}>
+        <Text style={styles.icon}>{save.muted ? "🔇" : "🔊"}</Text>
+      </OctagonPanel>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
-    backgroundColor: "rgba(18,10,38,0.75)",
-    borderColor: COLORS.neonCyan,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  icon: { fontSize: 16 },
+  inner: { paddingHorizontal: 10, paddingVertical: 6, alignItems: "center", justifyContent: "center" },
+  icon: { fontSize: 15 },
 });

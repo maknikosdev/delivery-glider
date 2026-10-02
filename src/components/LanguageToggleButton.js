@@ -3,6 +3,7 @@ import { Pressable, Text, StyleSheet } from "react-native";
 import { useGame } from "../store/GameContext";
 import { COLORS } from "../constants/gameConfig";
 import AudioManager from "../audio/AudioManager";
+import OctagonPanel from "./OctagonPanel";
 
 // Switches every screen's text between Greek and English at once (see
 // src/i18n). Persisted in the save file, same as Mute — placed right next
@@ -16,24 +17,17 @@ export default function LanguageToggleButton({ style }) {
         AudioManager.play("click");
         toggleLanguage();
       }}
-      style={[styles.btn, style]}
+      style={style}
       hitSlop={10}
     >
-      <Text style={styles.text}>{language === "en" ? "EN" : "EL"}</Text>
+      <OctagonPanel color={COLORS.neonCyan} size="medium" contentStyle={styles.inner}>
+        <Text style={styles.text}>{language === "en" ? "EN" : "EL"}</Text>
+      </OctagonPanel>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
-    backgroundColor: "rgba(18,10,38,0.75)",
-    borderColor: COLORS.neonCyan,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    minWidth: 34,
-    alignItems: "center",
-  },
+  inner: { paddingHorizontal: 12, paddingVertical: 6, alignItems: "center", justifyContent: "center", minWidth: 34 },
   text: { fontSize: 12, fontWeight: "800", color: COLORS.neonCyan },
 });

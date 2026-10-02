@@ -6,10 +6,9 @@ import AudioManager from "../audio/AudioManager";
 import { MILESTONES } from "../store/storage";
 import { gliderById } from "../game/gliders";
 import { ACHIEVEMENTS } from "../game/achievements";
+import OctagonPanel from "../components/OctagonPanel";
+import ScreenBackground from "../components/ScreenBackground";
 
-// Purely informational — no gameplay effect, just a record of everything the
-// player has done across every run ever played on this device (offline,
-// AsyncStorage only, matching the rest of the save file).
 export default function StatsScreen({ onBack }) {
   const { save, t } = useGame();
   if (!save) return null;
@@ -43,7 +42,7 @@ export default function StatsScreen({ onBack }) {
   ];
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
@@ -60,7 +59,7 @@ export default function StatsScreen({ onBack }) {
       <Text style={styles.hint}>{t("stats.hint")}</Text>
 
       {nextMilestone && (
-        <View style={styles.milestoneBox}>
+        <OctagonPanel color={COLORS.neonPink} size="wide" style={styles.milestoneBox} contentStyle={styles.milestoneInner}>
           <Text style={styles.milestoneTitle}>
             {t("stats.nextGift", { name: gliderById(nextMilestone.gliderId)?.name || nextMilestone.gliderId })}
           </Text>
@@ -75,18 +74,18 @@ export default function StatsScreen({ onBack }) {
           <Text style={styles.milestoneProgress}>
             {Math.floor(totalMeters)}m / {nextMilestone.meters}m
           </Text>
-        </View>
+        </OctagonPanel>
       )}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
         {rows.map((r) => (
-          <View key={r.label} style={styles.row}>
+          <OctagonPanel key={r.label} color="#3a3155" size="wide" style={styles.row} contentStyle={styles.rowInner}>
             <Text style={styles.rowLabel}>{r.label}</Text>
             <Text style={[styles.rowValue, { color: r.color }]}>{r.value}</Text>
-          </View>
+          </OctagonPanel>
         ))}
       </ScrollView>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -96,14 +95,8 @@ const styles = StyleSheet.create({
   back: { color: COLORS.neonCyan, fontWeight: "700" },
   title: { color: COLORS.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: 1.5 },
   hint: { color: COLORS.textDim, fontSize: 11, marginTop: 6, marginBottom: 16, lineHeight: 16 },
-  milestoneBox: {
-    backgroundColor: "rgba(255,46,168,0.08)",
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.neonPink,
-    padding: 14,
-    marginBottom: 16,
-  },
+  milestoneBox: { marginBottom: 16 },
+  milestoneInner: { padding: 14 },
   milestoneTitle: { color: COLORS.neonPink, fontWeight: "800", fontSize: 12, marginBottom: 8 },
   milestoneTrack: {
     height: 8,
@@ -113,17 +106,13 @@ const styles = StyleSheet.create({
   },
   milestoneFill: { height: "100%", backgroundColor: COLORS.neonPink, borderRadius: 4 },
   milestoneProgress: { color: COLORS.textDim, fontSize: 11, marginTop: 6, textAlign: "right" },
-  row: {
+  row: { marginBottom: 8 },
+  rowInner: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: COLORS.panel,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#2a2145",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 8,
   },
   rowLabel: { color: COLORS.textDim, fontSize: 12, flex: 1, marginRight: 10 },
   rowValue: { fontWeight: "800", fontSize: 13 },
