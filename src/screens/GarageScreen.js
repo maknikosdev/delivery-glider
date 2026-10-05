@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
-import { COLORS, SKILL_UPGRADES } from "../constants/gameConfig";
+import { COLORS, SKILL_UPGRADES, readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 import { GLIDERS } from "../game/gliders";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
@@ -17,7 +17,7 @@ function skillUpgradeCost(level) {
 // This screen never touches real money: "credits" is a points balance the
 // player earns purely by playing. Nothing here calls a payment/billing API.
 export default function GarageScreen({ onBack }) {
-  const { save, buyGlider, selectGlider, buySkillLevel, selectSkin, t } = useGame();
+  const { save, buyGlider, selectGlider, buySkillLevel, setSkillBranch, selectSkin, t } = useGame();
   if (!save) return null;
 
   const unlockedSkins = save.unlockedSkins || [];
@@ -50,10 +50,16 @@ export default function GarageScreen({ onBack }) {
           const owned = save.ownedGliders.includes(g.id);
           const selected = save.selectedGlider === g.id;
           const canAfford = save.credits >= g.unlockCost;
-          const skillLevel = (save.skillLevels || {})[g.id] || 0;
+          const skillLevel = readSkillLevel(save.skillLevels, g.id);
+          const skillBranch = readSkillBranch(save.skillLevels, g.id);
           const skillMaxed = skillLevel >= SKILL_UPGRADES.maxLevel;
           const upgradeCost = skillUpgradeCost(skillLevel);
           const canAffordUpgrade = save.credits >= upgradeCost;
+          // Skill Tree: this glider's skill forks into two branches at
+          // level 2 (see SKILL_UPGRADES.branches) — reinforced_hull has
+          // only one dimension, so it has no entry here and never shows
+          // the picker, just plain leveling like before.
+          const branchDef = g.skill && SKILL_UPGRADES.branches[g.skill.id];
 
           return (
             <OctagonPanel
@@ -127,6 +133,32 @@ export default function GarageScreen({ onBack }) {
                     style={styles.upgradeButton}
                     textStyle={styles.upgradeButtonText}
                   />
+                </View>
+              )}
+
+              {owned && branchDef && skillLevel >= 2 && (
+                <View style={styles.branchRow}>
+                  <Text style={styles.branchHint}>{t("garage.branchHint")}</Text>
+                  <View style={styles.branchButtons}>
+                    {["a", "b"].map((key) => {
+                      const picked = skillBranch === key;
+                      return (
+                        <Pressable
+                          key={key}
+                          style={[styles.branchPill, picked && { borderColor: g.color, backgroundColor: `${g.color}22` }]}
+                          onPress={() => {
+                            AudioManager.play("click");
+                            setSkillBranch(g.id, key);
+                          }}
+                        >
+                          <Text style={[styles.branchPillText, picked && { color: g.color }]}>
+                            {picked ? "✓ " : ""}
+                            {branchDef[key].name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
               )}
             </OctagonPanel>
@@ -217,6 +249,19 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {},
   upgradeButtonText: { fontSize: 11 },
+  branchRow: { marginTop: 12 },
+  branchHint: { color: COLORS.textDim, fontSize: 9.5, marginBottom: 6, letterSpacing: 0.3 },
+  branchButtons: { flexDirection: "row", gap: 8 },
+  branchPill: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#3a3155",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  branchPillText: { color: COLORS.textDim, fontSize: 10.5, fontWeight: "700" },
   skinRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 10 },
   skinSwatch: {
     width: 44,

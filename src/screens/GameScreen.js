@@ -4,6 +4,8 @@ import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
 import ObstacleSprite from "../components/ObstacleSprite";
+import BossSprite from "../components/BossSprite";
+import ProjectileSprite from "../components/ProjectileSprite";
 import { BalconySprite, DroneStationSprite, DeliveryParticle } from "../components/BalconySprite";
 import CoinSprite from "../components/CoinSprite";
 import DecoySprite from "../components/DecoySprite";
@@ -19,7 +21,7 @@ import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULT
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
-export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, totalRuns, onGameOver }) {
+export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, onGameOver }) {
   const handleGameOver = useCallback(
     (result) => {
       onGameOver && onGameOver(result);
@@ -38,12 +40,17 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     skillCooldownRemainingMs,
     skillActiveRemainingMs,
     stormImmune,
+    nightMode,
+    nightOpacity,
   } = useGameLoop({
     gliderConfig,
     gadgetIds,
     freeRevive,
     skillLevel,
+    skillBranch,
     totalRuns,
+    mutatorId,
+    dailySeed,
     onGameOver: handleGameOver,
   });
 
@@ -62,6 +69,24 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
       clearTimeout(holdTimer.current);
       holdTimer.current = null;
     }
+  }, []);
+
+  // Ghost Replay: remembers the last index we interpolated between, so
+  // finding "where was the ghost at this cameraX" each frame is O(1)
+  // amortized instead of re-scanning the whole trace every time (cameraX
+  // only ever increases during a run, so the cursor only moves forward).
+  const ghostCursorRef = useRef(0);
+  const getGhostY = useCallback((trace, cameraX) => {
+    if (!trace || trace.length < 2) return null;
+    let i = ghostCursorRef.current;
+    if (i >= trace.length - 1 || trace[i][0] > cameraX) i = 0;
+    while (i < trace.length - 2 && trace[i + 1][0] <= cameraX) i++;
+    ghostCursorRef.current = i;
+    const [x1, y1] = trace[i];
+    const [x2, y2] = trace[Math.min(i + 1, trace.length - 1)];
+    if (x2 === x1) return y1;
+    const t = Math.max(0, Math.min(1, (cameraX - x1) / (x2 - x1)));
+    return y1 + (y2 - y1) * t;
   }, []);
 
   const panResponder = useRef(
@@ -134,12 +159,50 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
   const shakeX = world.shake > 0 ? (Math.random() - 0.5) * 14 * world.shake : 0;
   const shakeY = world.shake > 0 ? (Math.random() - 0.5) * 10 * world.shake : 0;
+
+  // Juice: a quick camera punch-in on every successful delivery — scale
+  // ramps up and eases back out over 180ms, purely a function of elapsed
+  // time since the last delivery, so it needs no animation library and
+  // just rides the game loop's existing per-frame re-renders (same trick
+  // as the screen-shake above).
+  const PULSE_MS = 180;
+  const pulseElapsed = Date.now() - (world.deliveryPulseAt || 0);
+  const deliveryZoom =
+    pulseElapsed >= 0 && pulseElapsed < PULSE_MS ? 1 + 0.035 * Math.sin((pulseElapsed / PULSE_MS) * Math.PI) : 1;
+
   const currentZone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
-      <View style={{ flex: 1, transform: [{ translateX: shakeX }, { translateY: shakeY }] }}>
+      <View
+        style={{
+          flex: 1,
+          transform: [{ translateX: shakeX }, { translateY: shakeY }, { scale: deliveryZoom }],
+        }}
+      >
         <ParallaxBackground cameraX={world.cameraX} />
+
+        {/* Route Branching: a faint persistent divider + tint for the
+            upper(risk)/lower(safe) fork chunk, so the choice stays
+            legible even after the floating-text banners have faded. */}
+        {world.chunks.map((chunk) => {
+          if (chunk.templateId !== "route_branch") return null;
+          const screenX = chunk.startX - world.cameraX;
+          const chunkWidth = chunk.endX - chunk.startX;
+          if (screenX + chunkWidth < -20 || screenX > SCREEN.width + 20) return null;
+          return (
+            <React.Fragment key={`branch-${chunk.uid}`}>
+              <View
+                style={[styles.branchZone, { left: screenX, width: chunkWidth, top: 0, height: SCREEN.height * 0.4, backgroundColor: "rgba(255,46,168,0.05)" }]}
+                pointerEvents="none"
+              />
+              <View
+                style={[styles.branchZone, { left: screenX, width: chunkWidth, bottom: 0, height: SCREEN.height * 0.3, backgroundColor: "rgba(61,255,176,0.05)" }]}
+                pointerEvents="none"
+              />
+            </React.Fragment>
+          );
+        })}
 
         {world.chunks.map((chunk) =>
           (chunk.windCorridors || []).map((w) => {
@@ -178,7 +241,9 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             if (o.hit) return null;
             const screenX = o.worldX - world.cameraX;
             if (screenX < -60 || screenX > SCREEN.width + 60) return null;
-            return <ObstacleSprite key={o.id} type={o.type} screenX={screenX} y={o.y} />;
+            return (
+              <ObstacleSprite key={o.id} type={o.type} screenX={screenX} y={o.y} />
+            );
           })
         )}
 
@@ -222,6 +287,23 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           <ObstacleSprite type="police_drone" screenX={world.chaser.worldX - world.cameraX} y={world.chaser.y} />
         )}
 
+        {/* Boss Encounters: one real boss character, its own sprite +
+            animation, rendered exactly where useGameLoop.js's movement
+            patterns put it. */}
+        {world.activeBossEntity && (
+          <BossSprite
+            bossId={world.activeBossEntity.id}
+            screenX={world.activeBossEntity.worldX - world.cameraX}
+            y={world.activeBossEntity.y}
+            size={world.activeBossEntity.displaySize}
+          />
+        )}
+        {world.bossProjectiles.map((p) => {
+          const screenX = p.worldX - world.cameraX;
+          if (screenX < -60 || screenX > SCREEN.width + 60) return null;
+          return <ProjectileSprite key={p.id} type={p.type} screenX={screenX} y={p.y} size={p.size} />;
+        })}
+
         {world.decoy && (
           <DecoySprite screenX={world.decoy.worldX - world.cameraX} y={world.decoy.y} />
         )}
@@ -233,6 +315,25 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         {world.floatingTexts.map((f) => (
           <FloatingText key={f.id} text={f.text} screenX={f.x - world.cameraX} y={f.y} kind={f.kind} />
         ))}
+
+        {/* Ghost Replay: your previous best run, rendered translucent,
+            positioned by interpolating its recorded trace against YOUR
+            current cameraX — so it's always exactly where your best run
+            was at this same distance, not just a fixed-speed playback. */}
+        {world.ghostPlayback && (() => {
+          const ghostY = getGhostY(world.ghostPlayback, world.cameraX);
+          return ghostY === null ? null : (
+            <View style={styles.ghostWrap} pointerEvents="none">
+              <RiderSprite
+                y={ghostY}
+                color={gliderConfig.color}
+                accentColor={gliderConfig.accentColor}
+                packages={0}
+                thrusting={false}
+              />
+            </View>
+          );
+        })()}
 
         <RiderSprite
           y={world.riderY}
@@ -252,6 +353,17 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             StyleSheet.absoluteFill,
             { backgroundColor: currentZone.tint.color, opacity: currentZone.tint.opacity },
           ]}
+          pointerEvents="none"
+        />
+      )}
+
+      {/* Mutator: Blackout City keeps the whole run darkened — unlike the
+          temporary Blackout weather event, this never lifts, and HUD stays
+          fully visible throughout (it's a visibility challenge, not a
+          "can't read your stats" challenge). */}
+      {nightMode && (
+        <View
+          style={[StyleSheet.absoluteFill, { backgroundColor: "#000000", opacity: nightOpacity }]}
           pointerEvents="none"
         />
       )}
@@ -337,6 +449,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         credits={world.credits}
         zoneIndex={world.zoneIndex}
         combo={world.combo}
+        packageTypes={world.packageTypes}
         dimmed={world.weatherEvent && world.weatherEvent.id === "blackout" && !stormImmune}
       />
 
@@ -396,6 +509,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderStyle: "dashed",
+  },
+  branchZone: {
+    position: "absolute",
+  },
+  ghostWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.32,
   },
   windArrow: {
     position: "absolute",

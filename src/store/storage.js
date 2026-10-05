@@ -53,6 +53,11 @@ const DEFAULT_SAVE = {
   // over — no server, no shared seed across devices.
   dailyContracts: { date: null, ids: [], completed: [] },
   dailyCumulative: { date: null, deliveries: 0, runs: 0, empUsed: 0, slipstream: 0 },
+  // Daily Challenge: your personal best (meters) for each calendar day's
+  // seeded run, keyed by date string ("2026-10-04"). Since the seed makes
+  // that day's track identical for everyone who plays it, this is a clean
+  // "beat your own best on today's exact track" loop without any server.
+  dailyChallengeBests: {},
 };
 
 let cache = null;
@@ -204,6 +209,54 @@ export async function updateDailyContractsForRun(runStats) {
     },
   });
   return { save: updated, newlyCompleted };
+}
+
+// --- Daily Challenge ---------------------------------------------------
+// Call after a run that was played with today's seed. Only raises the
+// stored best for that date — never lowers it. Returns { save, isNewBest }.
+export async function recordDailyChallengeResult(dateKey, meters) {
+  const s = getCachedSave() || DEFAULT_SAVE;
+  const existing = (s.dailyChallengeBests || {})[dateKey] || 0;
+  const isNewBest = meters > existing;
+  if (!isNewBest) return { save: s, isNewBest: false };
+  const updated = await saveSave({
+    dailyChallengeBests: { ...(s.dailyChallengeBests || {}), [dateKey]: meters },
+  });
+  return { save: updated, isNewBest: true };
+}
+
+// --- Ghost Replay ---------------------------------------------------
+// Kept in its own AsyncStorage key, separate from the main save blob,
+// since a trace is a sizable array and has nothing to do with save-file
+// shape/versioning. Only ever holds ONE ghost: your single best run ever
+// (by distance). Every new personal best overwrites it — simple, and
+// exactly matches "race against your own best run".
+const GHOST_KEY = "@delivery_glider/ghost_v1";
+
+export async function loadBestGhost() {
+  try {
+    const raw = await AsyncStorage.getItem(GHOST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.trace) || parsed.trace.length < 2) return null;
+    return parsed; // { meters, trace: [[x,y], ...] }
+  } catch (e) {
+    return null;
+  }
+}
+
+// Only overwrites the stored ghost if this run's distance beats it (or
+// nothing is stored yet). Returns true if it actually saved.
+export async function saveBestGhostIfBetter(meters, trace) {
+  try {
+    const existing = await loadBestGhost();
+    if (existing && existing.meters >= meters) return false;
+    if (!trace || trace.length < 2) return false;
+    await AsyncStorage.setItem(GHOST_KEY, JSON.stringify({ meters, trace }));
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 export { DEFAULT_SAVE };

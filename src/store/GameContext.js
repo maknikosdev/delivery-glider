@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from "./storage";
 import AudioManager from "../audio/AudioManager";
 import { getTranslator } from "../i18n/i18n";
+import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 
 const GameContext = createContext(null);
 
@@ -144,17 +145,35 @@ export function GameProvider({ children }) {
   }, []);
 
   // Levels up a skill glider's Active/Passive ability (0→3). Same in-game
-  // credits as everything else — no billing, no real money.
+  // credits as everything else — no billing, no real money. Stores the
+  // { level, branch } shape (see gameConfig.js's readSkillLevel/
+  // readSkillBranch, which also still understand old saves' plain-number
+  // format) — branch starts null and is set separately via setSkillBranch
+  // once the player reaches level 2 and picks a fork.
   const buySkillLevel = useCallback(async (gliderId, cost, maxLevel) => {
     const current = await loadSave();
-    const level = (current.skillLevels || {})[gliderId] || 0;
+    const level = readSkillLevel(current.skillLevels, gliderId);
+    const branch = readSkillBranch(current.skillLevels, gliderId);
     if (level >= maxLevel || current.credits < cost) return false;
     const updated = await saveSave({
       credits: current.credits - cost,
-      skillLevels: { ...(current.skillLevels || {}), [gliderId]: level + 1 },
+      skillLevels: { ...(current.skillLevels || {}), [gliderId]: { level: level + 1, branch } },
     });
     setSave(updated);
     return true;
+  }, []);
+
+  // Skill Tree: records which of the two dimensions ("a" | "b") the
+  // player picked at level 2 — see SKILL_UPGRADES.branches in
+  // gameConfig.js. Only meaningful once level >= 2; harmless if called
+  // again later to switch (a respec, effectively free).
+  const setSkillBranch = useCallback(async (gliderId, branch) => {
+    const current = await loadSave();
+    const level = readSkillLevel(current.skillLevels, gliderId);
+    const updated = await saveSave({
+      skillLevels: { ...(current.skillLevels || {}), [gliderId]: { level, branch } },
+    });
+    setSave(updated);
   }, []);
 
   // Persists newly-earned achievement ids and unlocks their cosmetic skins.
@@ -219,6 +238,7 @@ export function GameProvider({ children }) {
     applyMysteryCrateReward,
     consumeRunBonuses,
     buySkillLevel,
+    setSkillBranch,
     unlockAchievements,
     selectSkin,
     markTutorialSeen,

@@ -11,6 +11,52 @@
 // languages, same as a real place name would.
 
 const el = {
+  // Story/NPCs: Nyx is the Astra-Express dispatcher — the one voice that's
+  // been in the player's ear since day one (see gliders.el.starter's own
+  // flavor text). A handful of short, personality-driven lines shown at a
+  // few key moments (Menu, Game Over, boss intros) — never blocking, never
+  // more than one line, purely flavor on top of mechanics that already
+  // work without it.
+  dispatcher: {
+    name: "Nyx",
+    menu: [
+      "Άλλη μια βάρδια, ρούκι. Η πόλη δεν παραδίδει μόνη της τα δέματα.",
+      "Έχω ακούσει ότι σήμερα έχει κίνηση στο Transit Lanes. Πρόσεχε τα blimp.",
+      "Ο πελάτης στο 14ο όροφο ρώτησε ξανά για το δέμα του. Μην αργήσεις.",
+      "Κάθε παράδοση μετράει. Κάθε μέτρο μετράει. Πάμε.",
+      "Η Astra-Express δεν κοιμάται ποτέ. Ούτε εσύ, προφανώς.",
+      "Το radar δείχνει καθαρό ουρανό. Προς το παρόν.",
+    ],
+    gameover_crashed_early: [
+      "Σκληρή μέρα στο γραφείο, ε; Ξαναπροσπάθησε.",
+      "Αυτό δεν μετράει καν ως βάρδια. Έλα, ξανά.",
+      "Η πόλη δεν συγχωρεί αρχάριους. Μάθε και συνέχισε.",
+    ],
+    gameover_decent: [
+      "Όχι άσχημα. Ο λογαριασμός σου γέμισε λίγο παραπάνω.",
+      "Σταθερή δουλειά. Η Astra-Express εκτιμά τη συνέπεια.",
+      "Μέτρια βάρδια. Έχεις δει και χειρότερες, έχεις δει και καλύτερες.",
+    ],
+    gameover_great: [
+      "Αυτό ήταν εντυπωσιακό πτήσης. Το αφεντικό το πρόσεξε.",
+      "Η πόλη σε θυμάται απόψε, ρούκι.",
+      "Τέτοιες βάρδιες πληρώνουν τους λογαριασμούς. Καλή δουλειά.",
+    ],
+    gameover_new_record: [
+      "★ Νέο ρεκόρ. Θα το καρφιτσώσω στον πίνακα του γραφείου.",
+      "★ Δεν το περίμενα αυτό. Εντυπωσιακό, ρούκι.",
+      "★ Η Neo-Athens Grid μόλις έμαθε το όνομά σου.",
+    ],
+    daily: "Σημερινή πρόκληση ενεργή. Ίδιο track, ίδιοι κανόνες, για όλους. Δείξε τι αξίζεις.",
+  },
+  bosses: {
+    police_blimp_name: "Λοχαγός Βος",
+    police_blimp_line: "«Astra-Express, προσγειώσου τώρα ή το φορτίο σου γίνεται απόδειξη.»",
+    mega_drone_name: "Bloodhound",
+    mega_drone_line: "«Εντοπισμός στόχου. Ξεκινά καταδίωξη.»",
+    storm_plasma_name: "The Static",
+    storm_plasma_line: "«Ο καιρός μου ανήκει εδώ. Καλή τύχη, ρούκι.»",
+  },
   common: {
     menuBack: "‹ MENU",
   },
@@ -61,6 +107,7 @@ const el = {
   gameover: {
     title: "CRASH!",
     newRecord: "★ ΝΕΟ ΡΕΚΟΡ ★",
+    dailyNewBest: "ΝΕΟ ΡΕΚΟΡ ΗΜΕΡΑΣ!",
     distance: "Απόσταση",
     deliveries: "Παραδόσεις",
     credits: "Credits",
@@ -109,6 +156,7 @@ const el = {
     select: "ΕΠΙΛΟΓΗ",
     maxLevel: "MAX LEVEL",
     upgradeSkill: "Upgrade Skill",
+    branchHint: "Διάλεξε κατεύθυνση (level 2+):",
     skins: "SKINS",
     skinsHint: "Χρώματα που ξεκλειδώνεις μέσα από Achievements — εφαρμόζονται πάνω στο επιλεγμένο glider σου.",
     default: "Default",
@@ -231,9 +279,64 @@ const el = {
     package_magnet: "Μεγαλύτερη ανοχή στόχευσης στο swipe παράδοσης — δεν χρειάζεται ακρίβεια.",
     fuel_canister: "+20% αρχική ταχύτητα και δωρεάν ασπίδα για τα πρώτα 500 μέτρα.",
   },
+  daily: {
+    title: "DAILY CHALLENGE",
+    toggle: "Σημερινή Πρόκληση",
+    hint: "Ίδιο track για όλους σήμερα (seeded) — σπάσε το προσωπικό σου ρεκόρ της ημέρας.",
+    bestToday: "Best σήμερα",
+  },
+  mutators: {
+    title: "MUTATORS",
+    hint: "Προαιρετικό hard-mode για αυτό το run — διάλεξε έναν ή κανέναν. Μεγαλύτερος κίνδυνος, μεγαλύτερη αμοιβή σε credits.",
+    none: "Κανένα",
+    double_gravity: "Διπλή βαρύτητα — πολύ πιο δύσκολος έλεγχος ύψους σε όλο το run.",
+    night_only: "Μόνιμο σκοτάδι σε όλο το run — μειωμένη ορατότητα, το HUD παραμένει ορατό.",
+    glass_cannon: "Κανένα shield, καμία δεύτερη ευκαιρία (revive) — ένα χτύπημα και τέλος.",
+    speed_demon: "+40% ταχύτητα κόσμου καθ' όλη τη διάρκεια του run.",
+  },
 };
 
 const en = {
+  dispatcher: {
+    name: "Nyx",
+    menu: [
+      "Another shift, rookie. The city doesn't deliver itself.",
+      "Heard Transit Lanes is busy today. Watch for the blimp.",
+      "The client on floor 14 asked about their package again. Don't be late.",
+      "Every delivery counts. Every meter counts. Let's move.",
+      "Astra-Express never sleeps. Apparently neither do you.",
+      "Radar's clear for now. Make the most of it.",
+    ],
+    gameover_crashed_early: [
+      "Rough one, huh? Try again.",
+      "That barely counts as a shift. Go again.",
+      "The city doesn't go easy on rookies. Learn and go again.",
+    ],
+    gameover_decent: [
+      "Not bad. Your balance just got a little healthier.",
+      "Steady work. Astra-Express appreciates consistency.",
+      "Average shift. You've seen worse, you've seen better.",
+    ],
+    gameover_great: [
+      "That was an impressive run. The boss noticed.",
+      "The city's going to remember you tonight, rookie.",
+      "Shifts like that pay the bills. Nice work.",
+    ],
+    gameover_new_record: [
+      "★ New record. I'm pinning that one on the office board.",
+      "★ Didn't see that coming. Impressive, rookie.",
+      "★ Neo-Athens Grid just learned your name.",
+    ],
+    daily: "Today's challenge is live. Same track, same rules, for everyone. Show us what you've got.",
+  },
+  bosses: {
+    police_blimp_name: "Captain Voss",
+    police_blimp_line: "\"Astra-Express, land now or your cargo becomes evidence.\"",
+    mega_drone_name: "Bloodhound",
+    mega_drone_line: "\"Target acquired. Initiating pursuit.\"",
+    storm_plasma_name: "The Static",
+    storm_plasma_line: "\"The weather's mine here. Good luck, rookie.\"",
+  },
   common: {
     menuBack: "‹ MENU",
   },
@@ -284,6 +387,7 @@ const en = {
   gameover: {
     title: "CRASH!",
     newRecord: "★ NEW RECORD ★",
+    dailyNewBest: "NEW DAILY BEST!",
     distance: "Distance",
     deliveries: "Deliveries",
     credits: "Credits",
@@ -332,6 +436,7 @@ const en = {
     select: "SELECT",
     maxLevel: "MAX LEVEL",
     upgradeSkill: "Upgrade Skill",
+    branchHint: "Pick a direction (level 2+):",
     skins: "SKINS",
     skinsHint: "Colors you unlock through Achievements — applied on top of your selected glider.",
     default: "Default",
@@ -453,6 +558,21 @@ const en = {
     ejector_seat: "On crash, you eject and keep flying 100m further collecting coins before the run ends smoothly.",
     package_magnet: "More forgiving aim on the delivery swipe — precision isn't required.",
     fuel_canister: "+20% starting speed and a free shield for the first 500 meters.",
+  },
+  daily: {
+    title: "DAILY CHALLENGE",
+    toggle: "Today's Challenge",
+    hint: "The same seeded track for everyone today — beat your own best for this date.",
+    bestToday: "Best today",
+  },
+  mutators: {
+    title: "MUTATORS",
+    hint: "An optional hard-mode pick for this run — choose one or none. Higher risk, bigger credit payout.",
+    none: "None",
+    double_gravity: "Double gravity — much harder altitude control for the whole run.",
+    night_only: "Permanent darkness for the whole run — reduced visibility, HUD stays visible.",
+    glass_cannon: "No shields, no second chances (revive) — one hit ends the run.",
+    speed_demon: "+40% world speed for the entire run.",
   },
 };
 

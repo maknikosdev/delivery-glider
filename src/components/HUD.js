@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS, DIFFICULTY } from "../constants/gameConfig";
+import { COLORS, DIFFICULTY, PACKAGE_TYPES } from "../constants/gameConfig";
 import MuteButton from "./MuteButton";
 
-export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed }) {
+export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed, packageTypes }) {
   const zone = DIFFICULTY.zones[zoneIndex] || DIFFICULTY.zones[0];
   return (
     <View style={[styles.wrap, dimmed && styles.wrapDimmed]} pointerEvents="box-none">
@@ -17,10 +17,23 @@ export default function HUD({ meters, packages, capacity, credits, zoneIndex, co
         <MuteButton />
       </View>
       <View style={styles.row}>
-        <View style={styles.pill}>
+        <View style={[styles.pill, styles.cargoPill]}>
           <Text style={styles.pillText}>
-            📦 {packages}/{capacity}
+            {packages}/{capacity}
           </Text>
+          {/* Current hold, front-to-back delivery order — lets the player
+              see at a glance whether they're carrying anything that
+              changes how they should fly (fragile = no dives, thermal =
+              hurry, VIP = expect police). */}
+          {packageTypes && packageTypes.length > 0 && (
+            <View style={styles.cargoIcons}>
+              {packageTypes.map((t, i) => (
+                <Text key={i} style={styles.cargoIcon}>
+                  {(PACKAGE_TYPES[t] || PACKAGE_TYPES.standard).icon}
+                </Text>
+              ))}
+            </View>
+          )}
         </View>
         {combo > 1 && (
           <View style={[styles.pill, styles.comboPill]}>
@@ -66,6 +79,18 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontWeight: "700",
     fontSize: 13,
+  },
+  cargoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cargoIcons: {
+    flexDirection: "row",
+    marginLeft: 6,
+  },
+  cargoIcon: {
+    fontSize: 13,
+    marginLeft: 1,
   },
   zonePill: {
     borderColor: COLORS.neonPink,

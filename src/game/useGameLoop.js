@@ -19,8 +19,17 @@ import {
   GADGETS,
   START_GRACE_MS,
   SKILL_UPGRADES,
+  PACKAGE_TYPES,
+  PACKAGE_TYPE_POOL,
+  MUTATORS,
+  BOSS_ENCOUNTERS,
+  PROJECTILE_TYPES,
+  CHUNK_WIDTH,
+  branchEffectiveLevel,
 } from "../constants/gameConfig";
-import { pickChunk, instantiateChunk, getZoneIndex } from "./chunks";
+import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK } from "./chunks";
+import { createSeededRng } from "./seededRandom";
+import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
 import { useGame } from "../store/GameContext";
 
@@ -42,18 +51,56 @@ function buildRunResult(world) {
   };
 }
 
-function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
+// Route Branching cadence — a forced upper/lower fork chunk every this many
+// meters of travel (not random — players should learn to anticipate it).
+const ROUTE_BRANCH_INTERVAL_M = 500;
+
+// Weighted random roll for one cargo-hold's worth of package types. Every
+// slot is independent, so a full hold is rarely homogeneous — that's the
+// point, it forces a mixed-risk decision on every run of deliveries until
+// the next refuel.
+function rollPackageLoad(capacity, rng = Math.random) {
+  const totalWeight = PACKAGE_TYPE_POOL.reduce((sum, t) => sum + t.weight, 0);
+  const load = [];
+  for (let i = 0; i < capacity; i++) {
+    let roll = rng() * totalWeight;
+    let chosen = PACKAGE_TYPE_POOL[0].id;
+    for (const t of PACKAGE_TYPE_POOL) {
+      if (roll < t.weight) {
+        chosen = t.id;
+        break;
+      }
+      roll -= t.weight;
+    }
+    load.push(chosen);
+  }
+  return load;
+}
+
+function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random) {
+  const initialLoad = rollPackageLoad(gliderConfig.capacity, rng);
+  const startsWithVip = initialLoad.includes("vip");
   return {
     cameraX: 0,
     riderY: SCREEN.height * 0.45,
     velocityY: 0,
     packages: gliderConfig.capacity,
     capacity: gliderConfig.capacity,
+    // Package variety: the current hold, front-to-back delivery order, and
+    // supporting state for the fragile/thermal rules. Re-rolled on every
+    // drone-station refuel (see the refuel block further down).
+    packageTypes: initialLoad,
+    packagesLoadedAt: Date.now(),
+    fragileDiveCount: 0,
     score: 0,
     deliveries: 0,
     credits: 0,
     chunks: [],
     lastChunkEndX: 0,
+    // Route Branching: every ROUTE_BRANCH_INTERVAL_M meters, the next chunk
+    // generated is forced to be the upper(risk)/lower(safe) fork instead of
+    // a random pick from the weighted pool.
+    nextBranchAtMeters: ROUTE_BRANCH_INTERVAL_M,
     status: "playing", // "playing" | "awaiting_revive" | "ejected" | "crashed"
     thrustHeld: false,
     particles: [],
@@ -66,6 +113,28 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
     nearMissCooldowns: {},
     shake: 0,
     edgeDanger: 0,
+    hitStopUntil: 0, // Juice: brief freeze-frame on crash/near-miss, see step()
+    deliveryPulseAt: 0, // Juice: camera punch-in timestamp, read by GameScreen.js
+    // Ghost Replay: sparse [x, y] samples of THIS run, recorded as it
+    // happens; saved as the new best ghost on game-over if it beat the
+    // previous one. ghostPlayback holds the PREVIOUS best run's trace
+    // (loaded async right after mount — see the effect below), which
+    // GameScreen.js renders as a translucent glider by interpolating this
+    // run's current cameraX against it.
+    ghostTrace: [],
+    lastGhostSampleAt: 0,
+    ghostPlayback: null,
+    // Boss Encounters: each one fires exactly once, in order, as its
+    // triggerMeters threshold is crossed. nextBossIndex walks forward
+    // through BOSS_ENCOUNTERS and never revisits one already triggered
+    // this run. activeBossEntity is the ONE real boss character currently
+    // on screen (its own sprite, its own movement, its own hitbox) — not
+    // a handful of reused obstacles like the first version of this
+    // system. bossProjectiles holds whatever it's currently thrown that
+    // hasn't resolved yet (hit, dodged, or expired).
+    nextBossIndex: 0,
+    activeBossEntity: null,
+    bossProjectiles: [],
     // coins & skills
     coinStreak: 0,
     skillCooldownUntil: 0,
@@ -79,7 +148,7 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
     usedFreeRevive: false,
     // weather
     weatherEvent: null, // { id, until, warmupUntil, bandY }
-    nextWeatherAt: Date.now() + WEATHER.minGapMs + Math.random() * (WEATHER.maxGapMs - WEATHER.minGapMs),
+    nextWeatherAt: Date.now() + WEATHER.minGapMs + rng() * (WEATHER.maxGapMs - WEATHER.minGapMs),
     corrosion: 0,
     weatherEventsSurvivedCount: 0, // weather events that ran to completion without a crash (Storm Chaser)
     maxPhaseShiftCoins: 0, // most coins pulled in by a single Phase Shift activation (Ghost Runner)
@@ -90,7 +159,7 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
     shieldCharges: 0,
     turboDashUntil: 0,
     // wanted level
-    wantedLevel: 0,
+    wantedLevel: startsWithVip ? Math.min(WANTED.maxLevel, PACKAGE_TYPES.vip.wantedBoostOnLoad) : 0,
     wantedMissedStreak: 0,
     wantedRedStreak: 0,
     chaser: null, // { worldX, y }
@@ -115,8 +184,47 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive) {
   };
 }
 
-export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, totalRuns = 0, onGameOver }) {
-  const worldRef = useRef(makeInitialWorld(gliderConfig, gadgetIds, freeRevive));
+export function useGameLoop({
+  gliderConfig,
+  gadgetIds,
+  freeRevive,
+  skillLevel,
+  skillBranch = null,
+  totalRuns = 0,
+  mutatorId = null,
+  dailySeed = null,
+  onGameOver,
+}) {
+  // Mutators: an optional, player-picked run modifier (see LoadoutScreen.js
+  // and MUTATORS in gameConfig.js). Fixed for the whole run — GameScreen.js
+  // remounts (via App.js's `key={runKey}`) between runs, so this never
+  // changes mid-run and is safe to read as a plain const.
+  const mutator = mutatorId ? MUTATORS[mutatorId] : null;
+
+  // Daily Challenge: when a seed is provided, every random roll that
+  // shapes the track (chunk choice, obstacle/coin/powerup placement,
+  // starting cargo, weather timing) comes from this seeded generator
+  // instead of Math.random() — same seed, same run, for every player.
+  // Created once via a ref so it's one continuous sequence for the whole
+  // run, not re-seeded every render.
+  const rngRef = useRef(dailySeed ? createSeededRng(dailySeed) : null);
+  const rng = rngRef.current || Math.random;
+
+  const worldRef = useRef(makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng));
+
+  // Ghost Replay: load the previous best run's trace once, right after
+  // mount. Async, so it lands a frame or two late — the ghost sprite just
+  // doesn't render until worldRef.current.ghostPlayback is populated,
+  // which GameScreen.js already treats as optional.
+  useEffect(() => {
+    let cancelled = false;
+    loadBestGhost().then((ghost) => {
+      if (!cancelled && ghost) worldRef.current.ghostPlayback = ghost.trace;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [, forceRender] = useState(0);
   const rafRef = useRef(null);
   const lastTsRef = useRef(null);
@@ -144,26 +252,29 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
   const effSkill = useMemo(() => {
     if (!skillDef) return null;
     const up = SKILL_UPGRADES.effects[skillDef.id];
+    const bl = (dimensionKey) => branchEffectiveLevel(level, skillBranch, dimensionKey, skillDef.id);
     if (skillDef.id === "emp_blast") {
       const base = SKILLS.emp_blast;
       return {
-        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, level),
-        radius: base.radius + up.radiusAddPerLevel * level,
+        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, bl("cooldownMultPerLevel")),
+        radius: base.radius + up.radiusAddPerLevel * bl("radiusAddPerLevel"),
+        // Small universal economy bonus — always full level, not part of
+        // the Wide Blast / Rapid Recharge fork.
         creditsPerObstacle: base.creditsPerObstacle + up.creditsAddPerLevel * level,
       };
     }
     if (skillDef.id === "decoy_drone") {
       const base = SKILLS.decoy_drone;
       return {
-        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, level),
-        durationMs: base.durationMs + up.durationAddPerLevel * level,
+        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, bl("cooldownMultPerLevel")),
+        durationMs: base.durationMs + up.durationAddPerLevel * bl("durationAddPerLevel"),
       };
     }
     if (skillDef.id === "turbo_dash") {
       const base = SKILLS.turbo_dash;
       return {
-        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, level),
-        durationMs: base.durationMs + up.durationAddPerLevel * level,
+        cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, bl("cooldownMultPerLevel")),
+        durationMs: base.durationMs + up.durationAddPerLevel * bl("durationAddPerLevel"),
         speedMult: base.speedMult,
         invincibleMs: base.invincibleMs,
       };
@@ -171,13 +282,14 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     if (skillDef.id === "phase_shift") {
       const base = SKILLS.phase_shift;
       return {
+        // Cooldown always scales fully — a shorter wait helps either build.
         cooldownMs: base.cooldownMs * Math.pow(up.cooldownMultPerLevel, level),
-        durationMs: base.durationMs + up.durationAddPerLevel * level,
-        pullRadius: base.pullRadius + up.radiusAddPerLevel * level,
+        durationMs: base.durationMs + up.durationAddPerLevel * bl("durationAddPerLevel"),
+        pullRadius: base.pullRadius + up.radiusAddPerLevel * bl("radiusAddPerLevel"),
       };
     }
     return null;
-  }, [skillDef, level]);
+  }, [skillDef, level, skillBranch]);
 
   // Passive skills modify the glider's own physics multipliers directly.
   const isMassReduction = skillDef && skillDef.id === "mass_reduction";
@@ -185,29 +297,33 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     const base = gliderConfig.weightFactorMult || 1;
     if (!isMassReduction) return base;
     const up = SKILL_UPGRADES.effects.mass_reduction;
-    return Math.max(0.15, base - up.weightFactorReducePerLevel * level);
-  }, [gliderConfig.weightFactorMult, isMassReduction, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "weightFactorReducePerLevel", "mass_reduction");
+    return Math.max(0.15, base - up.weightFactorReducePerLevel * bl);
+  }, [gliderConfig.weightFactorMult, isMassReduction, level, skillBranch]);
 
   const effectiveBoostMult = useMemo(() => {
     const base = gliderConfig.boostMult || 1;
     if (!isMassReduction) return base;
     const up = SKILL_UPGRADES.effects.mass_reduction;
-    return Math.min(1, base + up.boostMultRecoverPerLevel * level);
-  }, [gliderConfig.boostMult, isMassReduction, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "boostMultRecoverPerLevel", "mass_reduction");
+    return Math.min(1, base + up.boostMultRecoverPerLevel * bl);
+  }, [gliderConfig.boostMult, isMassReduction, level, skillBranch]);
 
   const effectiveMagnetMult = useMemo(() => {
     const base = gliderConfig.magnetMult || 1;
     if (!isCoinMagnetBoost) return base;
     const up = SKILL_UPGRADES.effects.coin_magnet_boost;
-    return base + up.magnetMultAddPerLevel * level;
-  }, [gliderConfig.magnetMult, isCoinMagnetBoost, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "magnetMultAddPerLevel", "coin_magnet_boost");
+    return base + up.magnetMultAddPerLevel * bl;
+  }, [gliderConfig.magnetMult, isCoinMagnetBoost, level, skillBranch]);
 
   const effectiveStreakForBoost = useMemo(() => {
     const base = SKILLS.coin_magnet_boost.streakForBoost;
     if (!isCoinMagnetBoost) return base;
     const up = SKILL_UPGRADES.effects.coin_magnet_boost;
-    return Math.max(3, base - up.streakReducePerLevel * level);
-  }, [isCoinMagnetBoost, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "streakReducePerLevel", "coin_magnet_boost");
+    return Math.max(3, base - up.streakReducePerLevel * bl);
+  }, [isCoinMagnetBoost, level, skillBranch]);
 
   // Storm Breaker passive: reduces acid-rain corrosion, ignores solar-flare
   // control inversion, keeps the HUD visible during Blackout, and grants a
@@ -216,13 +332,15 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
   const effectiveCorrosionMult = useMemo(() => {
     if (!isStormImmune) return 1;
     const up = SKILL_UPGRADES.effects.storm_immunity;
-    return Math.max(0.15, SKILLS.storm_immunity.corrosionMult - up.corrosionReducePerLevel * level);
-  }, [isStormImmune, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "corrosionReducePerLevel", "storm_immunity");
+    return Math.max(0.15, SKILLS.storm_immunity.corrosionMult - up.corrosionReducePerLevel * bl);
+  }, [isStormImmune, level, skillBranch]);
   const effectiveWeatherCreditMult = useMemo(() => {
     if (!isStormImmune) return 1;
     const up = SKILL_UPGRADES.effects.storm_immunity;
-    return SKILLS.storm_immunity.creditBonusMult + up.creditBonusAddPerLevel * level;
-  }, [isStormImmune, level]);
+    const bl = branchEffectiveLevel(level, skillBranch, "creditBonusAddPerLevel", "storm_immunity");
+    return SKILLS.storm_immunity.creditBonusMult + up.creditBonusAddPerLevel * bl;
+  }, [isStormImmune, level, skillBranch]);
 
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
@@ -241,14 +359,75 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     while (world.lastChunkEndX < world.cameraX + SCREEN.width * 3) {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
       const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult);
-      const template = pickChunk(world.zoneIndex);
       const yBounds = zone.tunnelMode ? { min: zone.tunnelTop + 0.04, max: zone.tunnelBottom - 0.04 } : undefined;
-      const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds);
+
+      // Route Branching: once this chunk's start position would cross the
+      // next scheduled fork distance, force the branch chunk instead of a
+      // random pick — but tunnel zones (Metro Undercity) already narrow
+      // the vertical band so hard there's no room for two sub-lanes, so
+      // those just skip ahead to the next scheduled fork instead.
+      const chunkStartMeters = world.lastChunkEndX * METERS_PER_PX;
+      const dueForBranch = chunkStartMeters >= world.nextBranchAtMeters && world.zoneIndex >= ROUTE_BRANCH_CHUNK.minZoneIndex;
+      let template;
+      if (dueForBranch && !zone.tunnelMode) {
+        template = ROUTE_BRANCH_CHUNK;
+        world.nextBranchAtMeters += ROUTE_BRANCH_INTERVAL_M;
+      } else if (dueForBranch) {
+        world.nextBranchAtMeters += ROUTE_BRANCH_INTERVAL_M;
+        template = pickChunk(world.zoneIndex, rng);
+      } else {
+        template = pickChunk(world.zoneIndex, rng);
+      }
+
+      const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds, rng);
       world.chunks.push(chunk);
       world.lastChunkEndX = chunk.endX;
+
+      if (template === ROUTE_BRANCH_CHUNK) {
+        const signX = chunk.startX + 80;
+        addFloatingText(world, "⬆ RISK ROUTE — more pay, more danger", signX, SCREEN.height * 0.1, "banner");
+        addFloatingText(world, "⬇ SAFE ROUTE — steady, modest pay", signX, SCREEN.height * 0.92, "banner");
+      }
+
+      // Boss Encounters: fire the next one (in order) once this chunk's
+      // start distance crosses its trigger — confined to THIS chunk's
+      // width so the fight has a clean, predictable start and end. This
+      // spawns ONE real boss entity (its own sprite + movement + hitbox),
+      // not a handful of reused obstacles — see step() for how it moves,
+      // throws projectiles, and resolves.
+      const boss = BOSS_ENCOUNTERS[world.nextBossIndex];
+      if (boss && chunkStartMeters >= boss.triggerMeters && !zone.tunnelMode) {
+        world.nextBossIndex += 1;
+        const bossNow = Date.now();
+        const centerX = chunk.startX + CHUNK_WIDTH / 2;
+        world.activeBossEntity = {
+          id: boss.id,
+          config: boss,
+          worldX: centerX,
+          y: SCREEN.height * 0.5,
+          driftCenterY: SCREEN.height * 0.5,
+          hitRadius: boss.hitRadius,
+          displaySize: boss.displaySize,
+          startX: chunk.startX,
+          endX: chunk.startX + CHUNK_WIDTH,
+          rewardCredits: boss.rewardCredits,
+          rewarded: false,
+          lastProjectileAt: bossNow,
+          dashUntil: 0,
+          nextDashAt: bossNow + (boss.dashEveryMs || 99999),
+          phase: 0,
+        };
+        addFloatingText(world, boss.warning, chunk.startX + 100, SCREEN.height * 0.12, "banner");
+        // Story/NPCs: each boss is a named character with one voiced
+        // taunt, read via t() so it's fully EL/EN rather than hardcoded.
+        const bossName = t(`bosses.${boss.id}_name`);
+        const bossLine = t(`bosses.${boss.id}_line`);
+        addFloatingText(world, `${bossName.toUpperCase()}`, chunk.startX + 100, SCREEN.height * 0.2, "banner");
+        addFloatingText(world, bossLine, chunk.startX + 100, SCREEN.height * 0.28, "banner");
+      }
     }
     world.chunks = world.chunks.filter((c) => c.endX > world.cameraX - SCREEN.width);
-  }, [softHazardMult]);
+  }, [softHazardMult, addFloatingText, rng, t]);
 
   useEffect(() => {
     const w = makeInitialWorld(gliderConfig, gadgetIds, freeRevive);
@@ -263,10 +442,11 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gliderConfig.id]);
 
+  const mutatorGravityMult = mutator?.gravityMult || 1;
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
-      const base = PHYSICS.gravityBase + world.packages * weightFactor;
+      const base = (PHYSICS.gravityBase + world.packages * weightFactor) * mutatorGravityMult;
       const elapsed = now - world.startedAt;
       if (elapsed < START_GRACE_MS) {
         // Start-of-run grace period: instead of floating flat (0 gravity)
@@ -281,9 +461,11 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       }
       return now < world.gravInvertUntil ? -base : base;
     },
-    [weightFactor]
+    [weightFactor, mutatorGravityMult]
   );
 
+  const mutatorSpeedMult = mutator?.speedMult || 1;
+  const mutatorCreditsMult = mutator?.creditsMult || 1;
   const currentSpeed = useCallback(
     (world) => {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
@@ -291,9 +473,18 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       const now = Date.now();
       const overclock = now < world.overclockUntil ? POWERUP.types.overclock.speedMult : 1;
       const turboDash = now < world.turboDashUntil ? SKILLS.turbo_dash.speedMult : 1;
-      return DIFFICULTY.baseSpeed * zone.speedMult * ramp * startSpeedMult * overclock * turboDash * softSpeedMult;
+      return (
+        DIFFICULTY.baseSpeed *
+        zone.speedMult *
+        ramp *
+        startSpeedMult *
+        overclock *
+        turboDash *
+        softSpeedMult *
+        mutatorSpeedMult
+      );
     },
-    [startSpeedMult, softSpeedMult]
+    [startSpeedMult, softSpeedMult, mutatorSpeedMult]
   );
 
   const addFloatingText = useCallback((world, text, worldX, y, kind = "score") => {
@@ -310,6 +501,9 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
   const finalizeGameOver = useCallback(
     (world, result) => {
       world.status = "crashed";
+      // Ghost Replay: fire-and-forget — only actually writes if this run's
+      // distance beat the previously stored best (see storage.js).
+      saveBestGhostIfBetter(result.meters, world.ghostTrace).catch(() => {});
       onGameOver && onGameOver(result);
     },
     [onGameOver]
@@ -324,9 +518,12 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
 
       const result = buildRunResult(world);
 
+      // Glass Cannon mutator: no second chances, by design — the big
+      // credits multiplier is the trade-off for a true one-hit run.
       const canRevive =
-        (world.revivesUsed < REVIVE.maxRevivesPerRun && world.credits >= REVIVE.cost) ||
-        world.freeReviveAvailable;
+        !mutator?.oneHitMode &&
+        ((world.revivesUsed < REVIVE.maxRevivesPerRun && world.credits >= REVIVE.cost) ||
+          world.freeReviveAvailable);
       if (canRevive) {
         world.status = "awaiting_revive";
         world.pendingCrashResult = result;
@@ -346,7 +543,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
 
       finalizeGameOver(world, result);
     },
-    [finalizeGameOver, addFloatingText, t]
+    [finalizeGameOver, addFloatingText, t, mutator]
   );
 
   const tryDeliver = useCallback(
@@ -365,6 +562,12 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
           if (dx < tol && dy < tol && world.packages > 0) {
             b.delivered = true;
             world.packages -= 1;
+            // Package variety: the hold is always delivered front-to-back
+            // (it's all loaded at once at a refuel, so there's no "pick
+            // which one" moment — the decision already happened earlier,
+            // in how you flew while carrying it).
+            const pkgType =
+              world.packageTypes && world.packageTypes.length > 0 ? world.packageTypes.shift() : "standard";
             world.deliveries += 1;
             world.wantedMissedStreak = 0;
 
@@ -398,7 +601,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
 
             const slipMult = now < world.slipstreamUntil ? SLIPSTREAM.scoreMult : 1;
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
-            let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult;
+            let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult * mutatorCreditsMult;
 
             if (b.express && b.expiresAt && now <= b.expiresAt) {
               earned = earned * EXPRESS.rewardMult;
@@ -408,30 +611,61 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
               world.velocityY = PHYSICS.deliveryBoostVy * boostMult;
             }
 
+            // Package type modifier — applied after combo/express so a VIP
+            // package still benefits from a hot combo streak, but a spoiled
+            // thermal package always zeroes out no matter how good the rest
+            // of the run was going.
+            let packageTag = null;
+            if (pkgType === "vip") {
+              earned *= PACKAGE_TYPES.vip.rewardMult;
+              packageTag = "VIP";
+            } else if (pkgType === "fragile") {
+              const integrity = Math.max(
+                PACKAGE_TYPES.fragile.minValueMult,
+                1 - PACKAGE_TYPES.fragile.diveDamage * world.fragileDiveCount
+              );
+              earned *= integrity;
+              if (integrity < 0.99) packageTag = "CRACKED";
+            } else if (pkgType === "thermal") {
+              const spoiled = now > world.packagesLoadedAt + PACKAGE_TYPES.thermal.expiresMs;
+              if (spoiled) {
+                earned = 0;
+                packageTag = "SPOILED!";
+              }
+            }
+
             earned = Math.round(earned);
             world.credits += earned;
             world.particles.push({ id: `p_${now}_${Math.random()}`, x: b.worldX, y: b.y, born: now });
-            addFloatingText(
-              world,
-              world.combo > 1 ? `+${earned} x${world.combo}` : `+${earned}`,
-              b.worldX,
-              b.y - 30,
-              "score"
-            );
+            const baseLabel = world.combo > 1 ? `+${earned} x${world.combo}` : `+${earned}`;
+            addFloatingText(world, packageTag ? `${packageTag} ${baseLabel}` : baseLabel, b.worldX, b.y - 30, "score");
             AudioManager.play("deliver");
+            world.deliveryPulseAt = now; // Juice: brief camera punch-in, read by GameScreen.js
             delivered = true;
           }
         }
       }
       return delivered;
     },
-    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult]
+    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult, mutatorCreditsMult]
   );
 
   const applyDive = useCallback((world) => {
     const now = Date.now();
     world.longestNoDiveMs = Math.max(world.longestNoDiveMs, now - world.lastDiveAt);
     world.lastDiveAt = now;
+
+    // Package variety: diving while carrying fragile cargo chips away at
+    // this load's integrity — every fragile package still in the hold
+    // takes the hit when it's eventually delivered, not just the next one.
+    if (world.packageTypes && world.packageTypes.includes("fragile")) {
+      world.fragileDiveCount += 1;
+      if (world.fragileDiveCount === 1) {
+        const riderWorldXForDive = world.cameraX + RIDER.screenX;
+        addFloatingText(world, "Fragile cargo cracking!", riderWorldXForDive, world.riderY - 40, "near_miss");
+      }
+    }
+
     const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
       world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy);
@@ -439,7 +673,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy);
     }
     AudioManager.play("swipe");
-  }, [isStormImmune]);
+  }, [isStormImmune, addFloatingText]);
 
   const setThrust = useCallback((held) => {
     worldRef.current.thrustHeld = held;
@@ -528,7 +762,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     (world, now) => {
       if (world.weatherEvent || now < world.nextWeatherAt) return;
       const ids = Object.keys(WEATHER.events);
-      const id = ids[Math.floor(Math.random() * ids.length)];
+      const id = ids[Math.floor(rng() * ids.length)];
       const def = WEATHER.events[id];
       if (id === "police_blockade") {
         // In a tunnel zone (Metro Undercity), keep the blockade band inside
@@ -537,15 +771,15 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
         const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
         const bandMin = zone.tunnelMode ? zone.tunnelTop + 0.08 : 0.2;
         const bandMax = zone.tunnelMode ? zone.tunnelBottom - 0.08 : 0.7;
-        const bandY = SCREEN.height * (bandMin + Math.random() * Math.max(0.05, bandMax - bandMin));
+        const bandY = SCREEN.height * (bandMin + rng() * Math.max(0.05, bandMax - bandMin));
         world.weatherEvent = { id, warmupUntil: now + def.warmupMs, resolved: false, bandY, until: now + def.warmupMs + 400 };
       } else {
         world.weatherEvent = { id, until: now + def.durationMs };
       }
       addFloatingText(world, t(`weather.${id}`), world.cameraX + RIDER.screenX, SCREEN.height * 0.2, "banner");
-      world.nextWeatherAt = now + def.durationMs + WEATHER.minGapMs + Math.random() * (WEATHER.maxGapMs - WEATHER.minGapMs);
+      world.nextWeatherAt = now + def.durationMs + WEATHER.minGapMs + rng() * (WEATHER.maxGapMs - WEATHER.minGapMs);
     },
-    [addFloatingText, t]
+    [addFloatingText, t, rng]
   );
 
   const step = useCallback(
@@ -554,8 +788,26 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       if (world.status !== "playing" && world.status !== "ejected") return;
 
       const now = Date.now();
+
+      // Juice: hit-stop. A crash (or a close call) briefly freezes nearly
+      // all motion for a punchy, readable "impact" beat — scaling dt way
+      // down for a few frames rather than literally pausing the RAF loop,
+      // so timers (weather, thermal packages) still tick in real time and
+      // the loop itself never stalls.
+      if (world.hitStopUntil && now < world.hitStopUntil) {
+        dt *= 0.04;
+      }
+
       const invincible = now < world.invincibleUntil || world.status === "ejected";
       world.maxWantedLevel = Math.max(world.maxWantedLevel, world.wantedLevel);
+
+      // Ghost Replay: sparse position sampling (~every 120ms — plenty
+      // smooth once interpolated for playback, and keeps a 3-minute run
+      // down to ~1500 tiny samples instead of one per frame).
+      if (world.status === "playing" && now - world.lastGhostSampleAt > 120) {
+        world.lastGhostSampleAt = now;
+        world.ghostTrace.push([Math.round(world.cameraX), Math.round(world.riderY)]);
+      }
 
       if (world.status === "playing") maybeTriggerWeather(world, now);
 
@@ -736,6 +988,9 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       };
 
       const absorbHit = () => {
+        // Glass Cannon mutator: shields never absorb anything, regardless
+        // of how many charges are banked — a true one-hit run.
+        if (mutator?.oneHitMode) return false;
         if (world.shieldCharges > 0 || fuelShieldActive) {
           if (world.shieldCharges > 0) world.shieldCharges -= 1;
           addFloatingText(world, "Shield absorbed!", riderWorldX, world.riderY - 30, "near_miss");
@@ -756,6 +1011,118 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
             world.velocityY -= 200;
             world.chaser.worldX -= 160;
             addFloatingText(world, "Busted contact!", riderWorldX, world.riderY - 40, "near_miss");
+            world.hitStopUntil = now + 70;
+          }
+        }
+      }
+
+      // Boss Encounters: movement, projectile throwing, and both
+      // collision checks (the boss's own body AND whatever it's thrown)
+      // all live here, now that absorbHit/riderWorldX are in scope.
+      if (world.activeBossEntity && world.status === "playing") {
+        const b = world.activeBossEntity;
+        const cfg = b.config;
+        b.phase += dt;
+
+        if (cfg.pattern === "chase") {
+          // Sky Wyvern: actively closes in on the rider's altitude — a
+          // capped-speed tracker, which is exactly "trying to block you"
+          // without ever being unfair (it can't instantly teleport onto you).
+          const targetY = world.riderY + RIDER.height / 2;
+          const diff = targetY - b.y;
+          const maxStep = cfg.chaseSpeed * dt;
+          b.y += Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+        } else if (cfg.pattern === "ram") {
+          // Giant Seagull: weaves normally, but every few seconds locks
+          // onto your CURRENT altitude and dashes at it fast — the
+          // "sudden ram" the bird clearly telegraphs via its own sprite.
+          if (now < b.dashUntil) {
+            const diff = b.dashTargetY - b.y;
+            const maxStep = cfg.dashSpeed * dt;
+            b.y += Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+          } else {
+            b.y = b.driftCenterY + Math.sin(b.phase * 1.8) * SCREEN.height * 0.24;
+            if (now >= b.nextDashAt) {
+              b.dashUntil = now + cfg.dashDurationMs;
+              b.dashTargetY = world.riderY + RIDER.height / 2;
+              b.nextDashAt = now + cfg.dashEveryMs;
+            }
+          }
+        } else if (cfg.pattern === "hover") {
+          // Mechanical Drone: hovers, drifts unpredictably — a small
+          // double-sine wobble around a slowly-shifting center, never
+          // actively chasing (matches "moves unpredictably" from spec).
+          const wobble = Math.sin(b.phase * 1.4) * SCREEN.height * 0.12 + Math.sin(b.phase * 3.1) * SCREEN.height * 0.06;
+          b.driftCenterY += Math.sin(b.phase * 0.3) * dt * 16;
+          b.driftCenterY = Math.max(SCREEN.height * 0.22, Math.min(SCREEN.height * 0.78, b.driftCenterY));
+          b.y = b.driftCenterY + wobble;
+        }
+
+        // Boss body collision — same severity as any other crash.
+        const bdx = Math.abs(b.worldX - riderWorldX);
+        const bdy = Math.abs(b.y - (world.riderY + RIDER.height / 2));
+        if (bdx < b.hitRadius && bdy < b.hitRadius) {
+          if (!(invincible || absorbHit())) {
+            handleCrash(world);
+          }
+        }
+
+        // Throws its named projectile on an interval, only once it's
+        // close enough to be relevant (no point firing at a target 2
+        // screens away).
+        if (world.status === "playing" && bdx < 700 && now - b.lastProjectileAt > cfg.projectileIntervalMs) {
+          b.lastProjectileAt = now;
+          const pconf = PROJECTILE_TYPES[cfg.projectile];
+          const dxToRider = Math.max(80, b.worldX - riderWorldX);
+          const travelTime = dxToRider / pconf.speed;
+          const vy = (world.riderY + RIDER.height / 2 - b.y) / travelTime;
+          world.bossProjectiles.push({
+            id: `proj_${now}_${Math.random()}`,
+            type: cfg.projectile,
+            worldX: b.worldX,
+            y: b.y,
+            vy,
+            speed: pconf.speed,
+            hitRadius: pconf.hitRadius,
+            size: pconf.size,
+          });
+        }
+
+        // Clears once the camera has fully passed it — pays the flat
+        // survival bonus exactly once, only if it was never hit.
+        if (world.cameraX > b.endX) {
+          if (!b.rewarded) {
+            world.credits += b.rewardCredits;
+            addFloatingText(world, `Boss cleared! +${b.rewardCredits}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
+          }
+          world.activeBossEntity = null;
+        }
+      }
+
+      // Boss projectiles: each one flies toward wherever the rider was
+      // standing the moment it launched (a fair, dodgeable aimed shot —
+      // not a continuously homing one), independent of the boss's own
+      // body and independent of normal world scroll.
+      if (world.bossProjectiles.length > 0) {
+        for (let i = world.bossProjectiles.length - 1; i >= 0; i--) {
+          const p = world.bossProjectiles[i];
+          p.worldX -= p.speed * dt;
+          p.y += p.vy * dt;
+
+          if (world.status === "playing") {
+            const pdx = Math.abs(p.worldX - riderWorldX);
+            const pdy = Math.abs(p.y - (world.riderY + RIDER.height / 2));
+            if (pdx < p.hitRadius + 16 && pdy < p.hitRadius + 16) {
+              if (invincible || absorbHit()) {
+                world.bossProjectiles.splice(i, 1);
+              } else {
+                handleCrash(world);
+              }
+              continue;
+            }
+          }
+          if (p.worldX < world.cameraX - 120) {
+            world.bossProjectiles.splice(i, 1);
           }
         }
       }
@@ -773,7 +1140,8 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
               o.y = o.baseY + Math.sin(t) * o.moveAmp;
             }
           }
-          const obsBox = { left: o.worldX - 22, right: o.worldX + 22, top: o.y - 22, bottom: o.y + 22 };
+          const hitR = o.hitRadius || 22;
+          const obsBox = { left: o.worldX - hitR, right: o.worldX + hitR, top: o.y - hitR, bottom: o.y + hitR };
           const overlap =
             riderBox.left < obsBox.right &&
             riderBox.right > obsBox.left &&
@@ -788,6 +1156,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
               world.wantedLevel = Math.min(WANTED.maxLevel, world.wantedLevel + 1);
               world.velocityY -= 260;
               addFloatingText(world, "Wanted Level ↑", riderWorldX, world.riderY - 40, "near_miss");
+              world.hitStopUntil = now + 70;
             } else if (absorbHit()) {
               o.hit = true;
             } else {
@@ -826,6 +1195,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
               world.nearMissCooldowns[o.id] = now;
               world.credits += NEAR_MISS.bonusCredits;
               addFloatingText(world, `Close call! +${NEAR_MISS.bonusCredits}`, o.worldX, o.y - 34, "near_miss");
+              world.hitStopUntil = now + 55; // Juice: tiny freeze-frame punctuates the dodge
             }
           }
         }
@@ -840,6 +1210,20 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
             world.credits += 10;
             world.velocityY = PHYSICS.refuelBoostVy * boostMult;
             AudioManager.play("pickup");
+
+            // Package variety: every refuel re-rolls the whole hold and
+            // resets the fragile/thermal tracking for the new load.
+            const newLoad = rollPackageLoad(world.capacity, rng);
+            world.packageTypes = newLoad;
+            world.packagesLoadedAt = Date.now();
+            world.fragileDiveCount = 0;
+            if (newLoad.includes("vip")) {
+              const before = world.wantedLevel;
+              world.wantedLevel = Math.min(WANTED.maxLevel, world.wantedLevel + PACKAGE_TYPES.vip.wantedBoostOnLoad);
+              if (world.wantedLevel > before) {
+                addFloatingText(world, "VIP PACKAGE — POLICE ALERTED!", riderWorldX, world.riderY - 60, "banner");
+              }
+            }
           }
         }
 
@@ -932,6 +1316,7 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
       effectiveWeatherCreditMult,
       effectiveCorrosionMult,
       isStormImmune,
+      rng,
     ]
   );
 
@@ -1039,5 +1424,10 @@ export function useGameLoop({ gliderConfig, gadgetIds, freeRevive, skillLevel, t
     skillCooldownRemainingMs: Math.max(0, world.skillCooldownUntil - now),
     skillActiveRemainingMs: Math.max(0, world.skillActiveUntil - now),
     stormImmune: isStormImmune,
+    // Mutators: Blackout City keeps the screen darkened for the ENTIRE
+    // run (unlike the Blackout weather event, which is temporary) —
+    // GameScreen.js renders a persistent overlay when this is set.
+    nightMode: !!mutator?.nightMode,
+    nightOpacity: mutator?.nightOpacity || 0,
   };
 }

@@ -7,6 +7,7 @@ import LanguageToggleButton from "../components/LanguageToggleButton";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import AudioManager from "../audio/AudioManager";
+import { pickMenuLineIndex } from "../game/dispatcher";
 
 // Background art is the user-supplied illustration (courier on the glider,
 // Neo-Athens skyline, "THE DELIVERY GLIDER" title baked directly into the
@@ -21,6 +22,12 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
   const { save, t } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
 
+  // Story/NPCs: one line from Nyx (the dispatcher), rotating daily rather
+  // than every Menu visit — reads like an actual message waiting for you,
+  // not a randomly flickering tip.
+  const menuLines = t("dispatcher.menu");
+  const menuLine = Array.isArray(menuLines) ? menuLines[pickMenuLineIndex(menuLines.length)] : null;
+
   return (
     <ImageBackground source={BG} style={styles.container} resizeMode="cover">
       <View style={styles.scrim} />
@@ -31,6 +38,13 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
       </View>
 
       <View style={styles.spacer} />
+
+      {menuLine && (
+        <View style={styles.dispatcherNote}>
+          <Text style={styles.dispatcherName}>{t("dispatcher.name")}</Text>
+          <Text style={styles.dispatcherText}>{menuLine}</Text>
+        </View>
+      )}
 
       <View style={styles.statsRow}>
         <OctagonPanel color={COLORS.neonCyan} size="medium" style={styles.statPanel}>
@@ -104,6 +118,24 @@ const styles = StyleSheet.create({
   },
   topRight: { position: "absolute", top: 50, right: 20, flexDirection: "row", alignItems: "center" },
   spacer: { flex: 1 },
+  dispatcherNote: {
+    marginHorizontal: 24,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  dispatcherName: {
+    color: COLORS.neonCyan,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  dispatcherText: {
+    color: COLORS.textPrimary,
+    fontSize: 12.5,
+    lineHeight: 17,
+    fontStyle: "italic",
+  },
   statsRow: { flexDirection: "row", justifyContent: "center", gap: 14, paddingHorizontal: 24, marginBottom: 14 },
   statPanel: { flex: 1, maxWidth: 170 },
   statInner: { alignItems: "center", paddingVertical: 12, paddingHorizontal: 10 },

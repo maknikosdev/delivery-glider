@@ -171,7 +171,52 @@ const metroUndercity = {
   windCorridors: [{ relX: 1000, width: 220, forceY: 220 }],
 };
 
+// Route Branching: a periodic special chunk (inserted deterministically by
+// useGameLoop.js's ensureChunksAhead, NOT part of the random weighted
+// CHUNK_POOL below) that lays out two distinct bands of content in the
+// SAME horizontal stretch — upper 35% of the screen and lower 35% — since
+// this game's only real degree of freedom is vertical position, "which
+// route" simply means "which band are you flying in when you pass
+// through here". No artificial wall is needed; your own altitude is the
+// choice. A floating-text sign is fired for each band the moment this
+// chunk is created (see useGameLoop.js) so the player sees the fork
+// coming before they commit.
+//
+//   UPPER (risk/reward): red + express-capable yellow balconies, a wind
+//   corridor, denser moving obstacles (police drones) — higher payout,
+//   higher danger.
+//   LOWER (safe): only green (standard-value) balconies, a single static
+//   obstacle, no wind corridor — reliable but modest.
+const routeBranchUpper = {
+  obstacles: [
+    { type: "police_drone", relX: 300, relY: SCREEN.height * 0.12, movePattern: "sine", moveAmp: 50, moveSpeed: 2.2 },
+    { type: "police_drone", relX: 900, relY: SCREEN.height * 0.18, movePattern: "sine", moveAmp: 60, moveSpeed: 2.4 },
+    { type: "flying_taxi", relX: 1500, relY: SCREEN.height * 0.1, movePattern: "sine", moveAmp: 45, moveSpeed: 2.0 },
+  ],
+  balconies: [
+    { color: "yellow", relX: 500, relY: SCREEN.height * 0.2 },
+    { color: "red", relX: 1150, relY: SCREEN.height * 0.15 },
+  ],
+  windCorridors: [{ relX: 800, width: 260, forceY: -320 }],
+};
+const routeBranchLower = {
+  obstacles: [{ type: "static_laundry", relX: 1000, relY: SCREEN.height * 0.88 }],
+  balconies: [
+    { color: "green", relX: 400, relY: SCREEN.height * 0.82 },
+    { color: "green", relX: 1300, relY: SCREEN.height * 0.86 },
+  ],
+};
+const routeBranch = {
+  id: "route_branch",
+  minZoneIndex: 1, // Rookie District (0-60m) stays simple/onboarding-clean
+  obstacles: [...routeBranchUpper.obstacles, ...routeBranchLower.obstacles],
+  balconies: [...routeBranchUpper.balconies, ...routeBranchLower.balconies],
+  droneStations: [],
+  windCorridors: [...routeBranchUpper.windCorridors],
+};
+
 export const CHUNK_POOL = [quiet, industrial, earlyTraffic, avenue, megacityCore, chaos, blackoutSprawl, metroUndercity];
+export const ROUTE_BRANCH_CHUNK = routeBranch;
 
 let uidCounter = 1;
 function nextUid() {
@@ -179,10 +224,15 @@ function nextUid() {
   return uidCounter;
 }
 
-export function pickChunk(zoneIndex) {
+// `rng` defaults to Math.random for normal runs. The Daily Challenge passes
+// a seeded generator instead (see seededRandom.js / useGameLoop.js), so
+// every call site in this file that needs randomness takes `rng` as a
+// parameter rather than calling Math.random() directly — that's the entire
+// mechanism that makes "everyone gets today's exact same layout" work.
+export function pickChunk(zoneIndex, rng = Math.random) {
   const candidates = CHUNK_POOL.filter((c) => c.minZoneIndex <= zoneIndex);
   const totalWeight = candidates.reduce((s, c) => s + c.weight, 0);
-  let r = Math.random() * totalWeight;
+  let r = rng() * totalWeight;
   for (const c of candidates) {
     r -= c.weight;
     if (r <= 0) return c;
@@ -197,7 +247,7 @@ const HAZARD_POOL = ["flying_taxi", "police_drone", "robo_pigeon", "static_anten
 // sprinkles in additional random obstacles on top of the template's fixed
 // layout, scaled by how deep into the run the player is — this is what
 // actually makes later zones feel denser/harder, not just faster.
-export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, yBounds) {
+export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, yBounds, rng = Math.random) {
   const obstacles = template.obstacles.map((o) => ({
     ...o,
     id: `obs_${nextUid()}`,
@@ -214,9 +264,9 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
   const yMin = yBounds ? yBounds.min : 0.15;
   const yMax = yBounds ? yBounds.max : 0.8;
   for (let i = 0; i < extraHazardCount; i++) {
-    const type = HAZARD_POOL[Math.floor(Math.random() * HAZARD_POOL.length)];
-    const relX = 150 + Math.random() * (CHUNK_WIDTH - 300);
-    const relY = SCREEN.height * (yMin + Math.random() * (yMax - yMin));
+    const type = HAZARD_POOL[Math.floor(rng() * HAZARD_POOL.length)];
+    const relX = 150 + rng() * (CHUNK_WIDTH - 300);
+    const relY = SCREEN.height * (yMin + rng() * (yMax - yMin));
     const moving = type !== "static_antenna";
     obstacles.push({
       type,
@@ -226,8 +276,8 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
       y: relY,
       hit: false,
       movePattern: moving ? "sine" : undefined,
-      moveAmp: moving ? 50 + Math.random() * 80 : undefined,
-      moveSpeed: moving ? 1.2 + Math.random() * 1.5 : undefined,
+      moveAmp: moving ? 50 + rng() * 80 : undefined,
+      moveSpeed: moving ? 1.2 + rng() * 1.5 : undefined,
     });
   }
 
@@ -243,8 +293,8 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
   }));
   // Occasionally flag one balcony in the chunk as an Express Delivery
   // (VIP, 5s countdown once it comes into view, 5x reward if you make it).
-  if (balconies.length > 0 && Math.random() < EXPRESS.chancePerChunk) {
-    balconies[Math.floor(Math.random() * balconies.length)].express = true;
+  if (balconies.length > 0 && rng() < EXPRESS.chancePerChunk) {
+    balconies[Math.floor(rng() * balconies.length)].express = true;
   }
 
   const droneStations = template.droneStations.map((d) => ({
@@ -269,12 +319,12 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
   // to follow rather than clutter.
   const coins = [];
   const coinCount = Math.floor(
-    COIN.perChunk.min + Math.random() * (COIN.perChunk.max - COIN.perChunk.min + 1)
+    COIN.perChunk.min + rng() * (COIN.perChunk.max - COIN.perChunk.min + 1)
   );
-  const trailStartX = 120 + Math.random() * (CHUNK_WIDTH - 400);
-  const trailBaseY = SCREEN.height * (0.3 + Math.random() * 0.4);
-  const trailAmp = 40 + Math.random() * 60;
-  const trailSpacing = 75 + Math.random() * 25;
+  const trailStartX = 120 + rng() * (CHUNK_WIDTH - 400);
+  const trailBaseY = SCREEN.height * (0.3 + rng() * 0.4);
+  const trailAmp = 40 + rng() * 60;
+  const trailSpacing = 75 + rng() * 25;
   for (let i = 0; i < coinCount; i++) {
     const relX = trailStartX + i * trailSpacing;
     const relY = trailBaseY + Math.sin(i * 0.9) * trailAmp;
@@ -288,11 +338,11 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
 
   // Rare floating power-up orb (Overclock / Nano-Repair / Grav-Inverter)
   const powerups = [];
-  if (Math.random() < POWERUP.spawnChancePerChunk) {
+  if (rng() < POWERUP.spawnChancePerChunk) {
     const types = Object.keys(POWERUP.types);
-    const type = types[Math.floor(Math.random() * types.length)];
-    const relX = 200 + Math.random() * (CHUNK_WIDTH - 400);
-    const relY = SCREEN.height * (0.2 + Math.random() * 0.55);
+    const type = types[Math.floor(rng() * types.length)];
+    const relX = 200 + rng() * (CHUNK_WIDTH - 400);
+    const relY = SCREEN.height * (0.2 + rng() * 0.55);
     powerups.push({
       id: `pu_${nextUid()}`,
       type,

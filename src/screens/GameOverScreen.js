@@ -5,6 +5,7 @@ import * as Sharing from "expo-sharing";
 import { COLORS, MIN_METERS_FOR_REWARDS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import { gameOverBucket, pickLine } from "../game/dispatcher";
 
 export default function GameOverScreen({
   result,
@@ -22,6 +23,14 @@ export default function GameOverScreen({
   const hasNewMilestones = newMilestones && newMilestones.length > 0;
   const shareRef = useRef(null);
   const [sharing, setSharing] = useState(false);
+
+  // Story/NPCs: Nyx reacts to how the run actually went — a different
+  // pool depending on outcome, picked once per result (stable across
+  // re-renders of this same screen instance since it's seeded off the
+  // run's own meters, not Date.now()).
+  const bucket = gameOverBucket({ meters: result.meters, isNewHighScore });
+  const dispatcherLines = t(`dispatcher.${bucket}`);
+  const dispatcherLine = Array.isArray(dispatcherLines) ? pickLine(dispatcherLines, result.meters) : null;
 
   const handleShare = async () => {
     if (sharing) return;
@@ -48,6 +57,16 @@ export default function GameOverScreen({
       <View style={styles.panel} ref={shareRef} collapsable={false}>
         <Text style={styles.title}>{t("gameover.title")}</Text>
         {isNewHighScore && <Text style={styles.newRecord}>{t("gameover.newRecord")}</Text>}
+        {result.dailyChallengeNewBest && (
+          <Text style={[styles.newRecord, { color: COLORS.neonPink }]}>🗓️ {t("gameover.dailyNewBest")}</Text>
+        )}
+
+        {dispatcherLine && (
+          <View style={styles.dispatcherBox}>
+            <Text style={styles.dispatcherName}>{t("dispatcher.name")}</Text>
+            <Text style={styles.dispatcherLine}>{dispatcherLine}</Text>
+          </View>
+        )}
 
         <View style={styles.row}>
           <Text style={styles.label}>{t("gameover.distance")}</Text>
@@ -156,6 +175,16 @@ const styles = StyleSheet.create({
   },
   title: { color: COLORS.danger, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   newRecord: { color: COLORS.neonYellow, marginTop: 6, fontWeight: "700" },
+  dispatcherBox: { marginTop: 12, paddingHorizontal: 6, alignItems: "center" },
+  dispatcherName: { color: COLORS.neonCyan, fontWeight: "800", fontSize: 10.5, letterSpacing: 0.5 },
+  dispatcherLine: {
+    color: COLORS.textDim,
+    fontSize: 12,
+    lineHeight: 16,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 2,
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",

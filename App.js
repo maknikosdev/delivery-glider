@@ -14,8 +14,9 @@ import TutorialScreen from "./src/screens/TutorialScreen";
 import DailyContractsScreen from "./src/screens/DailyContractsScreen";
 import { GLIDERS, gliderById } from "./src/game/gliders";
 import { evaluateNewAchievements, SKIN_COLORS, achievementById } from "./src/game/achievements";
-import { contractById } from "./src/game/contracts";
-import { COLORS, MIN_METERS_FOR_REWARDS } from "./src/constants/gameConfig";
+import { contractById, getTodayKey } from "./src/game/contracts";
+import { recordDailyChallengeResult } from "./src/store/storage";
+import { COLORS, MIN_METERS_FOR_REWARDS, readSkillLevel, readSkillBranch } from "./src/constants/gameConfig";
 
 // Keeps the native splash screen (the full, uncropped logo — see the
 // expo-splash-screen plugin config in app.json) visible past the moment
@@ -61,6 +62,14 @@ function Root() {
   const [runResult, setRunResult] = useState(null);
   const [runKey, setRunKey] = useState(0);
   const [runBonuses, setRunBonuses] = useState({ reviveToken: false, tempSkinColor: null });
+  // Mutators: the player's pick from LoadoutScreen for the run about to
+  // start. Chosen fresh every time (LoadoutScreen's own selection state
+  // resets each time you visit it), so this never carries over silently
+  // between runs.
+  const [activeMutatorId, setActiveMutatorId] = useState(null);
+  // Daily Challenge: holds today's date-seed string ("2026-10-04") for the
+  // run about to start if the player opted in, else null for a normal run.
+  const [activeDailySeed, setActiveDailySeed] = useState(null);
   const [newAchievements, setNewAchievements] = useState([]);
   const [newContracts, setNewContracts] = useState([]);
   const [newMilestones, setNewMilestones] = useState([]);
@@ -95,7 +104,11 @@ function Root() {
 
   const skillLevel = useMemo(() => {
     if (!save) return 0;
-    return (save.skillLevels || {})[baseGlider.id] || 0;
+    return readSkillLevel(save.skillLevels, baseGlider.id);
+  }, [save, baseGlider.id]);
+  const skillBranch = useMemo(() => {
+    if (!save) return null;
+    return readSkillBranch(save.skillLevels, baseGlider.id);
   }, [save, baseGlider.id]);
 
   // Color priority: a one-run Mystery Crate temp-skin beats the player's
@@ -129,15 +142,20 @@ function Root() {
     setScreen(tutorialReturnTo);
   }, [save, markTutorialSeen, tutorialReturnTo]);
 
-  const handlePlay = useCallback(async () => {
-    const bonuses = await consumeRunBonuses();
-    setRunBonuses(bonuses);
-    setNewAchievements([]);
-    setNewContracts([]);
-    setNewMilestones([]);
-    setRunKey((k) => k + 1);
-    setScreen("game");
-  }, [consumeRunBonuses]);
+  const handlePlay = useCallback(
+    async (mutatorId, isDailyChallenge) => {
+      const bonuses = await consumeRunBonuses();
+      setRunBonuses(bonuses);
+      setActiveMutatorId(mutatorId || null);
+      setActiveDailySeed(isDailyChallenge ? getTodayKey() : null);
+      setNewAchievements([]);
+      setNewContracts([]);
+      setNewMilestones([]);
+      setRunKey((k) => k + 1);
+      setScreen("game");
+    },
+    [consumeRunBonuses]
+  );
 
   // Runs below MIN_METERS_FOR_REWARDS don't get a Mystery Crate and their
   // credits aren't banked — only "real" runs that made it past the opening
@@ -159,10 +177,19 @@ function Root() {
 
       const milestones = await finishRun(savedResult);
       setNewMilestones(milestones || []);
-      setRunResult({ ...result, isNewHighScore: wasHigh });
+
+      // Daily Challenge: this run was played on today's seeded track —
+      // update today's personal best if it was beaten.
+      let dailyChallengeNewBest = false;
+      if (activeDailySeed) {
+        const { isNewBest } = await recordDailyChallengeResult(activeDailySeed, result.meters);
+        dailyChallengeNewBest = isNewBest;
+      }
+
+      setRunResult({ ...result, isNewHighScore: wasHigh, dailyChallengeNewBest });
       setScreen("gameover");
     },
-    [finishRun, save, unlockAchievements, updateDailyContracts]
+    [finishRun, save, unlockAchievements, updateDailyContracts, activeDailySeed]
   );
 
   const handleGameOver = useCallback(
@@ -246,7 +273,10 @@ function Root() {
           gliderConfig={activeGlider}
           gadgetIds={save.equippedGadgets || []}
           freeRevive={runBonuses.reviveToken}
+          mutatorId={activeMutatorId}
+          dailySeed={activeDailySeed}
           skillLevel={skillLevel}
+          skillBranch={skillBranch}
           totalRuns={save.totalRuns || 0}
           onGameOver={handleGameOver}
         />

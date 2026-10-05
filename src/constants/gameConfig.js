@@ -357,7 +357,76 @@ export const SKILL_UPGRADES = {
     phase_shift: { cooldownMultPerLevel: 0.85, durationAddPerLevel: 400, radiusAddPerLevel: 70 },
     storm_immunity: { corrosionReducePerLevel: 0.1, creditBonusAddPerLevel: 0.1 },
   },
+  // Skill Tree: reaching level 2 forks the upgrade path — the player picks
+  // ONE of two dimensions to keep scaling through levels 2-3; the other
+  // freezes at its level-1 value from then on. Level 1 always applies to
+  // both evenly (so there's a reason to grab it before deciding), and any
+  // dimension NOT listed here (e.g. emp_blast's small credits-per-kill
+  // bonus) keeps scaling with full level regardless of branch — a minor
+  // universal perk, not part of the build choice. reinforced_hull has only
+  // one dimension to begin with, so it has no fork: just straightforward
+  // leveling, like every skill did before this system existed.
+  branches: {
+    emp_blast: {
+      a: { key: "radiusAddPerLevel", name: "Wide Blast" },
+      b: { key: "cooldownMultPerLevel", name: "Rapid Recharge" },
+    },
+    decoy_drone: {
+      a: { key: "cooldownMultPerLevel", name: "Rapid Deploy" },
+      b: { key: "durationAddPerLevel", name: "Long Lure" },
+    },
+    mass_reduction: {
+      a: { key: "weightFactorReducePerLevel", name: "Light Frame" },
+      b: { key: "boostMultRecoverPerLevel", name: "Power Recovery" },
+    },
+    coin_magnet_boost: {
+      a: { key: "magnetMultAddPerLevel", name: "Wide Magnet" },
+      b: { key: "streakReducePerLevel", name: "Easy Trigger" },
+    },
+    turbo_dash: {
+      a: { key: "cooldownMultPerLevel", name: "Rapid Dash" },
+      b: { key: "durationAddPerLevel", name: "Long Burn" },
+    },
+    phase_shift: {
+      a: { key: "durationAddPerLevel", name: "Extended Phase" },
+      b: { key: "radiusAddPerLevel", name: "Wide Pull" },
+    },
+    storm_immunity: {
+      a: { key: "corrosionReducePerLevel", name: "Hardened Hull" },
+      b: { key: "creditBonusAddPerLevel", name: "Storm Profiteer" },
+    },
+  },
 };
+
+// Reads a skill's level from save.skillLevels, tolerating BOTH the old
+// plain-number format (every save before the Skill Tree existed) and the
+// new { level, branch } shape — old saves just behave as if no branch has
+// been picked yet, nothing breaks.
+export function readSkillLevel(skillLevels, gliderId) {
+  const entry = (skillLevels || {})[gliderId];
+  if (typeof entry === "number") return entry;
+  return (entry && entry.level) || 0;
+}
+export function readSkillBranch(skillLevels, gliderId) {
+  const entry = (skillLevels || {})[gliderId];
+  if (typeof entry === "number" || !entry) return null;
+  return entry.branch || null;
+}
+
+// The effective level to feed into ONE specific dimension's formula. Both
+// dimensions share levels 0-1 evenly; beyond that, only the chosen
+// branch's dimension keeps climbing — the other is capped at its level-1
+// value. Dimensions with no branches entry (reinforced_hull, and any
+// dimension simply absent from the branches table) always get the full
+// level, unaffected by this system.
+export function branchEffectiveLevel(level, branch, dimensionKey, gliderSkillId) {
+  if (level <= 1) return level;
+  const def = SKILL_UPGRADES.branches[gliderSkillId];
+  if (!def) return level;
+  const chosenKey = branch === "a" ? def.a.key : branch === "b" ? def.b.key : null;
+  if (dimensionKey !== def.a.key && dimensionKey !== def.b.key) return level; // not part of the fork
+  return dimensionKey === chosenKey ? level : 1;
+}
 
 export const COLORS = {
   bgDeep: "#05030d",
@@ -371,3 +440,178 @@ export const COLORS = {
   textDim: "#8f9bc0",
   panel: "#120a26",
 };
+
+// --- Package variety --------------------------------------------------
+// Every time the cargo hold is filled (run start + every drone-station
+// refuel), each slot is independently rolled from this weighted pool. The
+// player always delivers the FRONT of the queue (packages load all at
+// once, so there's no real "which one" choice — the decision is about
+// *how* you fly while carrying what you're carrying). HUD.js shows the
+// current load as a row of icons so the player always knows what's in the
+// hold before they commit to a risky dive or a shortcut.
+export const PACKAGE_TYPES = {
+  standard: {
+    id: "standard",
+    weight: 5,
+    label: "Standard",
+    icon: "📦",
+    color: "#8f9bc0",
+  },
+  fragile: {
+    id: "fragile",
+    weight: 2,
+    label: "Fragile",
+    icon: "🍶",
+    color: "#7de8ff",
+    // Every swipe-down dive while ≥1 fragile package is in the hold chips
+    // away at this run's "integrity" meter. A fragile package's payout is
+    // multiplied by whatever the meter is at the moment it's delivered —
+    // resets back to 1 on every refuel, so it's a per-load risk, not a
+    // permanent penalty.
+    diveDamage: 0.35,
+    minValueMult: 0.2,
+  },
+  thermal: {
+    id: "thermal",
+    weight: 2,
+    label: "Thermal",
+    icon: "🌡️",
+    color: "#ff9d2e",
+    // Must be delivered within this many ms of the load being picked up
+    // (not per-package — the whole hold is loaded at once, so the clock
+    // starts the same moment for everything in it). Delivered late = 0
+    // payout ("SPOILED!").
+    expiresMs: 13000,
+  },
+  vip: {
+    id: "vip",
+    weight: 1,
+    label: "VIP",
+    icon: "⭐",
+    color: "#ffe14d",
+    rewardMult: 2.5,
+    // Loading even one VIP package immediately raises the Wanted Level —
+    // the high payout comes with the police already looking for you.
+    wantedBoostOnLoad: 1,
+  },
+};
+
+export const PACKAGE_TYPE_POOL = Object.values(PACKAGE_TYPES);
+
+// --- Mutators -----------------------------------------------------------
+// Optional, player-picked run modifiers (0 or 1 active per run, chosen in
+// LoadoutScreen.js before "Start Delivery"). Each one meaningfully changes
+// how the run feels and, in exchange for the added difficulty, multiplies
+// every credit earned for that run — a clean risk/reward hard-mode layer
+// on top of the existing difficulty curve, not a replacement for it.
+export const MUTATORS = {
+  double_gravity: {
+    id: "double_gravity",
+    name: "Heavy World",
+    icon: "🪨",
+    color: "#8f9bc0",
+    gravityMult: 2,
+    creditsMult: 1.5,
+  },
+  night_only: {
+    id: "night_only",
+    name: "Blackout City",
+    icon: "🌑",
+    color: "#6c6ce0",
+    nightMode: true,
+    nightOpacity: 0.5,
+    creditsMult: 1.4,
+  },
+  glass_cannon: {
+    id: "glass_cannon",
+    name: "Glass Cannon",
+    icon: "💎",
+    color: "#7de8ff",
+    oneHitMode: true, // no shields, no revive offer — first hit ends the run
+    creditsMult: 1.8,
+  },
+  speed_demon: {
+    id: "speed_demon",
+    name: "Speed Demon",
+    icon: "⚡",
+    color: "#ffe14d",
+    speedMult: 1.4,
+    creditsMult: 1.6,
+  },
+};
+
+export const MUTATOR_POOL = Object.values(MUTATORS);
+
+// --- Boss Encounters ------------------------------------------------
+// One-time, scripted gauntlets at specific distances (each fires exactly
+// once per run, in order). This game has no combat system — "boss" here
+// means a sustained, high-drama DODGING challenge: a handful of oversized
+// obstacles sharing one driving movement pattern, with a much bigger
+// collision radius than normal obstacles, confined to a single chunk's
+// width so the encounter has a clear start and end. Surviving the whole
+// gauntlet (camera passing its worldX span without a hit) pays a flat
+// credit bonus — getting hit is just a normal crash, same as anything
+// else in the game.
+// Projectile types each boss throws — see ProjectileSprite.js for the art
+// (extracted from the user-supplied boss sprite sheet) and useGameLoop.js
+// for the spawn/flight/collision logic. Every projectile is a single small
+// hazard that flies toward where the rider was at the moment it launched
+// (not continuously homing — it's dodgeable by reading the launch and
+// moving away), independent of the boss's own body.
+export const PROJECTILE_TYPES = {
+  fireball: { size: 34, hitRadius: 15, speed: 340 },
+  fish: { size: 30, hitRadius: 14, speed: 380 },
+  missile: { size: 32, hitRadius: 14, speed: 420 },
+};
+
+// Boss Encounters — one real, single large character per fight (not N
+// copies of a reused obstacle like the first version). Each has its own
+// idle-flap animation (2 frames), a movement style that actively tries to
+// line up with the rider's altitude ("trying to block the glider", per
+// spec), and periodically launches its named projectile type, which the
+// rider must dodge independently of the boss's own body. Confined to a
+// single chunk's width, same as before — clean start, clean end, one-time
+// per run, in order.
+export const BOSS_ENCOUNTERS = [
+  {
+    id: "sky_wyvern",
+    name: "Sky Wyvern",
+    triggerMeters: 230, // just before Transit Lanes
+    hitRadius: 46,
+    displaySize: 130,
+    pattern: "chase", // tracks the rider's altitude with a capped speed
+    chaseSpeed: 150,
+    projectile: "fireball",
+    projectileIntervalMs: 1700,
+    rewardCredits: 300,
+    warning: "⚠ SKY WYVERN INCOMING",
+  },
+  {
+    id: "giant_seagull",
+    name: "Giant Seagull",
+    triggerMeters: 620, // just before Megacity Core
+    hitRadius: 42,
+    displaySize: 115,
+    pattern: "ram", // wide weave with periodic fast dashes toward the rider
+    chaseSpeed: 110,
+    dashSpeed: 420,
+    dashEveryMs: 2600,
+    dashDurationMs: 550,
+    projectile: "fish",
+    projectileIntervalMs: 1500,
+    rewardCredits: 450,
+    warning: "⚠ GIANT SEAGULL SPOTTED",
+  },
+  {
+    id: "mech_drone",
+    name: "Mechanical Drone",
+    triggerMeters: 1280, // just before Hyper-Speed Chaos
+    hitRadius: 48,
+    displaySize: 120,
+    pattern: "hover", // small chaotic drift around a slowly shifting center
+    projectile: "missile",
+    projectileIntervalMs: 1400,
+    rewardCredits: 600,
+    warning: "⚠ MECHANICAL DRONE ONLINE",
+  },
+];
