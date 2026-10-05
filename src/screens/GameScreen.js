@@ -325,6 +325,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           return ghostY === null ? null : (
             <View style={styles.ghostWrap} pointerEvents="none">
               <RiderSprite
+                gliderId={gliderConfig.id}
                 y={ghostY}
                 color={gliderConfig.color}
                 accentColor={gliderConfig.accentColor}
@@ -336,6 +337,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         })()}
 
         <RiderSprite
+          gliderId={gliderConfig.id}
           y={world.riderY}
           color={gliderConfig.color}
           accentColor={gliderConfig.accentColor}
