@@ -8,6 +8,13 @@
 // UI reads t(`achievements.${a.id}`) instead (AchievementsScreen), so the
 // shown text follows the EL/EN toggle. `name` stays as-is in both languages
 // (already English). See src/i18n/translations.js.
+//
+// NOTE ON NEW STATS (same situation as contracts.js): 3 of the 6 new
+// achievements below need a little new per-run/lifetime tracking for
+// systems that didn't exist when the original 19 were written (Boss
+// Encounters, Mutators, Package Variety). Each is commented with exactly
+// what's needed — see this file's accompanying chat message for the full
+// list in one place.
 
 export const SKIN_COLORS = {
   century_club: "#ff9d2e",
@@ -29,6 +36,13 @@ export const SKIN_COLORS = {
   ghost_runner: "#7d5cff",
   blind_flight: "#6c6ce0",
   zone_5: "#8f00ff",
+  // New in this batch
+  credit_tycoon: "#ffb700",
+  iron_will: "#9ad1ff",
+  fleet_commander: "#ff6bd6",
+  boss_hunter: "#ff3b3b",
+  hard_mode_hero: "#c084ff",
+  vip_specialist: "#ffe14d",
 };
 
 export const ACHIEVEMENTS = [
@@ -145,6 +159,59 @@ export const ACHIEVEMENTS = [
     name: "Blackout Sprawl",
     description: "Έφτασε στο Blackout Sprawl (2200m) σε ένα run.",
     check: (runStats) => runStats.meters >= 2200,
+  },
+
+  // --- New in this batch -------------------------------------------------
+
+  // Safe: reuses the existing `credits` save field at a higher bar than
+  // high_roller.
+  {
+    id: "credit_tycoon",
+    name: "Credit Tycoon",
+    description: "Μάζεψε 10000 νομίσματα συνολικά (τρέχον υπόλοιπο).",
+    check: (runStats, save) => (save.credits || 0) >= 10000,
+  },
+  // Safe: reuses the existing `longestNoDiveMs` stat at a higher bar than
+  // steady_hands (2 minutes).
+  {
+    id: "iron_will",
+    name: "Iron Will",
+    description: "Πέτα 120 δευτερόλεπτα χωρίς κανένα swipe-down βουτιά.",
+    check: (runStats) => runStats.longestNoDiveMs >= 120000,
+  },
+  // Safe: reuses the existing `ownedGliders` save field — now that all 14
+  // gliders exist, this is the "collect them all" achievement glider_collector
+  // (4+) used to imply before the roster grew.
+  {
+    id: "fleet_commander",
+    name: "Fleet Commander",
+    description: "Ξεκλείδωσε και τους 14 gliders.",
+    check: (runStats, save) => (save.ownedGliders || []).length >= 14,
+  },
+  // NEEDS NEW TRACKING (lifetime): increment save.stats.totalBossesCleared
+  // in the same spot updateDailyContractsForRun-style save merging happens
+  // after a run, whenever runStats.bossesClearedThisRun > 0 that run.
+  {
+    id: "boss_hunter",
+    name: "Boss Hunter",
+    description: "Καθάρισε 10 Boss Encounters συνολικά (όλα τα runs).",
+    check: (runStats, save) => (save.stats?.totalBossesCleared || 0) + (runStats.bossesClearedThisRun || 0) >= 10,
+  },
+  // NEEDS NEW TRACKING: same runStats.mutatorActive flag described in
+  // contracts.js's risk_taker contract.
+  {
+    id: "hard_mode_hero",
+    name: "Hard Mode Hero",
+    description: "Ολοκλήρωσε run 500m+ με ενεργό Mutator.",
+    check: (runStats) => runStats.mutatorActive && runStats.meters >= 500,
+  },
+  // NEEDS NEW TRACKING: same runStats.vipDeliveredThisRun counter described
+  // in contracts.js's vip_courier contract (higher bar here).
+  {
+    id: "vip_specialist",
+    name: "VIP Specialist",
+    description: "Παράδωσε 5 VIP πακέτα σε ένα run.",
+    check: (runStats) => (runStats.vipDeliveredThisRun || 0) >= 5,
   },
 ];
 

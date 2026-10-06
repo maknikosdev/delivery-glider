@@ -1,13 +1,26 @@
-// Daily Contracts: 3 are shown per calendar day, picked deterministically
-// (seeded by the date string, purely local — no server) from this pool of
-// 12. Regenerated automatically the first time the app is opened on a new
-// day (device clock). Rewards are in-game points only, granted the moment
-// a run's stats satisfy the target — same pattern as Achievements.
+// Daily Contracts: 4 are shown per calendar day (up from 3), picked
+// deterministically (seeded by the date string, purely local — no server)
+// from this pool of 20 (up from 12). Regenerated automatically the first
+// time the app is opened on a new day (device clock). Rewards are in-game
+// credits, granted the moment a run's stats satisfy the target — same
+// pattern as Achievements.
 //
 // NOTE ON i18n: `description` below is a Greek fallback / inline doc — the
 // UI reads t(`contracts.${c.id}`) instead (DailyContractsScreen), so the
 // shown text follows the EL/EN toggle. `name` stays as-is in both languages
 // (already English). See src/i18n/translations.js.
+//
+// NOTE ON NEW STATS (added in this batch, ids marked below): the original
+// 12 contracts only ever read stats that useGameLoop.js already tracked at
+// the time they were written (deliveries, meters, coinsThisRun, maxCombo,
+// empUsed, longestNoDiveMs, slipstream, maxWantedLevel, usedRevive, runs).
+// This batch adds 8 more, 5 of which reuse those same existing stats at
+// new targets (totally safe, no code changes needed elsewhere), and 3 of
+// which need a tiny bit of new per-run tracking for systems that didn't
+// exist when the original pool was written (Boss Encounters, Mutators,
+// Package Variety). Each of those 3 is commented with exactly what
+// useGameLoop.js needs to set on runStats for it to work — see this
+// file's accompanying chat message for the full list in one place.
 
 export const CONTRACT_POOL = [
   {
@@ -118,6 +131,97 @@ export const CONTRACT_POOL = [
     target: 8,
     reward: 150,
   },
+
+  // --- New in this batch -------------------------------------------------
+
+  // Safe: reuses the existing `deliveries` cumulative stat at a higher bar.
+  {
+    id: "delivery_master",
+    name: "Delivery Master",
+    description: "Παρέδωσε 35 δέματα σήμερα (σε όσα runs χρειαστεί).",
+    type: "cumulative",
+    stat: "deliveries",
+    target: 35,
+    reward: 260,
+  },
+  // Safe: reuses the existing `maxCombo` single_run stat at a higher bar.
+  {
+    id: "combo_overdrive",
+    name: "Combo Overdrive",
+    description: "Φτάσε combo x6 σε ένα run.",
+    type: "single_run",
+    stat: "maxCombo",
+    target: 6,
+    reward: 240,
+  },
+  // Safe: reuses the existing `meters` single_run stat at a higher bar.
+  {
+    id: "endurance_pilot",
+    name: "Endurance Pilot",
+    description: "Φτάσε τα 1200m σε ένα run.",
+    type: "single_run",
+    stat: "meters",
+    target: 1200,
+    reward: 260,
+  },
+  // Safe: reuses the existing `longestNoDiveMs` single_run stat (90s bar).
+  {
+    id: "zen_glide",
+    name: "Zen Glide",
+    description: "Πέτα 90 δευτερόλεπτα χωρίς swipe-down βουτιά σε ένα run.",
+    type: "single_run",
+    stat: "longestNoDiveMs",
+    target: 90000,
+    reward: 240,
+  },
+  // Safe: reuses the existing `runs` cumulative stat at a higher bar.
+  {
+    id: "busy_day",
+    name: "Busy Day",
+    description: "Ολοκλήρωσε 5 runs σήμερα.",
+    type: "cumulative",
+    stat: "runs",
+    target: 5,
+    reward: 220,
+  },
+  // NEEDS NEW TRACKING: increment a per-run counter wherever a Boss
+  // Encounter's survival reward pays out (the `!b.rewarded` branch in
+  // useGameLoop.js's boss-update block), e.g.
+  //   runStats.bossesClearedThisRun = (runStats.bossesClearedThisRun || 0) + 1;
+  // and include it in the object GameOverScreen/finishRun passes as
+  // runStats. Without that line this contract will just never complete.
+  {
+    id: "boss_slayer",
+    name: "Boss Slayer",
+    description: "Καθάρισε ένα Boss Encounter χωρίς να χτυπηθείς, σε ένα run.",
+    type: "single_run",
+    stat: "bossesClearedThisRun",
+    target: 1,
+    reward: 250,
+  },
+  // NEEDS NEW TRACKING: set runStats.mutatorActive = world.mutatorId ? 1 : 0
+  // once near the start of finishRun/game-over assembly.
+  {
+    id: "risk_taker",
+    name: "Risk Taker",
+    description: "Ολοκλήρωσε ένα run με ενεργό Mutator.",
+    type: "single_run",
+    stat: "mutatorActive",
+    target: 1,
+    reward: 220,
+  },
+  // NEEDS NEW TRACKING: increment a per-run counter wherever a VIP package
+  // is delivered (same spot the x2.5 VIP credit multiplier is applied),
+  // e.g. runStats.vipDeliveredThisRun = (runStats.vipDeliveredThisRun || 0) + 1;
+  {
+    id: "vip_courier",
+    name: "VIP Courier",
+    description: "Παράδωσε 3 VIP πακέτα σε ένα run.",
+    type: "single_run",
+    stat: "vipDeliveredThisRun",
+    target: 3,
+    reward: 220,
+  },
 ];
 
 export function contractById(id) {
@@ -134,7 +238,7 @@ export function getTodayKey() {
 }
 
 // Small deterministic string hash -> seeded PRNG, so the same date always
-// picks the same 3 contracts on a given device (stable through the day,
+// picks the same contracts on a given device (stable through the day,
 // changes automatically the next day) without needing a server.
 function seededPick(seedStr, pool, count) {
   let seed = 0;
@@ -155,8 +259,9 @@ function seededPick(seedStr, pool, count) {
   return pickedIndexes.map((i) => pool[i]);
 }
 
+// 4 per day now (was 3) — the bigger 20-item pool keeps repeats rare.
 export function pickDailyContracts(dateKey) {
-  return seededPick(dateKey, CONTRACT_POOL, 3).map((c) => c.id);
+  return seededPick(dateKey, CONTRACT_POOL, 4).map((c) => c.id);
 }
 
 // Returns { current, target, done } for a contract given today's cumulative
