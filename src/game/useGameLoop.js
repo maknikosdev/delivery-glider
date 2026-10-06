@@ -418,12 +418,12 @@ export function useGameLoop({
           phase: 0,
         };
         addFloatingText(world, boss.warning, chunk.startX + 100, SCREEN.height * 0.12, "banner");
-        // Story/NPCs: each boss is a named character with one voiced
-        // taunt, read via t() so it's fully EL/EN rather than hardcoded.
-        const bossName = t(`bosses.${boss.id}_name`);
+        // Story/NPCs: Nyx's own radio warning about the creature — these
+        // are real animals/machines now, not talking characters, so the
+        // line comes from the dispatcher reacting to them, not the boss
+        // itself. Read via t() so it's fully EL/EN.
         const bossLine = t(`bosses.${boss.id}_line`);
-        addFloatingText(world, `${bossName.toUpperCase()}`, chunk.startX + 100, SCREEN.height * 0.2, "banner");
-        addFloatingText(world, bossLine, chunk.startX + 100, SCREEN.height * 0.28, "banner");
+        addFloatingText(world, bossLine, chunk.startX + 100, SCREEN.height * 0.2, "banner");
       }
     }
     world.chunks = world.chunks.filter((c) => c.endX > world.cameraX - SCREEN.width);

@@ -18,7 +18,7 @@ import { pickMenuLineIndex } from "../game/dispatcher";
 // image, under the logo.
 const BG = require("../../assets/art/menu_background.jpg");
 
-export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial }) {
+export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial, onHazards }) {
   const { save, t } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
 
@@ -99,13 +99,22 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
         />
       </View>
 
-      <OctagonButton
-        label={t("menu.tutorial")}
-        onPress={onTutorial}
-        color="#9b8bff"
-        fillOpacity={0.1}
-        style={styles.tutorialButton}
-      />
+      <View style={styles.bottomRow}>
+        <OctagonButton
+          label={t("menu.tutorial")}
+          onPress={onTutorial}
+          color="#9b8bff"
+          fillOpacity={0.1}
+          style={styles.bottomButton}
+        />
+        <OctagonButton
+          label={t("menu.hazards")}
+          onPress={onHazards}
+          color={COLORS.danger}
+          fillOpacity={0.1}
+          style={styles.bottomButton}
+        />
+      </View>
     </ImageBackground>
   );
 }
@@ -152,5 +161,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   gridButton: { width: "47%", marginBottom: 10 },
-  tutorialButton: { marginHorizontal: 24, marginTop: 4, marginBottom: 36 },
+  bottomRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 24,
+    marginTop: 4,
+    marginBottom: 36,
+  },
+  bottomButton: { flex: 1 },
 });

@@ -10,6 +10,7 @@ import GarageScreen from "./src/screens/GarageScreen";
 import MysteryCrateScreen from "./src/screens/MysteryCrateScreen";
 import AchievementsScreen from "./src/screens/AchievementsScreen";
 import StatsScreen from "./src/screens/StatsScreen";
+import FieldGuideScreen from "./src/screens/FieldGuideScreen";
 import TutorialScreen from "./src/screens/TutorialScreen";
 import DailyContractsScreen from "./src/screens/DailyContractsScreen";
 import { GLIDERS, gliderById } from "./src/game/gliders";
@@ -257,6 +258,7 @@ function Root() {
           onAchievements={() => setScreen("achievements")}
           onContracts={() => setScreen("contracts")}
           onStats={() => setScreen("stats")}
+          onHazards={() => setScreen("hazards")}
           onTutorial={handleOpenTutorial}
         />
       )}
@@ -303,6 +305,7 @@ function Root() {
       {screen === "contracts" && <DailyContractsScreen onBack={() => setScreen("menu")} />}
 
       {screen === "stats" && <StatsScreen onBack={() => setScreen("menu")} />}
+      {screen === "hazards" && <FieldGuideScreen onBack={() => setScreen("menu")} />}
     </View>
   );
 }
