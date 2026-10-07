@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, useWindowDimensions } from "react-native";
 import { COLORS, MYSTERY_CRATE } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import OctagonPanel from "../components/OctagonPanel";
+import OctagonButton from "../components/OctagonButton";
 
 function rollReward() {
   const pool = MYSTERY_CRATE.rewardPool;
@@ -27,6 +29,7 @@ function rewardLabel(reward, t) {
 
 export default function MysteryCrateScreen({ onDone }) {
   const { t } = useGame();
+  const { width, height } = useWindowDimensions();
   const [openedIndex, setOpenedIndex] = useState(null);
   const [reward, setReward] = useState(null);
 
@@ -42,8 +45,10 @@ export default function MysteryCrateScreen({ onDone }) {
   );
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.panel}>
+    // Explicit window size (instead of absoluteFill of an unknown parent) so
+    // the content is always truly centered on screen.
+    <View style={[styles.overlay, { width, height }]}>
+      <OctagonPanel color={COLORS.neonPink} style={styles.panel} contentStyle={styles.panelContent}>
         <Text style={styles.title}>{t("mysteryCrate.title")}</Text>
         <Text style={styles.subtitle}>{t("mysteryCrate.subtitle")}</Text>
 
@@ -56,9 +61,15 @@ export default function MysteryCrateScreen({ onDone }) {
                 key={i}
                 onPress={() => pickCrate(i)}
                 disabled={openedIndex !== null}
-                style={[styles.crate, isOpened && styles.crateOpened, isOther && styles.crateDimmed]}
+                style={({ pressed }) => [{ opacity: isOther ? 0.3 : pressed ? 0.75 : 1 }]}
               >
-                <Text style={styles.crateIcon}>{isOpened ? "✨" : "📦"}</Text>
+                <OctagonPanel
+                  color={isOpened ? COLORS.neonYellow : COLORS.neonCyan}
+                  style={styles.crate}
+                  contentStyle={styles.crateContent}
+                >
+                  <Text style={styles.crateIcon}>{isOpened ? "✨" : "📦"}</Text>
+                </OctagonPanel>
               </Pressable>
             );
           })}
@@ -67,54 +78,35 @@ export default function MysteryCrateScreen({ onDone }) {
         {reward && <Text style={styles.rewardText}>{rewardLabel(reward, t)}</Text>}
 
         {reward && (
-          <Pressable
+          <OctagonButton
+            label={t("mysteryCrate.continue")}
+            color={COLORS.neonCyan}
             style={styles.continueButton}
-            onPress={() => {
-              AudioManager.play("click");
-              onDone(reward);
-            }}
-          >
-            <Text style={styles.continueText}>{t("mysteryCrate.continue")}</Text>
-          </Pressable>
+            onPress={() => onDone(reward)}
+          />
         )}
-      </View>
+      </OctagonPanel>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
     backgroundColor: "rgba(5,3,13,0.92)",
     alignItems: "center",
     justifyContent: "center",
   },
-  panel: {
-    width: "85%",
-    backgroundColor: COLORS.panel,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.neonPink,
-    padding: 24,
-    alignItems: "center",
-  },
-  title: { color: COLORS.neonPink, fontSize: 22, fontWeight: "900", letterSpacing: 1 },
-  subtitle: { color: COLORS.textDim, fontSize: 12, marginTop: 4, marginBottom: 20 },
-  crateRow: { flexDirection: "row", gap: 14 },
-  crate: {
-    width: 72,
-    height: 72,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.neonCyan,
-    backgroundColor: "rgba(40,224,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 6,
-  },
-  crateOpened: { borderColor: COLORS.neonYellow, backgroundColor: "rgba(255,225,77,0.15)" },
-  crateDimmed: { opacity: 0.3 },
-  crateIcon: { fontSize: 30 },
+  panel: { width: "85%" },
+  panelContent: { paddingVertical: 28, paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
+  title: { color: COLORS.neonPink, fontSize: 22, fontWeight: "900", letterSpacing: 1, textAlign: "center" },
+  subtitle: { color: COLORS.textDim, fontSize: 12, marginTop: 4, marginBottom: 22, textAlign: "center" },
+  crateRow: { flexDirection: "row", justifyContent: "center", gap: 14 },
+  crate: { width: 72, height: 72 },
+  crateContent: { flex: 1, alignItems: "center", justifyContent: "center" },
+  crateIcon: { fontSize: 30, textAlign: "center" },
   rewardText: {
     color: COLORS.neonYellow,
     fontSize: 15,
@@ -122,14 +114,5 @@ const styles = StyleSheet.create({
     marginTop: 22,
     textAlign: "center",
   },
-  continueButton: {
-    marginTop: 20,
-    borderWidth: 2,
-    borderColor: COLORS.neonCyan,
-    backgroundColor: "rgba(40,224,255,0.12)",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-  },
-  continueText: { color: COLORS.neonCyan, fontWeight: "800", letterSpacing: 0.5 },
+  continueButton: { marginTop: 20, alignSelf: "stretch" },
 });
