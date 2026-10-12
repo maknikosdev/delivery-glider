@@ -1,4 +1,6 @@
 import { CHUNK_WIDTH, SCREEN, COIN, POWERUP, EXPRESS } from "../constants/gameConfig";
+import { randomizeTemplate, proceduralTemplate, PROCEDURAL_CHANCE, setRandomSource } from "./randomizer";
+import { spawnParcels } from "./parcels";
 
 // Each chunk is defined with relative coordinates (0..CHUNK_WIDTH horizontally,
 // 0..SCREEN.height vertically). The spawner instantiates them at the current
@@ -230,6 +232,10 @@ function nextUid() {
 // parameter rather than calling Math.random() directly — that's the entire
 // mechanism that makes "everyone gets today's exact same layout" work.
 export function pickChunk(zoneIndex, rng = Math.random) {
+  // Random layouts: half of the chunks are generated from scratch, the rest
+  // are the hand-made templates below with shuffled/jittered contents.
+  setRandomSource(rng);
+  if (rng() < PROCEDURAL_CHANCE) return proceduralTemplate(zoneIndex);
   const candidates = CHUNK_POOL.filter((c) => c.minZoneIndex <= zoneIndex);
   const totalWeight = candidates.reduce((s, c) => s + c.weight, 0);
   let r = rng() * totalWeight;
@@ -248,6 +254,9 @@ const HAZARD_POOL = ["flying_taxi", "police_drone", "robo_pigeon", "static_anten
 // layout, scaled by how deep into the run the player is — this is what
 // actually makes later zones feel denser/harder, not just faster.
 export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, yBounds, rng = Math.random) {
+  setRandomSource(rng);
+  // The Route Branching chunk keeps its fixed upper/lower lanes.
+  if (template.id !== "route_branch") template = randomizeTemplate(template, yBounds);
   const obstacles = template.obstacles.map((o) => ({
     ...o,
     id: `obs_${nextUid()}`,
@@ -363,6 +372,7 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
     coins,
     powerups,
     windCorridors,
+    parcels: spawnParcels(worldOffsetX, obstacles, balconies, yBounds),
   };
 }
 

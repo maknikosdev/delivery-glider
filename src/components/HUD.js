@@ -1,47 +1,45 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS, DIFFICULTY, PACKAGE_TYPES } from "../constants/gameConfig";
+import { COLORS, DIFFICULTY } from "../constants/gameConfig";
+import { HUD_TOP } from "../constants/hudLayout";
 import MuteButton from "./MuteButton";
 
-export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed, packageTypes }) {
+export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed }) {
   const zone = DIFFICULTY.zones[zoneIndex] || DIFFICULTY.zones[0];
   return (
     <View style={[styles.wrap, dimmed && styles.wrapDimmed]} pointerEvents="box-none">
       <View style={styles.row}>
         <View style={styles.pill}>
-          <Text style={styles.pillText}>{Math.floor(meters)}m</Text>
+          <Text style={styles.pillText} allowFontScaling={false}>{Math.floor(meters)}m</Text>
         </View>
         <View style={styles.pill}>
-          <Text style={[styles.pillText, { color: COLORS.neonYellow }]}>◆ {credits}</Text>
+          <Text style={[styles.pillText, { color: COLORS.neonYellow }]} allowFontScaling={false}>◆ {credits}</Text>
         </View>
         <MuteButton />
       </View>
-      <View style={styles.row}>
-        <View style={[styles.pill, styles.cargoPill]}>
-          <Text style={styles.pillText}>
-            {packages}/{capacity}
+      <View style={styles.row2} pointerEvents="none">
+        <View style={styles.pill}>
+          <Text style={styles.pillText} allowFontScaling={false}>
+            📦 {packages}/{capacity}
           </Text>
-          {/* Current hold, front-to-back delivery order — lets the player
-              see at a glance whether they're carrying anything that
-              changes how they should fly (fragile = no dives, thermal =
-              hurry, VIP = expect police). */}
-          {packageTypes && packageTypes.length > 0 && (
-            <View style={styles.cargoIcons}>
-              {packageTypes.map((t, i) => (
-                <Text key={i} style={styles.cargoIcon}>
-                  {(PACKAGE_TYPES[t] || PACKAGE_TYPES.standard).icon}
-                </Text>
-              ))}
-            </View>
-          )}
         </View>
         {combo > 1 && (
           <View style={[styles.pill, styles.comboPill]}>
-            <Text style={styles.comboText}>🔥 COMBO x{combo}</Text>
+            <Text style={styles.comboText} allowFontScaling={false}>🔥 x{combo}</Text>
           </View>
         )}
+        {/* The zone name takes whatever space is left and shrinks its font
+            instead of being cut off, so long names fit next to the combo. */}
         <View style={[styles.pill, styles.zonePill]}>
-          <Text style={styles.zoneText}>{zone.name}</Text>
+          <Text
+            style={styles.zoneText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            allowFontScaling={false}
+          >
+            {zone.name}
+          </Text>
         </View>
       </View>
     </View>
@@ -51,13 +49,12 @@ export default function HUD({ meters, packages, capacity, credits, zoneIndex, co
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    top: 44,
+    top: HUD_TOP,
     left: 12,
     right: 12,
   },
   // During Blackout, the readouts fade almost out of view (still faintly
-  // legible) instead of disappearing entirely — a "flying blind" feel
-  // without making the game literally unplayable.
+  // legible) instead of disappearing entirely.
   wrapDimmed: {
     opacity: 0.12,
   },
@@ -67,6 +64,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  row2: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
   pill: {
     backgroundColor: "rgba(18,10,38,0.75)",
     borderColor: COLORS.neonCyan,
@@ -74,31 +77,25 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    flexShrink: 0,
   },
   pillText: {
     color: COLORS.textPrimary,
     fontWeight: "700",
     fontSize: 13,
   },
-  cargoPill: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  cargoIcons: {
-    flexDirection: "row",
-    marginLeft: 6,
-  },
-  cargoIcon: {
-    fontSize: 13,
-    marginLeft: 1,
-  },
   zonePill: {
     borderColor: COLORS.neonPink,
+    flexShrink: 1,
+    flexGrow: 1,
+    alignItems: "center",
+    minWidth: 0,
   },
   zoneText: {
     color: COLORS.neonPink,
     fontWeight: "700",
     fontSize: 12,
+    textAlign: "center",
   },
   comboPill: {
     borderColor: COLORS.neonYellow,

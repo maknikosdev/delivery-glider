@@ -80,6 +80,22 @@ export function GameProvider({ children }) {
     return true;
   }, []);
 
+  // Skin Updates I-III: extra cosmetic upgrades per OWNED glider, bought in
+  // order with credits (see game/economy.js for the costs). Stored as
+  // save.skinTiers = { [gliderId]: 0..3 } - old saves simply have none.
+  const buySkinTier = useCallback(async (gliderId, tier, cost) => {
+    const current = await loadSave();
+    if (!current.ownedGliders.includes(gliderId)) return false;
+    const have = (current.skinTiers || {})[gliderId] || 0;
+    if (tier !== have + 1 || tier > 3 || current.credits < cost) return false;
+    const updated = await saveSave({
+      credits: current.credits - cost,
+      skinTiers: { ...(current.skinTiers || {}), [gliderId]: tier },
+    });
+    setSave(updated);
+    return true;
+  }, []);
+
   const selectGlider = useCallback(async (gliderId) => {
     const updated = await saveSave({ selectedGlider: gliderId });
     setSave(updated);
@@ -232,6 +248,7 @@ export function GameProvider({ children }) {
     t,
     finishRun,
     buyGlider,
+    buySkinTier,
     selectGlider,
     buyGadget,
     toggleEquippedGadget,

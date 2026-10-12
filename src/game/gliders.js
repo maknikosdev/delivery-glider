@@ -5,12 +5,17 @@
 // read it directly — GarageScreen looks up t(`gliders.${g.id}`) instead, so
 // the displayed text follows the EL/EN toggle. See src/i18n/translations.js.
 //
+// PRICES: every unlockCost below is already 2x the old value (slower economy;
+// see game/economy.js for Skin Update costs which are derived from it).
+//
 // IMPORTANT: There is NO real-money purchase anywhere in this game. No
 // payment SDK, no billing library, no network call. "unlockCost" below is
 // spent using CREDITS earned purely by playing (successful deliveries +
 // drone refuels during a run — see src/game/useGameLoop.js). It is exactly
 // like an arcade high-score/coin system, not an in-app purchase.
-export const GLIDERS = [
+import { NEW_GLIDERS } from "./newGliders";
+
+const BASE_GLIDERS = [
   {
     id: "starter",
     name: "Rusty Starter",
@@ -25,7 +30,7 @@ export const GLIDERS = [
   {
     id: "swift",
     name: "The Swift",
-    unlockCost: 500,
+    unlockCost: 1000,
     capacity: 3,
     weightFactorMult: 0.7,
     turnRate: 1.35,
@@ -36,9 +41,9 @@ export const GLIDERS = [
   {
     id: "heavy_lifter",
     name: "The Heavy Lifter",
-    unlockCost: 750,
+    unlockCost: 1500,
     capacity: 8,
-    weightFactorMult: 1.25,
+    weightFactorMult: 1.1,
     turnRate: 0.75,
     color: "#ff9d2e",
     accentColor: "#ff2ea8",
@@ -47,7 +52,7 @@ export const GLIDERS = [
   {
     id: "phantom",
     name: "Phantom Glider",
-    unlockCost: 1200,
+    unlockCost: 2400,
     capacity: 5,
     weightFactorMult: 0.85,
     turnRate: 1.15,
@@ -58,7 +63,7 @@ export const GLIDERS = [
   {
     id: "pulse_wave",
     name: "The Pulse-Wave",
-    unlockCost: 900,
+    unlockCost: 1800,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.0,
@@ -75,7 +80,7 @@ export const GLIDERS = [
   {
     id: "hologram",
     name: "Hologram Glider",
-    unlockCost: 1000,
+    unlockCost: 2000,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.05,
@@ -92,7 +97,7 @@ export const GLIDERS = [
   {
     id: "anti_grav_heavy",
     name: "Anti-Grav Heavy",
-    unlockCost: 1100,
+    unlockCost: 2200,
     capacity: 5,
     weightFactorMult: 0.5, // Mass Reduction passive: -50% weight effect
     turnRate: 0.85,
@@ -109,7 +114,7 @@ export const GLIDERS = [
   {
     id: "solar_wing",
     name: "Solar-Wing",
-    unlockCost: 1300,
+    unlockCost: 2600,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.1,
@@ -126,7 +131,7 @@ export const GLIDERS = [
   {
     id: "storm_chaser",
     name: "Storm Chaser",
-    unlockCost: 1400,
+    unlockCost: 2800,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.05,
@@ -143,7 +148,7 @@ export const GLIDERS = [
   {
     id: "iron_courier",
     name: "Iron Courier",
-    unlockCost: 1300,
+    unlockCost: 2600,
     capacity: 6,
     weightFactorMult: 1.1,
     turnRate: 0.9,
@@ -159,7 +164,7 @@ export const GLIDERS = [
   {
     id: "nomad",
     name: "Nomad",
-    unlockCost: 350,
+    unlockCost: 700,
     capacity: 4,
     weightFactorMult: 0.9,
     turnRate: 1.2,
@@ -170,7 +175,7 @@ export const GLIDERS = [
   {
     id: "riftwalker",
     name: "Riftwalker",
-    unlockCost: 1500,
+    unlockCost: 3000,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.1,
@@ -187,7 +192,7 @@ export const GLIDERS = [
   {
     id: "storm_breaker",
     name: "Storm Breaker",
-    unlockCost: 1450,
+    unlockCost: 2900,
     capacity: 5,
     weightFactorMult: 1.0,
     turnRate: 1.0,
@@ -203,15 +208,17 @@ export const GLIDERS = [
   {
     id: "titan",
     name: "Titan",
-    unlockCost: 1800,
-    capacity: 10,
-    weightFactorMult: 1.4,
+    unlockCost: 3600,
+    capacity: 8,
+    weightFactorMult: 1.05,
     turnRate: 0.65,
     color: "#ff9d2e",
     accentColor: "#ff3b3b",
-    description: "Τεράστια χωρητικότητα 10 δεμάτων για μαζικές παραδόσεις — αλλά βαραίνει πολύ και στρίβει αργά.",
+    description: "Χωρητικότητα 8 δεμάτων για μαζικές παραδόσεις — ανεβαίνει ακόμα και φορτωμένο, αλλά στρίβει πολύ αργά.",
   },
 ];
+
+export const GLIDERS = [...BASE_GLIDERS, ...NEW_GLIDERS];
 
 export function gliderById(id) {
   return GLIDERS.find((g) => g.id === id);

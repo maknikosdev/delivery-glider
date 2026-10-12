@@ -1,8 +1,14 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { View, Text, StyleSheet, PanResponder } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
+import SpecialRiderSprite from "../components/SpecialRiderSprite";
+import ParcelSprite from "../components/ParcelSprite";
+import { GLIDER_SPRITES } from "../game/gliderSprites";
+import GliderTrail from "../components/GliderTrail";
+import { useGame } from "../store/GameContext";
+import { pickEnvironmentId } from "../game/environments";
 import ObstacleSprite from "../components/ObstacleSprite";
 import BossSprite from "../components/BossSprite";
 import ProjectileSprite from "../components/ProjectileSprite";
@@ -55,6 +61,15 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   });
 
   const skillDef = gliderConfig.skill;
+  // The 12 extra gliders have their own artwork; the originals use RiderSprite.
+  const RiderComp = GLIDER_SPRITES[gliderConfig.id] ? SpecialRiderSprite : RiderSprite;
+
+  // Skin Update tier (0-3) of the glider being flown -> cosmetic trail.
+  const { save } = useGame();
+  const skinTier = (save && save.skinTiers && save.skinTiers[gliderConfig.id]) || 0;
+  // Random background for this run, from the environments unlocked so far
+  // (one more every 3 gliders owned - see game/environments.js).
+  const [envId] = useState(() => pickEnvironmentId(((save && save.ownedGliders) || []).length));
   const gestureStart = useRef({ x: 0, y: 0, t: 0 });
   const lastTapAt = useRef(0);
   const holdTimer = useRef(null);
@@ -180,7 +195,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           transform: [{ translateX: shakeX }, { translateY: shakeY }, { scale: deliveryZoom }],
         }}
       >
-        <ParallaxBackground cameraX={world.cameraX} />
+        <ParallaxBackground cameraX={world.cameraX} env={envId} />
 
         {/* Route Branching: a faint persistent divider + tint for the
             upper(risk)/lower(safe) fork chunk, so the choice stays
@@ -257,6 +272,15 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         )}
 
         {world.chunks.map((chunk) =>
+          (chunk.parcels || []).map((p) => {
+            if (p.collected) return null;
+            const screenX = p.worldX - world.cameraX;
+            if (screenX < -40 || screenX > SCREEN.width + 40) return null;
+            return <ParcelSprite key={p.id} screenX={screenX} y={p.y} full={world.packages >= world.capacity} />;
+          })
+        )}
+
+        {world.chunks.map((chunk) =>
           chunk.balconies.map((b) => {
             const screenX = b.worldX - world.cameraX;
             if (screenX < -60 || screenX > SCREEN.width + 60) return null;
@@ -324,7 +348,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           const ghostY = getGhostY(world.ghostPlayback, world.cameraX);
           return ghostY === null ? null : (
             <View style={styles.ghostWrap} pointerEvents="none">
-              <RiderSprite
+              <RiderComp
                 gliderId={gliderConfig.id}
                 y={ghostY}
                 color={gliderConfig.color}
@@ -336,7 +360,15 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           );
         })()}
 
-        <RiderSprite
+        <GliderTrail
+          y={world.riderY}
+          color={gliderConfig.color}
+          accentColor={gliderConfig.accentColor}
+          tier={skinTier}
+          thrusting={world.thrustHeld}
+        />
+
+        <RiderComp
           gliderId={gliderConfig.id}
           y={world.riderY}
           color={gliderConfig.color}
@@ -356,6 +388,14 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             { backgroundColor: currentZone.tint.color, opacity: currentZone.tint.opacity },
           ]}
           pointerEvents="none"
+        />
+      )}
+
+      {/* Active-skill colour wash of the extra gliders (Cryo Field, Chrono Rune, ...) */}
+      {world.gs && world.gs.tint && Date.now() < world.gs.tint.until && (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: world.gs.tint.color, opacity: 0.09 }]}
         />
       )}
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS } from "../constants/gameConfig";
+import { COLORS, SCREEN } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 
 export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemainingMs }) {
@@ -10,7 +10,9 @@ export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemai
   if (skill.type === "passive") {
     return (
       <View style={[styles.pill, styles.passivePill]} pointerEvents="none">
-        <Text style={styles.passiveText}>✦ {skill.name}</Text>
+        <Text style={styles.passiveText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>
+          ✦ {skill.name}
+        </Text>
       </View>
     );
   }
@@ -27,8 +29,10 @@ export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemai
       ]}
       pointerEvents="none"
     >
-      <Text style={styles.skillName}>{skill.name}</Text>
-      <Text style={styles.skillState}>
+      <Text style={styles.skillName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>
+        {skill.name}
+      </Text>
+      <Text style={styles.skillState} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} allowFontScaling={false}>
         {isActive
           ? t("skillIndicator.active")
           : isCoolingDown
@@ -40,10 +44,13 @@ export default function SkillIndicator({ skill, cooldownRemainingMs, activeRemai
 }
 
 const styles = StyleSheet.create({
+  // Capped to the screen width (minus margins) so long skill names / Greek
+  // trigger hints shrink instead of running off the edge.
   pill: {
     position: "absolute",
-    bottom: 26,
+    bottom: 34,
     right: 14,
+    maxWidth: SCREEN.width - 28,
     borderRadius: 14,
     borderWidth: 1.5,
     paddingHorizontal: 12,

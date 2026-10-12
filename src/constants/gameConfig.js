@@ -129,7 +129,7 @@ export const DIFFICULTY = {
 export const COMBO = {
   windowMs: 3200, // time allowed since last delivery before combo resets
   maxMultiplier: 5,
-  creditsPerDelivery: 12,
+  creditsPerDelivery: 7, // was 12 - credits are scarcer so gliders/skins last longer
 };
 
 // Passing close to an obstacle without hitting it grants a small "close call"
@@ -137,7 +137,7 @@ export const COMBO = {
 // pure relief, which is what was missing.
 export const NEAR_MISS = {
   triggerDistance: 34, // px beyond the hitbox edge that still counts as "close"
-  bonusCredits: 6,
+  bonusCredits: 3, // was 6
   cooldownMs: 900, // avoid re-triggering on the same obstacle every frame
 };
 
@@ -152,13 +152,13 @@ export const CHUNK_WIDTH = SCREEN_W * 2;
 export const COIN = {
   value: 1,
   pickupRadius: 46,
-  perChunk: { min: 3, max: 6 },
+  perChunk: { min: 1, max: 3 }, // was 3-6
 };
 
 // "Second Chance" revive: spend coins to continue exactly where you crashed,
 // strictly once per run (see design doc — no stacking revives).
 export const REVIVE = {
-  cost: 100,
+  cost: 60, // was 100 (cheaper because earnings are lower)
   invincibleMs: 3000,
   maxRevivesPerRun: 1,
 };
@@ -332,7 +332,7 @@ export const MAX_EQUIPPED_GADGETS = 2;
 // --- Mystery Crate at Game Over ------------------------------------------
 export const MYSTERY_CRATE = {
   rewardPool: [
-    { type: "coins", min: 50, max: 150 },
+    { type: "coins", min: 25, max: 80 }, // was 50-150
     { type: "revive_token" },
     { type: "temp_skin" },
   ],
@@ -583,7 +583,7 @@ export const BOSS_ENCOUNTERS = [
     chaseSpeed: 150,
     projectile: "fireball",
     projectileIntervalMs: 1700,
-    rewardCredits: 300,
+    rewardCredits: 150,
     warning: "⚠ SKY WYVERN INCOMING",
   },
   {
@@ -599,7 +599,7 @@ export const BOSS_ENCOUNTERS = [
     dashDurationMs: 550,
     projectile: "fish",
     projectileIntervalMs: 1500,
-    rewardCredits: 450,
+    rewardCredits: 225,
     warning: "⚠ GIANT SEAGULL SPOTTED",
   },
   {
@@ -611,7 +611,7 @@ export const BOSS_ENCOUNTERS = [
     pattern: "hover", // small chaotic drift around a slowly shifting center
     projectile: "missile",
     projectileIntervalMs: 1400,
-    rewardCredits: 600,
+    rewardCredits: 300,
     warning: "⚠ MECHANICAL DRONE ONLINE",
   },
 ];

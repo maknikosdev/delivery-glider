@@ -1,22 +1,22 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { COLORS, WANTED } from "../constants/gameConfig";
+import { STARS_TOP } from "../constants/hudLayout";
 
 // Accessibility: active stars use a FILLED glyph (★) and inactive ones use
 // an OUTLINE glyph (☆) — two different shapes, not just two different
-// colors/opacities — plus a small numeric badge. That way the wanted level
-// is readable even without color vision at all.
+// colors/opacities — plus a small numeric badge.
 export default function WantedStars({ level }) {
   if (!level || level <= 0) return null;
   return (
     <View style={styles.wrap} pointerEvents="none">
       {Array.from({ length: WANTED.maxLevel }).map((_, i) => (
-        <Text key={i} style={[styles.star, i < level ? styles.starActive : styles.starDim]}>
+        <Text key={i} style={[styles.star, i < level ? styles.starActive : styles.starDim]} allowFontScaling={false}>
           {i < level ? "★" : "☆"}
         </Text>
       ))}
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>{level}</Text>
+        <Text style={styles.badgeText} allowFontScaling={false}>{level}</Text>
       </View>
     </View>
   );
@@ -25,7 +25,7 @@ export default function WantedStars({ level }) {
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    top: 108,
+    top: STARS_TOP,
     left: 14,
     flexDirection: "row",
     alignItems: "center",

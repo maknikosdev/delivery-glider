@@ -29,6 +29,8 @@ import {
 } from "../constants/gameConfig";
 import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK } from "./chunks";
 import { createSeededRng } from "./seededRandom";
+import { updateParcels } from "./parcels";
+import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
 import { useGame } from "../store/GameContext";
@@ -434,6 +436,7 @@ export function useGameLoop({
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
     w.shieldCharges = startingShieldCharges;
+    initGliderSkills(w, skillDef, level);
     ensureChunksAhead(w);
     worldRef.current = w;
     runningRef.current = true;
@@ -686,6 +689,8 @@ export function useGameLoop({
     if (!skillDef || skillDef.type !== "active") return;
     const now = Date.now();
     if (now < world.skillCooldownUntil) return;
+    // The 12 extra gliders' active skills live in gliderSkills.js
+    if (activateGliderSkill(world, skillDef, level, now, { addFloatingText, play: (s) => AudioManager.play(s) })) return;
 
     if (skillDef.id === "emp_blast") {
       const cfg = effSkill;
@@ -755,7 +760,7 @@ export function useGameLoop({
       world.particles.push({ id: `phase_${now}`, x: riderWorldX, y: world.riderY, born: now, kind: "phase" });
       AudioManager.play("swipe");
     }
-  }, [skillDef, addFloatingText, effSkill]);
+  }, [skillDef, addFloatingText, effSkill, level]);
 
   // --- Weather event scheduling -----------------------------------------
   const maybeTriggerWeather = useCallback(
@@ -869,6 +874,7 @@ export function useGameLoop({
 
       const speed = currentSpeed(world);
       world.cameraX += speed * dt;
+      tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
       world.score = world.cameraX * METERS_PER_PX;
       world.prevZoneIndex = world.zoneIndex;
       world.zoneIndex = getZoneIndex(world.score);
@@ -1137,7 +1143,7 @@ export function useGameLoop({
               o.y += (world.decoy.y - o.y) * Math.min(1, 3 * dt);
             } else {
               const t = (now / 1000) * o.moveSpeed;
-              o.y = o.baseY + Math.sin(t) * o.moveAmp;
+              o.y = o.baseY + Math.sin(t + (o.phase || 0)) * o.moveAmp;
             }
           }
           const hitR = o.hitRadius || 22;
@@ -1226,6 +1232,12 @@ export function useGameLoop({
             }
           }
         }
+
+        updateParcels(world, chunk, riderWorldX, {
+          addFloatingText,
+          play: (s) => AudioManager.play(s),
+          t,
+        });
 
         for (const c of chunk.coins) {
           if (c.collected) continue;
@@ -1317,6 +1329,7 @@ export function useGameLoop({
       effectiveCorrosionMult,
       isStormImmune,
       rng,
+      t,
     ]
   );
 

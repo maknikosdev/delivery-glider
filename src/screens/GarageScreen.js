@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import { COLORS, SKILL_UPGRADES, readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 import { GLIDERS } from "../game/gliders";
 import { useGame } from "../store/GameContext";
@@ -9,6 +9,8 @@ import LanguageToggleButton from "../components/LanguageToggleButton";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import ScreenBackground from "../components/ScreenBackground";
+import SkinUpdatesRow from "../components/SkinUpdatesRow";
+import { GLIDER_SPRITES } from "../game/gliderSprites";
 
 function skillUpgradeCost(level) {
   return Math.round(SKILL_UPGRADES.baseCost * Math.pow(SKILL_UPGRADES.costGrowth, level));
@@ -71,7 +73,11 @@ export default function GarageScreen({ onBack }) {
               contentStyle={styles.gliderCardInner}
             >
               <View style={styles.gliderRow}>
-                <View style={[styles.gliderSwatch, { backgroundColor: g.color }]} />
+                {GLIDER_SPRITES[g.id] ? (
+                  <Image source={GLIDER_SPRITES[g.id]} style={styles.gliderThumb} resizeMode="contain" />
+                ) : (
+                  <View style={[styles.gliderSwatch, { backgroundColor: g.color }]} />
+                )}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.gliderName}>{g.name}</Text>
                   {g.skill && (
@@ -161,6 +167,9 @@ export default function GarageScreen({ onBack }) {
                   </View>
                 </View>
               )}
+
+              {/* Skin Updates I-III (extra credits, cosmetic trail in-game) */}
+              {owned && <SkinUpdatesRow glider={g} />}
             </OctagonPanel>
           );
         })}
@@ -213,6 +222,7 @@ const styles = StyleSheet.create({
   gliderCardInner: { padding: 16 },
   gliderRow: { flexDirection: "row", alignItems: "center" },
   gliderSwatch: { width: 36, height: 36, borderRadius: 10 },
+  gliderThumb: { width: 52, height: 52 },
   gliderName: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 15 },
   skillBadge: {
     alignSelf: "flex-start",
