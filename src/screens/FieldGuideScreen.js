@@ -36,6 +36,13 @@ const COLLECTIBLES = [
   { id: "overclock", img: require("../../assets/sprites/powerup_overclock.png"), color: COLORS.danger },
   { id: "nano_repair", img: require("../../assets/sprites/powerup_nano_repair.png"), color: COLORS.neonGreen },
   { id: "grav_inverter", img: require("../../assets/sprites/powerup_grav_inverter.png"), color: COLORS.neonPink },
+  { id: "parcel", emoji: true, color: COLORS.neonCyan },
+];
+
+// Extra "deliver" rows (emoji icons, no sprite needed).
+const DELIVER_EXTRAS = [
+  { id: "order", color: COLORS.neonYellow },
+  { id: "passenger", color: COLORS.neonCyan },
 ];
 
 const BALCONIES = [
@@ -112,7 +119,11 @@ export default function FieldGuideScreen({ onBack }) {
         <View style={styles.listCol}>
           {COLLECTIBLES.map((c) => (
             <OctagonPanel key={c.id} color={c.color} size="wide" fillOpacity={0.08} style={styles.rowCard} contentStyle={styles.rowCardInner}>
-              <Image source={c.img} style={styles.rowIcon} resizeMode="contain" />
+              {c.emoji ? (
+                <Text style={styles.rowEmoji}>{t(`hazards.collect_${c.id}_icon`)}</Text>
+              ) : (
+                <Image source={c.img} style={styles.rowIcon} resizeMode="contain" />
+              )}
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.rowName, { color: c.color }]}>{t(`hazards.collect_${c.id}`)}</Text>
                 <Text style={styles.rowDesc}>{t(`hazards.collect_${c.id}_desc`)}</Text>
@@ -129,6 +140,15 @@ export default function FieldGuideScreen({ onBack }) {
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={[styles.rowName, { color: b.color }]}>{t(`hazards.${b.id}`)}</Text>
                 <Text style={styles.rowDesc}>{t(`hazards.${b.id}_desc`)}</Text>
+              </View>
+            </OctagonPanel>
+          ))}
+          {DELIVER_EXTRAS.map((x) => (
+            <OctagonPanel key={x.id} color={x.color} size="wide" fillOpacity={0.08} style={styles.rowCard} contentStyle={styles.rowCardInner}>
+              <Text style={styles.rowEmoji}>{t(`hazards.${x.id}_icon`)}</Text>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.rowName, { color: x.color }]}>{t(`hazards.${x.id}`)}</Text>
+                <Text style={styles.rowDesc}>{t(`hazards.${x.id}_desc`)}</Text>
               </View>
             </OctagonPanel>
           ))}
@@ -189,6 +209,7 @@ const styles = StyleSheet.create({
   rowCard: { marginBottom: 0 },
   rowCardInner: { flexDirection: "row", alignItems: "center", padding: 12 },
   rowIcon: { width: 42, height: 42 },
+  rowEmoji: { width: 42, fontSize: 30, textAlign: "center" },
   rowName: { fontWeight: "800", fontSize: 13 },
   rowDesc: { color: COLORS.textDim, fontSize: 10.5, marginTop: 3, lineHeight: 14 },
   cargoRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },

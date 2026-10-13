@@ -8,7 +8,9 @@ import ParcelSprite from "../components/ParcelSprite";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 import GliderTrail from "../components/GliderTrail";
 import { useGame } from "../store/GameContext";
-import { pickEnvironmentId } from "../game/environments";
+import { pickEnvironmentId, getEnvironment } from "../game/environments";
+import { runCreditBonus } from "../game/progress";
+import { PACKAGE_TYPES } from "../constants/gameConfig";
 import ObstacleSprite from "../components/ObstacleSprite";
 import BossSprite from "../components/BossSprite";
 import ProjectileSprite from "../components/ProjectileSprite";
@@ -28,11 +30,33 @@ const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
 export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, onGameOver }) {
+  const { save, language } = useGame();
+  // Random background for this run, from the environments unlocked so far
+  // (one more every 3 gliders owned + achievement-unlocked ones).
+  const [envId] = useState(() =>
+    pickEnvironmentId(((save && save.ownedGliders) || []).length, (save && save.bonusEnvs) || [])
+  );
+  const [bannerVisible, setBannerVisible] = useState(true);
+  React.useEffect(() => {
+    const id = setTimeout(() => setBannerVisible(false), 3200);
+    return () => clearTimeout(id);
+  }, []);
+
   const handleGameOver = useCallback(
     (result) => {
-      onGameOver && onGameOver(result);
+      // Mastery + glider-pair bonus on top of the run's credits.
+      const bonus = runCreditBonus(save, gliderConfig.id);
+      const base = result.creditsEarned || 0;
+      const out = {
+        ...result,
+        creditsEarned: Math.round(base * (1 + bonus)),
+        bonusPct: Math.round(bonus * 100),
+        gliderId: gliderConfig.id,
+        envId,
+      };
+      onGameOver && onGameOver(out);
     },
-    [onGameOver]
+    [onGameOver, save, gliderConfig.id, envId]
   );
 
   const {
@@ -57,6 +81,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     totalRuns,
     mutatorId,
     dailySeed,
+    envId,
     onGameOver: handleGameOver,
   });
 
@@ -65,11 +90,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   const RiderComp = GLIDER_SPRITES[gliderConfig.id] ? SpecialRiderSprite : RiderSprite;
 
   // Skin Update tier (0-3) of the glider being flown -> cosmetic trail.
-  const { save } = useGame();
   const skinTier = (save && save.skinTiers && save.skinTiers[gliderConfig.id]) || 0;
-  // Random background for this run, from the environments unlocked so far
-  // (one more every 3 gliders owned - see game/environments.js).
-  const [envId] = useState(() => pickEnvironmentId(((save && save.ownedGliders) || []).length));
   const gestureStart = useRef({ x: 0, y: 0, t: 0 });
   const lastTapAt = useRef(0);
   const holdTimer = useRef(null);
@@ -196,6 +217,18 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         }}
       >
         <ParallaxBackground cameraX={world.cameraX} env={envId} />
+        {bannerVisible ? (() => {
+          const env = getEnvironment(envId);
+          const lang = language === "el" ? "el" : "en";
+          const nm = env && env.name ? (typeof env.name === "object" ? env.name[lang] || env.name.en : env.name) : "";
+          const rt = env && env.rule && env.rule.text ? env.rule.text[lang] : "";
+          return (
+            <View pointerEvents="none" style={styles.envBanner}>
+              <Text style={styles.envName}>{nm}</Text>
+              {rt ? <Text style={styles.envRule}>{rt}</Text> : null}
+            </View>
+          );
+        })() : null}
 
         {/* Route Branching: a faint persistent divider + tint for the
             upper(risk)/lower(safe) fork chunk, so the choice stays
@@ -284,8 +317,27 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           chunk.balconies.map((b) => {
             const screenX = b.worldX - world.cameraX;
             if (screenX < -60 || screenX > SCREEN.width + 60) return null;
+            const orderIcon =
+              b.order && !b.delivered && mutatorId !== "passenger" && PACKAGE_TYPES[b.order]
+                ? PACKAGE_TYPES[b.order].icon
+                : null;
+            const orderMatch = !!orderIcon && world.packageTypes && world.packageTypes[0] === b.order;
             return (
-              <BalconySprite key={b.id} color={b.color} screenX={screenX} y={b.y} delivered={b.delivered} />
+              <React.Fragment key={b.id}>
+                <BalconySprite color={b.color} screenX={screenX} y={b.y} delivered={b.delivered} />
+                {orderIcon ? (
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.orderBadge,
+                      { left: screenX - 14, top: b.y - 46 },
+                      orderMatch && styles.orderBadgeOn,
+                    ]}
+                  >
+                    <Text style={{ fontSize: 14 }}>{orderIcon}</Text>
+                  </View>
+                ) : null}
+              </React.Fragment>
             );
           })
         )}
@@ -514,6 +566,21 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 }
 
 const styles = StyleSheet.create({
+  orderBadge: {
+    position: "absolute",
+    width: 28,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orderBadgeOn: { borderColor: "#7dffb0", backgroundColor: "rgba(20,90,50,0.7)" },
+  envBanner: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center" },
+  envName: { color: "#fff", fontSize: 15, fontWeight: "800", letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 4 },
+  envRule: { color: "#ffe27d", fontSize: 12, marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   container: {
     flex: 1,
     backgroundColor: "#05030d",

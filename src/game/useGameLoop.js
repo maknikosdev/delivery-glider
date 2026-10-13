@@ -25,11 +25,15 @@ import {
   BOSS_ENCOUNTERS,
   PROJECTILE_TYPES,
   CHUNK_WIDTH,
+  PASSENGER,
+  ORDER,
   branchEffectiveLevel,
 } from "../constants/gameConfig";
 import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK } from "./chunks";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
+import { getEnvironment } from "./environments";
+import { getPairPerks, perkTotals } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
@@ -50,6 +54,11 @@ function buildRunResult(world) {
     weatherEventsSurvivedCount: world.weatherEventsSurvivedCount,
     maxPhaseShiftCoins: world.maxPhaseShiftCoins,
     blackoutMetersThisRun: world.blackoutMetersThisRun,
+    // meta-progression (see game/progress.js)
+    bossClearedIds: world.bossClearedIds || [],
+    ordersCompleted: world.ordersCompleted || 0,
+    passengersDelivered: world.passengersDelivered || 0,
+    parcelsPickedUp: world.parcelsPickedUp || 0,
   };
 }
 
@@ -135,6 +144,11 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random
     // system. bossProjectiles holds whatever it's currently thrown that
     // hasn't resolved yet (hit, dodged, or expired).
     nextBossIndex: 0,
+    bossClearedIds: [],
+    ordersCompleted: 0,
+    passengersDelivered: 0,
+    passengerDives: 0,
+    parcelsPickedUp: 0,
     activeBossEntity: null,
     bossProjectiles: [],
     // coins & skills
@@ -195,6 +209,7 @@ export function useGameLoop({
   totalRuns = 0,
   mutatorId = null,
   dailySeed = null,
+  envId = null,
   onGameOver,
 }) {
   // Mutators: an optional, player-picked run modifier (see LoadoutScreen.js
@@ -202,6 +217,9 @@ export function useGameLoop({
   // remounts (via App.js's `key={runKey}`) between runs, so this never
   // changes mid-run and is safe to read as a plain const.
   const mutator = mutatorId ? MUTATORS[mutatorId] : null;
+  const isPassenger = !!(mutator && mutator.passengerMode);
+  // Environment rule (gravity / speed / credits tweak of the background)
+  const envRule = (envId && getEnvironment(envId).rule) || {};
 
   // Daily Challenge: when a seed is provided, every random roll that
   // shapes the track (chunk choice, obstacle/coin/powerup placement,
@@ -231,7 +249,14 @@ export function useGameLoop({
   const rafRef = useRef(null);
   const lastTsRef = useRef(null);
   const runningRef = useRef(true);
-  const { t } = useGame();
+  const { t, save: gameSave } = useGame();
+  // Glider pairs: owning both gliders of a pair gives a small passive perk
+  const ownedCount = ((gameSave && gameSave.ownedGliders) || []).length;
+  const pairPerks = useMemo(
+    () => perkTotals(getPairPerks(gliderConfig.id, (gameSave && gameSave.ownedGliders) || [])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gliderConfig.id, ownedCount]
+  );
 
   const skillDef = gliderConfig.skill;
   const isCoinMagnetBoost = skillDef && skillDef.id === "coin_magnet_boost";
@@ -346,8 +371,8 @@ export function useGameLoop({
 
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
-  const magnetMult = effectiveMagnetMult;
-  const maxCapacity = gliderConfig.capacity;
+  const magnetMult = effectiveMagnetMult * pairPerks.magnetMult;
+  const maxCapacity = isPassenger ? Math.min(gliderConfig.capacity, PASSENGER.capacity) : gliderConfig.capacity;
 
   const hasGadget = useCallback(
     (id) => (worldRef.current.gadgets || []).includes(id),
@@ -435,7 +460,8 @@ export function useGameLoop({
     const w = makeInitialWorld(gliderConfig, gadgetIds, freeRevive);
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
-    w.shieldCharges = startingShieldCharges;
+    w.shieldCharges = startingShieldCharges + pairPerks.startShield;
+    if (isPassenger) w.packageTypes = Array(maxCapacity).fill("passenger");
     initGliderSkills(w, skillDef, level);
     ensureChunksAhead(w);
     worldRef.current = w;
@@ -445,7 +471,7 @@ export function useGameLoop({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gliderConfig.id]);
 
-  const mutatorGravityMult = mutator?.gravityMult || 1;
+  const mutatorGravityMult = (mutator?.gravityMult || 1) * (envRule.gravityMult || 1);
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
@@ -467,8 +493,8 @@ export function useGameLoop({
     [weightFactor, mutatorGravityMult]
   );
 
-  const mutatorSpeedMult = mutator?.speedMult || 1;
-  const mutatorCreditsMult = mutator?.creditsMult || 1;
+  const mutatorSpeedMult = (mutator?.speedMult || 1) * (envRule.speedMult || 1);
+  const mutatorCreditsMult = (mutator?.creditsMult || 1) * (envRule.creditsMult || 1);
   const currentSpeed = useCallback(
     (world) => {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
@@ -635,6 +661,25 @@ export function useGameLoop({
                 earned = 0;
                 packageTag = "SPOILED!";
               }
+            } else if (pkgType === "passenger") {
+              // Passenger Run: higher fare, but every dive rattles the passenger.
+              const comfort = Math.max(PASSENGER.minComfort, 1 - PASSENGER.diveComfortLoss * world.passengerDives);
+              earned *= PASSENGER.rewardMult * comfort;
+              packageTag = comfort < 0.99 ? "RATTLED" : "SMOOTH RIDE!";
+              world.passengersDelivered += 1;
+              world.passengerDives = 0;
+            }
+
+            // Customer order: this balcony asked for a specific cargo type.
+            if (b.order && !isPassenger) {
+              if (pkgType === b.order) {
+                earned *= ORDER.matchMult;
+                world.ordersCompleted += 1;
+                packageTag = packageTag ? `${packageTag} ORDER ✓` : "ORDER ✓";
+              } else {
+                earned *= ORDER.mismatchMult;
+                packageTag = packageTag ? `${packageTag} WRONG ITEM` : "WRONG ITEM";
+              }
             }
 
             earned = Math.round(earned);
@@ -650,7 +695,7 @@ export function useGameLoop({
       }
       return delivered;
     },
-    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult, mutatorCreditsMult]
+    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult, mutatorCreditsMult, isPassenger]
   );
 
   const applyDive = useCallback((world) => {
@@ -669,6 +714,11 @@ export function useGameLoop({
       }
     }
 
+    if (isPassenger && world.packageTypes && world.packageTypes.includes("passenger")) {
+      world.passengerDives += 1;
+      addFloatingText(world, "Hold on!", world.cameraX + RIDER.screenX, world.riderY - 40, "near_miss");
+    }
+
     const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
       world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy);
@@ -676,7 +726,7 @@ export function useGameLoop({
       world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy);
     }
     AudioManager.play("swipe");
-  }, [isStormImmune, addFloatingText]);
+  }, [isStormImmune, addFloatingText, isPassenger]);
 
   const setThrust = useCallback((held) => {
     worldRef.current.thrustHeld = held;
@@ -1100,6 +1150,8 @@ export function useGameLoop({
           if (!b.rewarded) {
             world.credits += b.rewardCredits;
             addFloatingText(world, `Boss cleared! +${b.rewardCredits}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
+            if (!world.bossClearedIds.includes(b.id)) world.bossClearedIds.push(b.id);
+            addFloatingText(world, t(`bosses.${b.id}_win`), world.cameraX + RIDER.screenX, world.riderY - 80, "banner");
           }
           world.activeBossEntity = null;
         }
@@ -1219,7 +1271,7 @@ export function useGameLoop({
 
             // Package variety: every refuel re-rolls the whole hold and
             // resets the fragile/thermal tracking for the new load.
-            const newLoad = rollPackageLoad(world.capacity, rng);
+            const newLoad = isPassenger ? Array(world.capacity).fill("passenger") : rollPackageLoad(world.capacity, rng);
             world.packageTypes = newLoad;
             world.packagesLoadedAt = Date.now();
             world.fragileDiveCount = 0;
@@ -1330,6 +1382,7 @@ export function useGameLoop({
       isStormImmune,
       rng,
       t,
+      isPassenger,
     ]
   );
 

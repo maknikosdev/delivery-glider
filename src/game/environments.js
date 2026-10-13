@@ -5,12 +5,15 @@ import { COLORS } from "../constants/gameConfig";
 //
 // Ξεκλείδωμα: κάθε περιβάλλον ανοίγει όταν ο παίκτης έχει >= unlockAt gliders.
 // (1 = από την αρχή, μετά ένα νέο κάθε 3 ξεκλειδώματα gliders.)
+// Μπορούν να ξεκλειδώσουν και από achievements (save.bonusEnvs).
+// Κάθε περιβάλλον έχει μικρό `rule` (βαρύτητα / ταχύτητα / πόντοι) που εφαρμόζει το useGameLoop.
 // Σε κάθε νέο run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα.
 // Άλλαξε τα unlockAt για πιο γρήγορη/αργή πρόοδο (π.χ. 4 αντί 3).
 
 export const ENVIRONMENTS = [
   {
     id: "neon_city", unlockAt: 1, name: "Neon City",
+    rule: null,
     bg: COLORS.bgDeep,
     fogs: [
       { top: 0.1, height: 130, color: COLORS.bgPurple, opacity: 0.1 },
@@ -33,6 +36,7 @@ export const ENVIRONMENTS = [
   },
   {
     id: "crimson_dunes", unlockAt: 4, name: "Crimson Dunes",
+    rule: { speedMult: 1.06, creditsMult: 1.08, text: { en: "Scorching heat: +6% speed, +8% credits", el: "Καύσωνας: +6% ταχύτητα, +8% πόντοι" } },
     bg: "#2a0d14",
     fogs: [
       { top: 0.05, height: 200, color: "#ff7a2f", opacity: 0.13 },
@@ -55,6 +59,7 @@ export const ENVIRONMENTS = [
   },
   {
     id: "frozen_peaks", unlockAt: 7, name: "Frozen Peaks",
+    rule: { gravityMult: 1.08, creditsMult: 1.05, text: { en: "Dense icy air: +8% gravity, +5% credits", el: "Πυκνός παγωμένος αέρας: +8% βαρύτητα, +5% πόντοι" } },
     bg: "#07182c",
     fogs: [
       { top: 0.08, height: 190, color: "#6fe3ff", opacity: 0.08 },
@@ -77,6 +82,7 @@ export const ENVIRONMENTS = [
   },
   {
     id: "bio_jungle", unlockAt: 10, name: "Bio Jungle",
+    rule: { gravityMult: 0.95, speedMult: 0.97, text: { en: "Spore haze: -5% gravity, -3% speed", el: "Σπόρια: -5% βαρύτητα, -3% ταχύτητα" } },
     bg: "#06210f",
     fogs: [
       { top: 0.1, height: 170, color: "#2cff8a", opacity: 0.07 },
@@ -99,6 +105,7 @@ export const ENVIRONMENTS = [
   },
   {
     id: "orbital_ring", unlockAt: 13, name: "Orbital Ring",
+    rule: { gravityMult: 0.85, speedMult: 1.03, text: { en: "Low gravity: -15% gravity, +3% speed", el: "Χαμηλή βαρύτητα: -15% βαρύτητα, +3% ταχύτητα" } },
     bg: "#03030f",
     fogs: [
       { top: 0.1, height: 150, color: "#6a5cff", opacity: 0.08 },
@@ -125,14 +132,15 @@ export function getEnvironment(id) {
   return ENVIRONMENTS.find((e) => e.id === id) || ENVIRONMENTS[0];
 }
 
-export function unlockedEnvironments(ownedCount) {
-  return ENVIRONMENTS.filter((e) => ownedCount >= e.unlockAt);
+export function unlockedEnvironments(ownedCount, bonusIds = []) {
+  return ENVIRONMENTS.filter((e) => ownedCount >= e.unlockAt || bonusIds.includes(e.id));
 }
 
-// Τυχαίο ανάμεσα στα ξεκλειδωμένα. Αποφεύγει (αν γίνεται) το ίδιο με το προηγούμενο run.
+// Random among the unlocked ones (by glider count, or unlocked by an
+// achievement reward). Avoids repeating the previous run's environment.
 let lastId = null;
-export function pickEnvironmentId(ownedCount, rnd = Math.random) {
-  const pool = unlockedEnvironments(Math.max(1, ownedCount || 1));
+export function pickEnvironmentId(ownedCount, bonusIds = [], rnd = Math.random) {
+  const pool = unlockedEnvironments(Math.max(1, ownedCount || 1), bonusIds || []);
   const candidates = pool.length > 1 ? pool.filter((e) => e.id !== lastId) : pool;
   const pick = candidates[Math.floor(rnd() * candidates.length)];
   lastId = pick.id;

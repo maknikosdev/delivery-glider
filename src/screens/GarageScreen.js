@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
 import { COLORS, SKILL_UPGRADES, readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 import { GLIDERS } from "../game/gliders";
@@ -10,6 +10,7 @@ import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import ScreenBackground from "../components/ScreenBackground";
 import SkinUpdatesRow from "../components/SkinUpdatesRow";
+import { MasteryRow, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 
 function skillUpgradeCost(level) {
@@ -19,8 +20,14 @@ function skillUpgradeCost(level) {
 // This screen never touches real money: "credits" is a points balance the
 // player earns purely by playing. Nothing here calls a payment/billing API.
 export default function GarageScreen({ onBack }) {
-  const { save, buyGlider, selectGlider, buySkillLevel, setSkillBranch, selectSkin, t } = useGame();
+  const { save, buyGlider, selectGlider, buySkillLevel, setSkillBranch, selectSkin, t, language } = useGame();
+  const [tab, setTab] = useState("gliders");
   if (!save) return null;
+  const TAB_LABELS = {
+    gliders: "GLIDERS",
+    collection: language === "en" ? "COLLECTION" : "ΣΥΛΛΟΓΗ",
+    weekly: language === "en" ? "WEEKLY" : "ΕΒΔΟΜΑΔΑ",
+  };
 
   const unlockedSkins = save.unlockedSkins || [];
 
@@ -44,6 +51,27 @@ export default function GarageScreen({ onBack }) {
         </View>
       </View>
 
+      <View style={styles.tabRow}>
+        {Object.keys(TAB_LABELS).map((k) => (
+          <Pressable
+            key={k}
+            onPress={() => {
+              AudioManager.play("click");
+              setTab(k);
+            }}
+            style={[styles.tabBtn, tab === k && styles.tabBtnOn]}
+          >
+            <Text style={[styles.tabText, tab === k && styles.tabTextOn]}>{TAB_LABELS[k]}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {tab !== "gliders" ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+          {tab === "collection" ? <CollectionPanel /> : <WeeklyPanel />}
+        </ScrollView>
+      ) : (
+      <>
       <Text style={styles.sectionTitle}>{t("garage.gliders")}</Text>
       <Text style={styles.sectionHint}>{t("garage.glidersHint")}</Text>
 
@@ -170,6 +198,7 @@ export default function GarageScreen({ onBack }) {
 
               {/* Skin Updates I-III (extra credits, cosmetic trail in-game) */}
               {owned && <SkinUpdatesRow glider={g} />}
+              {owned && <MasteryRow glider={g} />}
             </OctagonPanel>
           );
         })}
@@ -199,11 +228,18 @@ export default function GarageScreen({ onBack }) {
           {unlockedSkins.length === 0 && <Text style={styles.noSkinsText}>{t("garage.noSkins")}</Text>}
         </View>
       </ScrollView>
+      </>
+      )}
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  tabRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: "#3a3355", alignItems: "center" },
+  tabBtnOn: { borderColor: COLORS.neonCyan, backgroundColor: "rgba(40,224,255,0.1)" },
+  tabText: { color: COLORS.textDim, fontSize: 11, fontWeight: "800", letterSpacing: 0.8 },
+  tabTextOn: { color: COLORS.neonCyan },
   container: { flex: 1, backgroundColor: COLORS.bgDeep, paddingTop: 50, paddingHorizontal: 16 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   back: { color: COLORS.neonCyan, fontWeight: "700" },

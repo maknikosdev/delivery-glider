@@ -34,7 +34,10 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Wanted Level** (0-3 αστέρια): ανεβαίνει με χτύπημα σε police drone ή 5 χαμένες παραδόσεις· από level 2 σε κυνηγάει chaser drone· πέφτει με 3 παραδόσεις σε κόκκινα μπαλκόνια.
 - **Slipstream** πίσω από ταξί (x2 πόντοι), **Delivery Fever** (3 παραδόσεις → διπλά νομίσματα + ασπίδα), **Express Delivery** (VIP μπαλκόνι με χρονόμετρο, x5), «Close call» μπόνους.
 - **Τύποι φορτίου**: Standard, Fragile (χάνει αξία με βουτιές), Thermal (λήγει σε 13″), VIP (x2.5 αλλά ανεβάζει Wanted Level).
-- **Mutators** (προαιρετικά, με πολλαπλασιαστή πόντων): Heavy World, Blackout City, Glass Cannon, Speed Demon.
+- **Mutators** (προαιρετικά, με πολλαπλασιαστή πόντων): Heavy World, Blackout City, Glass Cannon, Speed Demon, **Passenger Run** (μεταφέρεις έως 3 επιβάτες με αμοιβή ×2.2· οι απότομες βουτιές μειώνουν την αμοιβή).
+- **Παραγγελίες πελατών**: κάποια μπαλκόνια δείχνουν το είδος φορτίου που ζητούν· σωστό φορτίο = ×2, λάθος = ×0.5.
+- **Κανόνες περιβάλλοντος**: κάθε περιβάλλον έχει μικρή επίδραση σε βαρύτητα, ταχύτητα ή πόντους (banner στην αρχή του run).
+- **Boss story**: dispatch γραμμές και μηνύματα νίκης για κάθε boss, με ιστορία που ξεκλειδώνει στη Συλλογή.
 - **Daily Challenge / Daily Seed** και **Ghost Replay** της καλύτερης πτήσης σου.
 - **Revive** («Second Chance»): με 60 νομίσματα ή δωρεάν token, μία φορά ανά run.
 - **Mystery Crate** στο Game Over: 1 από 3 κουτιά (νομίσματα / free revive / προσωρινό skin).
@@ -48,7 +51,12 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Skin Updates I-III** για κάθε glider που έχεις: Neon Trail, Plasma Trail, Legend Aura — τρέιλ πίσω από το glider, αγοράζονται με τη σειρά με επιπλέον πόντους (25%/50%/90% της τιμής του glider, ελάχιστη βάση 1000).
 - **Πιο αργή οικονομία**: οι τιμές των gliders είναι διπλάσιες και τα κέρδη μειωμένα (παράδοση 7 πόντοι, νομίσματα 1-3 ανά chunk, near-miss 3), ώστε το ξεκλείδωμα να παίρνει χρόνο.
 - Ο **Titan** μεταφέρει 8 δέματα και μπορεί να ανέβει ακόμα και γεμάτος· ο **Heavy Lifter** είναι ελαφρύτερος από πριν.
-- **5 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): ένα νέο ξεκλειδώνει κάθε 3 gliders που αποκτάς, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Καθαρά διακοσμητικά.
+- **5 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): ένα νέο ξεκλειδώνει κάθε 3 gliders που αποκτάς, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Έχουν και μικρό κανόνα gameplay (βλ. παραπάνω).
+- **Mastery ανά glider**: XP από παραδόσεις και μέτρα, 5 επίπεδα (Αρχάριος → Θρύλος) και +1–3% πόντους.
+- **Ζευγάρια gliders** (10): αν έχεις και τα δύο gliders ενός ζευγαριού, παίρνεις passive perk (+1 ασπίδα / +3% πόντοι / +20% μαγνήτης νομισμάτων).
+- **Achievements που ξεκλειδώνουν περιεχόμενο**: πόντοι, νέα περιβάλλοντα (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), το glider Aero Lance και skin tiers.
+- **Συλλογή** (Garage → ΣΥΛΛΟΓΗ): gliders, περιβάλλοντα, bosses με ιστορία, skins, ζευγάρια, τελευταίες ανταμοιβές.
+- **Εβδομαδιαίοι στόχοι + μηνιαία Σεζόν** (Garage → ΕΒΔΟΜΑΔΑ): 3 στόχοι/εβδομάδα, πόντοι σεζόν και ανταμοιβές στους 4, 8 και 12 πόντους.
 - **25 Achievements** που ξεκλειδώνουν cosmetic skins (χρώματα), **20 Daily Contracts** (4 τυχαία κάθε μέρα), **milestone reward** (δωρεάν Phantom στα 10.000m συνολικά), **Field Guide** (οδηγός εμποδίων, bosses, αντικειμένων, τύπων φορτίου), **Stats** (100% offline).
 
 **Τεχνικά / UI**
@@ -83,11 +91,12 @@ src/
     gliderSkills.js            # skills των 12 νέων gliders
     gliderSprites.js           # artwork των νέων gliders
     economy.js                 # κόστος Skin Updates
-    environments.js            # 5 περιβάλλοντα background + κανόνες ξεκλειδώματος
+    environments.js            # 5 περιβάλλοντα background + κανόνες + ξεκλείδωμα
+    progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements
     achievements.js, contracts.js, seededRandom.js
   store/storage.js, GameContext.js
   audio/AudioManager.js
-  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, ParcelSprite, ...
+  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
 assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
 tools/gen_sfx.py
@@ -153,7 +162,10 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Wanted Level** (0-3 stars): rises when you hit a police drone or miss 5 deliveries; from level 2 a chaser drone follows you; drops with 3 deliveries to red balconies.
 - **Slipstream** behind taxis (x2 points), **Delivery Fever** (3 deliveries → double coins + shield), **Express Delivery** (timed VIP balcony, x5), "Close call" bonuses.
 - **Cargo types**: Standard, Fragile (loses value with dives), Thermal (spoils after 13 s), VIP (x2.5 but raises Wanted Level).
-- **Mutators** (optional, with a credit multiplier): Heavy World, Blackout City, Glass Cannon, Speed Demon.
+- **Mutators** (optional, with a credit multiplier): Heavy World, Blackout City, Glass Cannon, Speed Demon, **Passenger Run** (carry up to 3 passengers for a x2.2 fare; hard dives cut the fare).
+- **Customer orders**: some balconies show the cargo they want; match it for x2, deliver the wrong item for x0.5.
+- **Environment rules**: each environment has a small effect on gravity, speed or points (banner at the start of a run).
+- **Boss story**: dispatch lines and victory messages per boss, with lore unlocked in the Collection.
 - **Daily Challenge / Daily Seed** and a **Ghost Replay** of your best run.
 - **Revive** ("Second Chance"): for 60 coins or a free token, once per run.
 - **Mystery Crate** on Game Over: 1 of 3 crates (coins / free revive / temporary skin).
@@ -167,7 +179,12 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Skin Updates I-III** for every glider you own: Neon Trail, Plasma Trail, Legend Aura — a trail behind the glider, bought in order for extra points (25% / 50% / 90% of the glider's price, minimum base 1000).
 - **Slower economy**: glider prices are doubled and earnings reduced (delivery 7 points, 1-3 coins per chunk, near-miss 3), so unlocking takes time.
 - **Titan** carries 8 packages and can still climb fully loaded; **Heavy Lifter** is lighter than before.
-- **5 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): a new one unlocks every 3 gliders you own, and each run picks one of the unlocked ones at random. Purely decorative.
+- **5 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): a new one unlocks every 3 gliders you own, and each run picks one of the unlocked ones at random. They also carry a small gameplay rule (see above).
+- **Glider Mastery**: XP from deliveries and distance, 5 levels (Rookie → Legend) and +1–3% points.
+- **Glider pairs** (10): own both gliders of a pair to get a passive perk (+1 shield / +3% points / +20% coin magnet).
+- **Achievements that unlock content**: points, new environments (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), the Aero Lance glider and skin tiers.
+- **Collection** (Garage → COLLECTION): gliders, environments, bosses with lore, skins, pairs, latest rewards.
+- **Weekly goals + monthly Season** (Garage → WEEKLY): 3 goals per week, season points and rewards at 4, 8 and 12 points.
 - **25 Achievements** unlocking cosmetic colours, **20 Daily Contracts** (4 random per day), a **milestone reward** (free Phantom at 10,000 m total), a **Field Guide** (obstacles, bosses, pickups, cargo types), and **Stats** (100% offline).
 
 **Technical / UI**
@@ -202,11 +219,12 @@ src/
     gliderSkills.js            # skills of the 12 new gliders
     gliderSprites.js           # artwork of the new gliders
     economy.js                 # Skin Update costs
-    environments.js            # 5 background environments + unlock rules
+    environments.js            # 5 background environments + rules + unlocks
+    progress.js                # mastery, pairs, weekly goals, season, achievement rewards
     achievements.js, contracts.js, seededRandom.js
   store/storage.js, GameContext.js
   audio/AudioManager.js
-  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, ParcelSprite, ...
+  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
 assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
 tools/gen_sfx.py

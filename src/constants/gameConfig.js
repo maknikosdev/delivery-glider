@@ -496,6 +496,32 @@ export const PACKAGE_TYPES = {
   },
 };
 
+// Passenger Run only (weight 0 = never rolled in a normal run).
+PACKAGE_TYPES.passenger = {
+  id: "passenger",
+  weight: 0,
+  label: "Passenger",
+  icon: "🧍",
+  color: "#7de8ff",
+};
+
+// --- Passenger Run mutator ---------------------------------------------
+export const PASSENGER = {
+  capacity: 3, // seats
+  rewardMult: 2.2, // fare vs a parcel
+  diveComfortLoss: 0.3, // each dive while carrying a passenger
+  minComfort: 0.3,
+};
+
+// --- Customer orders ----------------------------------------------------
+// Some balconies ask for a specific cargo type. The hold is delivered
+// front-to-back, so the choice is "deliver here or skip".
+export const ORDER = {
+  chancePerChunk: 0.3,
+  matchMult: 2,
+  mismatchMult: 0.5,
+};
+
 export const PACKAGE_TYPE_POOL = Object.values(PACKAGE_TYPES);
 
 // --- Mutators -----------------------------------------------------------
@@ -529,6 +555,16 @@ export const MUTATORS = {
     color: "#7de8ff",
     oneHitMode: true, // no shields, no revive offer — first hit ends the run
     creditsMult: 1.8,
+  },
+  passenger: {
+    id: "passenger",
+    name: "Passenger Run",
+    icon: "🧍",
+    color: "#7de8ff",
+    // Carry passengers instead of parcels: higher pay, but every swipe-down
+    // dive rattles the passenger and cuts that fare (see PASSENGER below).
+    passengerMode: true,
+    creditsMult: 1,
   },
   speed_demon: {
     id: "speed_demon",

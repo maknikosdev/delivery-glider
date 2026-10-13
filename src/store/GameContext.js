@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from "./storage";
 import AudioManager from "../audio/AudioManager";
 import { getTranslator } from "../i18n/i18n";
+import { applyRunProgress, applyAchievementRewards } from "../game/progress";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 
 const GameContext = createContext(null);
@@ -60,7 +61,15 @@ export function GameProvider({ children }) {
   // caller can show a "free glider unlocked!" notice on the Game Over screen.
   const finishRun = useCallback(async (result) => {
     const { save: updated, newMilestones } = await recordRunResult(result);
-    setSave(updated);
+    let finalSave = updated;
+    try {
+      // Mastery, collection, weekly goals & season (see game/progress.js).
+      const { patch } = applyRunProgress(updated, result);
+      if (patch) finalSave = await saveSave(patch);
+    } catch (e) {
+      // progression is a bonus layer - never block the Game Over flow
+    }
+    setSave(finalSave);
     setLastRun(result);
     return newMilestones;
   }, []);
@@ -204,10 +213,16 @@ export function GameProvider({ children }) {
     const newSkins = newlyUnlocked
       .map((id) => skinColors[id])
       .filter((c) => c && !(current.unlockedSkins || []).includes(c));
-    const updated = await saveSave({
+    let updated = await saveSave({
       unlockedAchievements: [...(current.unlockedAchievements || []), ...newlyUnlocked],
       unlockedSkins: [...(current.unlockedSkins || []), ...newSkins],
     });
+    try {
+      // Achievements now also unlock content (credits / environments /
+      // gliders / skin tiers) - see ACHIEVEMENT_REWARDS in game/progress.js.
+      const { patch } = applyAchievementRewards(updated, newlyUnlocked);
+      if (patch && Object.keys(patch).length) updated = await saveSave(patch);
+    } catch (e) {}
     setSave(updated);
     return newlyUnlocked;
   }, []);

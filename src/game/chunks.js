@@ -1,4 +1,4 @@
-import { CHUNK_WIDTH, SCREEN, COIN, POWERUP, EXPRESS } from "../constants/gameConfig";
+import { CHUNK_WIDTH, SCREEN, COIN, POWERUP, EXPRESS, ORDER } from "../constants/gameConfig";
 import { randomizeTemplate, proceduralTemplate, PROCEDURAL_CHANCE, setRandomSource } from "./randomizer";
 import { spawnParcels } from "./parcels";
 
@@ -304,6 +304,13 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
   // (VIP, 5s countdown once it comes into view, 5x reward if you make it).
   if (balconies.length > 0 && rng() < EXPRESS.chancePerChunk) {
     balconies[Math.floor(rng() * balconies.length)].express = true;
+  }
+
+  // Customer order: one balcony may ask for a specific cargo type.
+  if (balconies.length > 0 && rng() < ORDER.chancePerChunk) {
+    const pool = ["fragile", "fragile", "thermal", "thermal", "vip", "standard", "standard"];
+    const target = balconies.filter((b) => !b.express);
+    if (target.length > 0) target[Math.floor(rng() * target.length)].order = pool[Math.floor(rng() * pool.length)];
   }
 
   const droneStations = template.droneStations.map((d) => ({
