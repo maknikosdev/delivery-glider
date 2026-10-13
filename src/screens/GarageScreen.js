@@ -11,6 +11,7 @@ import OctagonButton from "../components/OctagonButton";
 import ScreenBackground from "../components/ScreenBackground";
 import SkinUpdatesRow from "../components/SkinUpdatesRow";
 import { MasteryRow, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
+import HangarPanel, { LevelUpToast } from "../components/HangarPanel";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 
 function skillUpgradeCost(level) {
@@ -25,6 +26,7 @@ export default function GarageScreen({ onBack }) {
   if (!save) return null;
   const TAB_LABELS = {
     gliders: "GLIDERS",
+    hangar: language === "en" ? "HANGAR" : "HANGAR",
     collection: language === "en" ? "COLLECTION" : "ΣΥΛΛΟΓΗ",
     weekly: language === "en" ? "WEEKLY" : "ΕΒΔΟΜΑΔΑ",
   };
@@ -51,6 +53,7 @@ export default function GarageScreen({ onBack }) {
         </View>
       </View>
 
+      <LevelUpToast />
       <View style={styles.tabRow}>
         {Object.keys(TAB_LABELS).map((k) => (
           <Pressable
@@ -68,7 +71,7 @@ export default function GarageScreen({ onBack }) {
 
       {tab !== "gliders" ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-          {tab === "collection" ? <CollectionPanel /> : <WeeklyPanel />}
+          {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : <WeeklyPanel />}
         </ScrollView>
       ) : (
       <>

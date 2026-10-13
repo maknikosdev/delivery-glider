@@ -253,6 +253,11 @@ const HAZARD_POOL = ["flying_taxi", "police_drone", "robo_pigeon", "static_anten
 // sprinkles in additional random obstacles on top of the template's fixed
 // layout, scaled by how deep into the run the player is — this is what
 // actually makes later zones feel denser/harder, not just faster.
+let orderBias = null;
+export function setOrderBias(type) {
+  orderBias = type || null;
+}
+
 export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, yBounds, rng = Math.random) {
   setRandomSource(rng);
   // The Route Branching chunk keeps its fixed upper/lower lanes.
@@ -309,6 +314,8 @@ export function instantiateChunk(template, worldOffsetX, extraHazardCount = 0, y
   // Customer order: one balcony may ask for a specific cargo type.
   if (balconies.length > 0 && rng() < ORDER.chancePerChunk) {
     const pool = ["fragile", "fragile", "thermal", "thermal", "vip", "standard", "standard"];
+    // Weekly event: bias orders toward the event's cargo type.
+    if (orderBias) for (let i = 0; i < 6; i++) pool.push(orderBias);
     const target = balconies.filter((b) => !b.express);
     if (target.length > 0) target[Math.floor(rng() * target.length)].order = pool[Math.floor(rng() * pool.length)];
   }

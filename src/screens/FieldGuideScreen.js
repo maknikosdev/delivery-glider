@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable, Image, ScrollView } from "react-native";
 import { COLORS, BOSS_ENCOUNTERS } from "../constants/gameConfig";
+import { NEW_BOSSES } from "../game/newBosses";
+import { NEW_BOSS_IMAGES } from "../components/NewBossSprites";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import OctagonPanel from "../components/OctagonPanel";
@@ -29,7 +31,8 @@ const BOSSES = [
   { id: "sky_wyvern", img: require("../../assets/bosses/wyvern_portrait.png") },
   { id: "giant_seagull", img: require("../../assets/bosses/seagull_portrait.png") },
   { id: "mech_drone", img: require("../../assets/bosses/drone_portrait.png") },
-].map((b) => ({ ...b, name: BOSS_ENCOUNTERS.find((cfg) => cfg.id === b.id)?.name || b.id }));
+  ...NEW_BOSSES.map((nb) => ({ id: nb.id, img: NEW_BOSS_IMAGES[nb.id] })),
+].map((b) => ({ ...b, name: BOSS_ENCOUNTERS.find((cfg) => cfg.id === b.id)?.name || (NEW_BOSSES.find((nb) => nb.id === b.id) || {}).name || b.id }));
 
 const COLLECTIBLES = [
   { id: "coin", img: require("../../assets/sprites/coin.png"), color: COLORS.neonYellow },
@@ -195,8 +198,8 @@ const styles = StyleSheet.create({
   gridCardInner: { alignItems: "center", paddingVertical: 12, paddingHorizontal: 4 },
   gridIcon: { width: 44, height: 44, marginBottom: 6 },
   gridLabel: { color: COLORS.textPrimary, fontSize: 10, fontWeight: "700", textAlign: "center" },
-  bossRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
-  bossCard: { flex: 1 },
+  bossRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 10 },
+  bossCard: { width: "30%" },
   bossCardInner: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 6 },
   bossIcon: { width: 70, height: 70, marginBottom: 8 },
   bossLabel: { color: COLORS.textPrimary, fontSize: 11, fontWeight: "800", textAlign: "center" },

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, PanResponder } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
@@ -9,11 +9,17 @@ import { GLIDER_SPRITES } from "../game/gliderSprites";
 import GliderTrail from "../components/GliderTrail";
 import { useGame } from "../store/GameContext";
 import { pickEnvironmentId, getEnvironment } from "../game/environments";
-import { runCreditBonus } from "../game/progress";
+import { runCreditBonus, gliderMastery, weekKey } from "../game/progress";
+import { eventForWeek } from "../game/events";
+import { rivalFor, rivalMeters } from "../game/rival";
+import { trailVariant, enginePitch } from "../game/pilots";
+import AudioManager from "../audio/AudioManager";
 import { PACKAGE_TYPES } from "../constants/gameConfig";
 import ObstacleSprite from "../components/ObstacleSprite";
 import BossSprite from "../components/BossSprite";
 import ProjectileSprite from "../components/ProjectileSprite";
+import { NewBossSprite, NewProjectileSprite, GiftSprite, LavaZone } from "../components/NewBossSprites";
+import { NEW_BOSS_IDS, NEW_PROJECTILE_TYPES } from "../game/newBosses";
 import { BalconySprite, DroneStationSprite, DeliveryParticle } from "../components/BalconySprite";
 import CoinSprite from "../components/CoinSprite";
 import DecoySprite from "../components/DecoySprite";
@@ -42,21 +48,44 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     return () => clearTimeout(id);
   }, []);
 
+  // Daily Challenge rival ghost: a deterministic pacer per daily seed.
+  const rival = useMemo(() => (dailySeed ? rivalFor(dailySeed) : null), [dailySeed]);
+  const runStartRef = useRef(Date.now());
+  const weekEvent = useMemo(() => eventForWeek(weekKey()), []);
+
+  // Per-glider engine pitch for the thrust sound (best effort, never throws).
+  useEffect(() => {
+    const player = AudioManager && AudioManager.players && AudioManager.players.thrust;
+    try {
+      if (player) {
+        player.shouldCorrectPitch = false;
+        player.setPlaybackRate(enginePitch(gliderConfig));
+      }
+    } catch (e) {}
+    return () => {
+      try {
+        if (player) player.setPlaybackRate(1);
+      } catch (e) {}
+    };
+  }, [gliderConfig]);
+
   const handleGameOver = useCallback(
     (result) => {
       // Mastery + glider-pair bonus on top of the run's credits.
       const bonus = runCreditBonus(save, gliderConfig.id);
       const base = result.creditsEarned || 0;
+      const rivalBeaten = !!rival && (result.meters || 0) > rivalMeters(rival, Date.now() - runStartRef.current);
       const out = {
         ...result,
-        creditsEarned: Math.round(base * (1 + bonus)),
+        rivalBeaten,
+        creditsEarned: Math.round(base * (1 + bonus)) + (rivalBeaten ? rival.bonus : 0),
         bonusPct: Math.round(bonus * 100),
         gliderId: gliderConfig.id,
         envId,
       };
       onGameOver && onGameOver(out);
     },
-    [onGameOver, save, gliderConfig.id, envId]
+    [onGameOver, save, gliderConfig.id, envId, rival]
   );
 
   const {
@@ -226,6 +255,9 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             <View pointerEvents="none" style={styles.envBanner}>
               <Text style={styles.envName}>{nm}</Text>
               {rt ? <Text style={styles.envRule}>{rt}</Text> : null}
+              <Text style={styles.envEvent}>
+                {weekEvent.icon} {weekEvent.name[lang]}
+              </Text>
             </View>
           );
         })() : null}
@@ -366,17 +398,37 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         {/* Boss Encounters: one real boss character, its own sprite +
             animation, rendered exactly where useGameLoop.js's movement
             patterns put it. */}
-        {world.activeBossEntity && (
+        {world.activeBossEntity && NEW_BOSS_IDS.has(world.activeBossEntity.id) ? (
+          <NewBossSprite
+            bossId={world.activeBossEntity.id}
+            screenX={world.activeBossEntity.worldX - world.cameraX}
+            y={world.activeBossEntity.y}
+            size={world.activeBossEntity.displaySize}
+            alpha={world.activeBossEntity.visibleAlpha}
+            charging={world.activeBossEntity.charging}
+          />
+        ) : world.activeBossEntity ? (
           <BossSprite
             bossId={world.activeBossEntity.id}
             screenX={world.activeBossEntity.worldX - world.cameraX}
             y={world.activeBossEntity.y}
             size={world.activeBossEntity.displaySize}
           />
-        )}
+        ) : null}
+        {world.bossHazards && world.bossHazards.map((h) => {
+          const screenX = h.worldX - world.cameraX;
+          if (screenX < -100 || screenX > SCREEN.width + 100) return null;
+          return <LavaZone key={h.id} h={h} screenX={screenX} />;
+        })}
+        {world.bossGifts && world.bossGifts.map((g) => {
+          const screenX = g.worldX - world.cameraX;
+          if (screenX < -60 || screenX > SCREEN.width + 60) return null;
+          return <GiftSprite key={g.id} screenX={screenX} y={g.y} kind={g.kind} />;
+        })}
         {world.bossProjectiles.map((p) => {
           const screenX = p.worldX - world.cameraX;
           if (screenX < -60 || screenX > SCREEN.width + 60) return null;
+          if (NEW_PROJECTILE_TYPES[p.type]) return <NewProjectileSprite key={p.id} p={p} screenX={screenX} />;
           return <ProjectileSprite key={p.id} type={p.type} screenX={screenX} y={p.y} size={p.size} />;
         })}
 
@@ -413,6 +465,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         })()}
 
         <GliderTrail
+          variant={trailVariant(gliderConfig.id)}
+          gold={gliderMastery(save, gliderConfig.id).level >= 5}
           y={world.riderY}
           color={gliderConfig.color}
           accentColor={gliderConfig.accentColor}
@@ -536,6 +590,20 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         corrosion={world.weatherEvent && world.weatherEvent.id === "acid_rain" ? world.corrosion : null}
       />
 
+      {rival && world.status === "playing" ? (() => {
+        const rm = rivalMeters(rival, Date.now() - runStartRef.current);
+        const diff = Math.round((world.score || 0) - rm);
+        const ahead = diff >= 0;
+        return (
+          <View pointerEvents="none" style={styles.rivalWrap}>
+            <Text style={[styles.rivalText, { color: ahead ? "#9dff4d" : "#ff7a7a" }]}>
+              👻 {rival.name} {ahead ? "+" : ""}
+              {diff} m
+            </Text>
+          </View>
+        );
+      })() : null}
+
       <HUD
         meters={world.score}
         packages={world.packages}
@@ -579,6 +647,9 @@ const styles = StyleSheet.create({
   },
   orderBadgeOn: { borderColor: "#7dffb0", backgroundColor: "rgba(20,90,50,0.7)" },
   envBanner: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center" },
+  rivalWrap: { position: "absolute", top: 120, right: 14, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  rivalText: { fontSize: 12, fontWeight: "800" },
+  envEvent: { color: "#7de8ff", fontSize: 12, fontWeight: "700", marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   envName: { color: "#fff", fontSize: 15, fontWeight: "800", letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 4 },
   envRule: { color: "#ffe27d", fontSize: 12, marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   container: {

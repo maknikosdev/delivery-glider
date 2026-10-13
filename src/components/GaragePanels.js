@@ -17,9 +17,12 @@ import {
   weeklyGoalsFor,
   SEASON_TIERS,
 } from "../game/progress";
+import { getPartDef, RARITY } from "../game/parts";
+import { PILOTS } from "../game/pilots";
+import { eventForWeek, EVENTS } from "../game/events";
 
-const BOSS_IDS = ["sky_wyvern", "giant_seagull", "mech_drone"];
-const BOSS_ICON = { sky_wyvern: "🐉", giant_seagull: "🕊️", mech_drone: "🤖" };
+const BOSS_IDS = ["sky_wyvern", "giant_seagull", "mech_drone", "sky_trawler", "junker_shark", "storm_wyvern", "volcanic_goliath", "orbital_drone", "phantom_crow"];
+const BOSS_ICON = { sky_wyvern: "🐉", giant_seagull: "🕊️", mech_drone: "🤖", sky_trawler: "🎈", junker_shark: "🦈", storm_wyvern: "🌪️", volcanic_goliath: "🌋", orbital_drone: "🛰️", phantom_crow: "🐦‍⬛" };
 const SKIN_NAMES = ["I", "II", "III"];
 
 const L = {
@@ -171,6 +174,9 @@ export function CollectionPanel() {
       })}
 
       <Text style={s.title}>
+        {l === "en" ? "Pilot challenges" : "Προκλήσεις πιλότων"} {Object.keys(save.challenges || {}).length}/{Object.keys(PILOTS).length} · {l === "en" ? "Parts" : "Εξαρτήματα"} {((save.parts && save.parts.items) || []).length} · {l === "en" ? "Rival wins" : "Νίκες vs Rival"} {save.rivalWins || 0}
+      </Text>
+      <Text style={s.title}>
         {tx.orders}: {save.ordersTotal || 0} · {tx.passengers}: {save.passengersTotal || 0} ({tx.total})
       </Text>
 
@@ -179,8 +185,9 @@ export function CollectionPanel() {
           <Text style={s.title}>{tx.rewards}</Text>
           {log.map((r, i) => (
             <Text key={i} style={s.dim}>
-              🏆 {r.ach} → {tx.rg[r.kind] || r.kind}:{" "}
-              {r.kind === "glider" || r.kind === "skinTier" ? gname(r.value) : r.kind === "env" ? (ENVIRONMENTS.find((e) => e.id === r.value) ? envName(ENVIRONMENTS.find((e) => e.id === r.value)) : r.value) : r.value}
+              🏆 {r.kind === "part"
+                ? `${{ boss: "Boss", order: l === "en" ? "Order" : "Παραγγελία", challenge: l === "en" ? "Challenge" : "Πρόκληση" }[r.ach] || (EVENTS.find((e) => e.id === r.ach) || {}).name?.[l] || r.ach} → ${(getPartDef(r.value) || { name: { en: r.value, el: r.value } }).name[l]}`
+                : `${r.ach} → ${tx.rg[r.kind] || r.kind}: ${r.kind === "glider" || r.kind === "skinTier" ? gname(r.value) : r.kind === "env" ? (ENVIRONMENTS.find((e) => e.id === r.value) ? envName(ENVIRONMENTS.find((e) => e.id === r.value)) : r.value) : r.value}`}
             </Text>
           ))}
         </>
@@ -200,6 +207,24 @@ export function WeeklyPanel() {
   const maxPts = SEASON_TIERS[SEASON_TIERS.length - 1].points;
   return (
     <View>
+      {(() => {
+        const ev = eventForWeek(w.week);
+        const part = getPartDef(ev.part);
+        return (
+          <View style={s.eventCard}>
+            <Text style={s.eventTitle}>
+              {ev.icon} {l === "en" ? "EVENT" : "EVENT"}: {ev.name[l]}
+            </Text>
+            <Text style={s.text}>{ev.text[l]}</Text>
+            {part ? (
+              <Text style={[s.dim, { color: RARITY[part.rarity].color }]}>
+                {l === "en" ? "Limited part: " : "Περιορισμένο εξάρτημα: "}
+                {part.name[l]} ({RARITY[part.rarity][l]})
+              </Text>
+            ) : null}
+          </View>
+        );
+      })()}
       <Text style={s.title}>{tx.week}</Text>
       {goals.map((g) => {
         const done = w.done.includes(g.id);
@@ -252,4 +277,6 @@ const s = StyleSheet.create({
   barBg: { height: 6, borderRadius: 3, backgroundColor: "#241a3f", overflow: "hidden", marginBottom: 4 },
   barFill: { height: 6, borderRadius: 3 },
   goal: { marginBottom: 12 },
+  eventCard: { borderWidth: 1.5, borderColor: "#7de8ff", borderRadius: 12, padding: 10, marginTop: 10 },
+  eventTitle: { color: "#7de8ff", fontSize: 13, fontWeight: "900", marginBottom: 4 },
 });

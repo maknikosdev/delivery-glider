@@ -7,10 +7,15 @@ import { RIDER } from "../constants/gameConfig";
 //   I   Neon Trail    - short trail in the glider's colour
 //   II  Plasma Trail  - longer, alternating glider / accent colour
 //   III Legend Aura   - gold/white trail with a soft glow and sparks
-const COUNTS = [0, 6, 9, 12];
+const COUNTS = [4, 6, 9, 12];
+// Per-glider trail style so every glider looks a little different.
+const WAVE = [1, 0.4, 2, 1.4];
+const RADIUS = [null, 1, null, 3];
 
-export default function GliderTrail({ y, color, accentColor, tier, thrusting }) {
-  if (!tier) return null;
+export default function GliderTrail({ y, color, accentColor, tier: tierProp, thrusting, variant = 0, gold = false }) {
+  // tier 0 = a short faint trail in the glider's colour; Mastery 5 = GOLD trail.
+  const tier = gold ? Math.max(3, tierProp || 0) : tierProp || 0;
+  const faint = tier === 0 ? 0.55 : 1;
   const now = Date.now();
   const n = COUNTS[tier] || 0;
   const x0 = RIDER.screenX - RIDER.width / 2 + 6;
@@ -19,11 +24,12 @@ export default function GliderTrail({ y, color, accentColor, tier, thrusting }) 
   const segs = [];
 
   for (let i = 0; i < n; i++) {
-    const wave = Math.sin(now / 150 + i * 0.8) * (1.5 + tier);
+    const wave = Math.sin(now / 150 + i * 0.8) * (1.5 + tier) * WAVE[variant % 4];
     const w = Math.max(5, (20 - i * 1.4) * boost);
     const h = 3 + tier;
+    const rad = RADIUS[variant % 4] != null ? RADIUS[variant % 4] : h / 2;
     const left = x0 - (i + 1) * 13;
-    const opacity = Math.max(0.08, 0.6 - i * 0.045);
+    const opacity = Math.max(0.08, 0.6 - i * 0.045) * faint;
     const c = tier === 3 ? (i % 2 ? "#ffffff" : "#ffe14d") : tier === 2 ? (i % 2 ? accentColor : color) : color;
     if (tier === 3) {
       segs.push(
@@ -51,7 +57,7 @@ export default function GliderTrail({ y, color, accentColor, tier, thrusting }) 
           top: cy + wave - h / 2,
           width: w,
           height: h,
-          borderRadius: h / 2,
+          borderRadius: rad,
           backgroundColor: c,
           opacity,
         }}

@@ -1,4 +1,7 @@
 import { GLIDERS } from "./gliders";
+import { getPartTotals, addParts, rollPartId, rollRarity, getPartDef, PARTS } from "./parts";
+import { PILOTS, challengeStatValue, pilotSkinColor } from "./pilots";
+import { eventForWeek, EVENT_PART_CHANCE } from "./events";
 
 // ---------------------------------------------------------------------------
 // Meta-progression: Mastery per glider, glider Pairs, Weekly goals + Season,
@@ -76,7 +79,9 @@ export function perkTotals(perks) {
 // Total end-of-run credit bonus (mastery + pairs) for the glider being flown.
 export function runCreditBonus(save, gliderId) {
   const perks = perkTotals(getPairPerks(gliderId, (save && save.ownedGliders) || []));
-  return gliderMastery(save, gliderId).bonus + perks.creditBonus;
+  const ev = eventForWeek(weekKey());
+  const bonus = gliderMastery(save, gliderId).bonus + perks.creditBonus + getPartTotals(save, gliderId).creditBonus + (ev.creditBonus || 0);
+  return Math.min(0.25, bonus);
 }
 
 // ---- Weekly goals + Season -------------------------------------------------
@@ -157,6 +162,12 @@ export function applyRunProgress(save, result, now = new Date()) {
     const after = masteryInfo(mastery[result.gliderId]).level;
     if (after > before) notes.push({ kind: "mastery", glider: result.gliderId, level: after });
     patch.mastery = mastery;
+    // Mastery 5: the pilot's unique skin colour (gold trail is derived from mastery).
+    if (after >= 5 && before < 5) {
+      const col = pilotSkinColor(result.gliderId);
+      if (!(save.unlockedSkins || []).includes(col)) patch.unlockedSkins = [...(save.unlockedSkins || []), col];
+      notes.push({ kind: "pilotSkin", glider: result.gliderId });
+    }
   }
 
   // Collection
@@ -180,6 +191,9 @@ export function applyRunProgress(save, result, now = new Date()) {
     runs: 1,
     maxCombo: result.maxCombo || 0,
   };
+  // Weekly event: one stat counts double for the weekly goals.
+  const event = eventForWeek(weekly.week);
+  if (event.boostStat && stats[event.boostStat]) stats[event.boostStat] *= 2;
   const progress = { ...weekly.progress };
   const done = [...weekly.done];
   let season = currentSeason(save, now);
@@ -201,6 +215,45 @@ export function applyRunProgress(save, result, now = new Date()) {
       }
     }
   }
+  // ---- Parts: drops from bosses / orders / challenges / event ---------------
+  const log = [];
+  const drops = [];
+  const bossN = (result.bossClearedIds || []).length;
+  for (let i = 0; i < bossN; i++) {
+    drops.push(rollPartId(Math.random));
+    log.push({ ach: "boss", kind: "part", value: drops[drops.length - 1] });
+  }
+  const orderN = result.ordersCompleted || 0;
+  let orderDrops = 0;
+  for (let i = 0; i < orderN && orderDrops < 2; i++) {
+    if (Math.random() < 0.15) {
+      orderDrops++;
+      drops.push(rollPartId(Math.random));
+      log.push({ ach: "order", kind: "part", value: drops[drops.length - 1] });
+    }
+  }
+  if ((orderN > 0 || bossN > 0) && Math.random() < EVENT_PART_CHANCE) {
+    drops.push(event.part);
+    log.push({ ach: event.id, kind: "part", value: event.part });
+  }
+  // Personal challenge of the glider flown
+  const pilot = result.gliderId && PILOTS[result.gliderId];
+  if (pilot && !(save.challenges || {})[result.gliderId]) {
+    if (challengeStatValue(result, pilot.challenge.stat) >= pilot.challenge.target) {
+      patch.challenges = { ...(save.challenges || {}), [result.gliderId]: true };
+      const id = rollPartId(Math.random, "rare");
+      drops.push(id);
+      log.push({ ach: "challenge", kind: "part", value: id });
+      notes.push({ kind: "challenge", glider: result.gliderId });
+    }
+  }
+  if (drops.length) {
+    patch.parts = addParts(save, drops);
+    patch.rewardLog = [...log, ...(save.rewardLog || [])].slice(0, 12);
+    notes.push({ kind: "parts", ids: drops });
+  }
+  if (result.rivalBeaten) patch.rivalWins = (save.rivalWins || 0) + 1;
+
   patch.weekly = { week: weekly.week, progress, done };
   patch.season = season;
   if (credits !== save.credits) patch.credits = credits;

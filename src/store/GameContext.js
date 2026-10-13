@@ -3,6 +3,7 @@ import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from 
 import AudioManager from "../audio/AudioManager";
 import { getTranslator } from "../i18n/i18n";
 import { applyRunProgress, applyAchievementRewards } from "../game/progress";
+import { partsOf, upgradeCost, SLOTS } from "../game/parts";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 
 const GameContext = createContext(null);
@@ -103,6 +104,57 @@ export function GameProvider({ children }) {
     });
     setSave(updated);
     return true;
+  }, []);
+
+  // ---- Parts (Hangar) ---------------------------------------------------
+  // Equip a part uid into a glider's slot (null = unequip). A part can only be
+  // on one glider at a time: equipping moves it.
+  const equipPart = useCallback(async (gliderId, slot, uid) => {
+    const current = await loadSave();
+    const parts = partsOf(current);
+    if (!SLOTS.includes(slot)) return false;
+    const equipped = {};
+    for (const [g, m] of Object.entries(parts.equipped)) equipped[g] = { ...m };
+    if (uid != null) {
+      const item = parts.items.find((i) => i.uid === uid);
+      if (!item) return false;
+      for (const g of Object.keys(equipped)) for (const sl of SLOTS) if (equipped[g][sl] === uid) delete equipped[g][sl];
+    }
+    equipped[gliderId] = { ...(equipped[gliderId] || {}) };
+    if (uid == null) delete equipped[gliderId][slot];
+    else equipped[gliderId][slot] = uid;
+    const updated = await saveSave({ parts: { ...parts, equipped } });
+    setSave(updated);
+    return true;
+  }, []);
+
+  const upgradePart = useCallback(async (uid) => {
+    const current = await loadSave();
+    const parts = partsOf(current);
+    const item = parts.items.find((i) => i.uid === uid);
+    if (!item) return false;
+    const cost = upgradeCost(item);
+    if (cost == null || current.credits < cost) return false;
+    const items = parts.items.map((i) => (i.uid === uid ? { ...i, level: i.level + 1 } : i));
+    const updated = await saveSave({ credits: current.credits - cost, parts: { ...parts, items } });
+    setSave(updated);
+    return true;
+  }, []);
+
+  // Clears the "NEW" badge on freshly dropped parts.
+  const ackParts = useCallback(async () => {
+    const current = await loadSave();
+    const parts = partsOf(current);
+    if (!parts.items.some((i) => i.fresh)) return;
+    const updated = await saveSave({ parts: { ...parts, items: parts.items.map((i) => (i.fresh ? { ...i, fresh: false } : i)) } });
+    setSave(updated);
+  }, []);
+
+  // Remembers which mastery levels the player has already been told about
+  // (drives the level-up animation in the Garage).
+  const ackMastery = useCallback(async (levels) => {
+    const updated = await saveSave({ masteryShown: levels });
+    setSave(updated);
   }, []);
 
   const selectGlider = useCallback(async (gliderId) => {
@@ -264,6 +316,10 @@ export function GameProvider({ children }) {
     finishRun,
     buyGlider,
     buySkinTier,
+    equipPart,
+    upgradePart,
+    ackParts,
+    ackMastery,
     selectGlider,
     buyGadget,
     toggleEquippedGadget,

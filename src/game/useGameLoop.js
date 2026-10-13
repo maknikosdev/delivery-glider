@@ -29,11 +29,14 @@ import {
   ORDER,
   branchEffectiveLevel,
 } from "../constants/gameConfig";
-import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK } from "./chunks";
+import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK, setOrderBias } from "./chunks";
+import { getPartTotals } from "./parts";
+import { NEW_BOSSES, NEW_BOSS_IDS, NEW_PROJECTILE_TYPES, GIFT_KINDS, GIFT_REWARD, LAVA, firstBossMeters, bossGapMeters, shuffledBag } from "./newBosses";
+import { eventForWeek } from "./events";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
-import { getPairPerks, perkTotals } from "./progress";
+import { getPairPerks, perkTotals, weekKey } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
@@ -151,6 +154,11 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random
     parcelsPickedUp: 0,
     activeBossEntity: null,
     bossProjectiles: [],
+    // Random boss schedule + new-boss extras (see game/newBosses.js)
+    nextBossAtMeters: 300,
+    bossBag: [],
+    bossGifts: [],
+    bossHazards: [],
     // coins & skills
     coinStreak: 0,
     skillCooldownUntil: 0,
@@ -252,6 +260,13 @@ export function useGameLoop({
   const { t, save: gameSave } = useGame();
   // Glider pairs: owning both gliders of a pair gives a small passive perk
   const ownedCount = ((gameSave && gameSave.ownedGliders) || []).length;
+  // Equipped parts (engine/wings/core + set bonuses) and the weekly event.
+  const partTotals = useMemo(
+    () => getPartTotals(gameSave, gliderConfig.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gliderConfig.id, gameSave && gameSave.parts]
+  );
+  setOrderBias(eventForWeek(weekKey()).orderBias);
   const pairPerks = useMemo(
     () => perkTotals(getPairPerks(gliderConfig.id, (gameSave && gameSave.ownedGliders) || [])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -371,7 +386,7 @@ export function useGameLoop({
 
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
-  const magnetMult = effectiveMagnetMult * pairPerks.magnetMult;
+  const magnetMult = effectiveMagnetMult * pairPerks.magnetMult * partTotals.magnetMult;
   const maxCapacity = isPassenger ? Math.min(gliderConfig.capacity, PASSENGER.capacity) : gliderConfig.capacity;
 
   const hasGadget = useCallback(
@@ -422,17 +437,28 @@ export function useGameLoop({
       // spawns ONE real boss entity (its own sprite + movement + hitbox),
       // not a handful of reused obstacles — see step() for how it moves,
       // throws projectiles, and resolves.
-      const boss = BOSS_ENCOUNTERS[world.nextBossIndex];
-      if (boss && chunkStartMeters >= boss.triggerMeters && !zone.tunnelMode) {
-        world.nextBossIndex += 1;
+      // Random scheduling: the first boss at a random distance, then one every
+      // few hundred meters, drawn from a shuffled bag of all 9 bosses.
+      let boss = null;
+      if (!world.activeBossEntity && chunkStartMeters >= world.nextBossAtMeters && !zone.tunnelMode) {
+        if (!world.bossBag || world.bossBag.length === 0) {
+          world.bossBag = shuffledBag([...BOSS_ENCOUNTERS, ...NEW_BOSSES].map((x) => x.id), rng);
+        }
+        const pickedId = world.bossBag.pop();
+        boss = NEW_BOSSES.find((x) => x.id === pickedId) || BOSS_ENCOUNTERS.find((x) => x.id === pickedId);
+      }
+      if (boss) {
+        world.nextBossAtMeters = chunkStartMeters + bossGapMeters(rng);
         const bossNow = Date.now();
         const centerX = chunk.startX + CHUNK_WIDTH / 2;
+        const startY =
+          boss.pattern === "walk" ? SCREEN.height * 0.76 : boss.pattern === "cruise" ? SCREEN.height * 0.22 : SCREEN.height * 0.5;
         world.activeBossEntity = {
           id: boss.id,
           config: boss,
           worldX: centerX,
-          y: SCREEN.height * 0.5,
-          driftCenterY: SCREEN.height * 0.5,
+          y: startY,
+          driftCenterY: startY,
           hitRadius: boss.hitRadius,
           displaySize: boss.displaySize,
           startX: chunk.startX,
@@ -440,6 +466,12 @@ export function useGameLoop({
           rewardCredits: boss.rewardCredits,
           rewarded: false,
           lastProjectileAt: bossNow,
+          lastDropAt: bossNow,
+          lastGiftAt: bossNow,
+          nextEruptAt: bossNow + 1500,
+          nextTeleportAt: bossNow + (boss.teleportEveryMs || 99999),
+          visibleAlpha: 1,
+          touchCooldownUntil: 0,
           dashUntil: 0,
           nextDashAt: bossNow + (boss.dashEveryMs || 99999),
           phase: 0,
@@ -458,9 +490,10 @@ export function useGameLoop({
 
   useEffect(() => {
     const w = makeInitialWorld(gliderConfig, gadgetIds, freeRevive);
+    w.nextBossAtMeters = firstBossMeters(rng);
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
-    w.shieldCharges = startingShieldCharges + pairPerks.startShield;
+    w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield;
     if (isPassenger) w.packageTypes = Array(maxCapacity).fill("passenger");
     initGliderSkills(w, skillDef, level);
     ensureChunksAhead(w);
@@ -471,7 +504,7 @@ export function useGameLoop({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gliderConfig.id]);
 
-  const mutatorGravityMult = (mutator?.gravityMult || 1) * (envRule.gravityMult || 1);
+  const mutatorGravityMult = (mutator?.gravityMult || 1) * (envRule.gravityMult || 1) * partTotals.gravityMult;
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
@@ -721,12 +754,12 @@ export function useGameLoop({
 
     const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
-      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy);
+      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy * partTotals.diveMult);
     } else {
-      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy);
+      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy * partTotals.diveMult);
     }
     AudioManager.play("swipe");
-  }, [isStormImmune, addFloatingText, isPassenger]);
+  }, [isStormImmune, addFloatingText, isPassenger, partTotals.diveMult]);
 
   const setThrust = useCallback((held) => {
     worldRef.current.thrustHeld = held;
@@ -1088,7 +1121,7 @@ export function useGameLoop({
           const diff = targetY - b.y;
           const maxStep = cfg.chaseSpeed * dt;
           b.y += Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
-        } else if (cfg.pattern === "ram") {
+        } else if (cfg.pattern === "ram" || cfg.pattern === "charge") {
           // Giant Seagull: weaves normally, but every few seconds locks
           // onto your CURRENT altitude and dashes at it fast — the
           // "sudden ram" the bird clearly telegraphs via its own sprite.
@@ -1114,13 +1147,115 @@ export function useGameLoop({
           b.y = b.driftCenterY + wobble;
         }
 
-        // Boss body collision — same severity as any other crash.
+        // ---- New boss patterns -------------------------------------------------
+        const riderCenterY = world.riderY + RIDER.height / 2;
+        if (cfg.pattern === "cruise") {
+          // Sky Trawler: slow, high drift
+          b.y = SCREEN.height * 0.2 + Math.sin(b.phase * 0.9) * SCREEN.height * 0.06;
+        } else if (cfg.pattern === "walk") {
+          // Volcanic Goliath: stays on the ground
+          b.y = SCREEN.height * 0.76 + Math.sin(b.phase * 2) * 4;
+        } else if (cfg.pattern === "teleport") {
+          // Phantom Crow: blinks out, reappears ahead of the rider and drops loot
+          if (!b.pendingTeleport && now >= b.nextTeleportAt) {
+            b.nextTeleportAt = now + cfg.teleportEveryMs;
+            b.pendingTeleport = true;
+            b.fadeUntil = now + 260;
+          }
+          if (b.pendingTeleport && now >= b.fadeUntil) {
+            b.pendingTeleport = false;
+            b.appearedAt = now;
+            b.y = SCREEN.height * (0.2 + Math.random() * 0.55);
+            b.worldX = Math.max(b.startX + 60, Math.min(b.endX - 60, riderWorldX + 240 + Math.random() * 260));
+            for (let k = 0; k < (cfg.lootOnTeleport || 0); k++) {
+              world.bossGifts.push({ id: `gift_${now}_${k}_${Math.random()}`, worldX: b.worldX + k * 36, y: b.y + 24, vy: 70, kind: "coins" });
+            }
+          }
+          b.visibleAlpha = b.pendingTeleport ? 0.2 : now - (b.appearedAt || 0) < 260 ? 0.5 : 1;
+        }
+        b.charging = now < b.dashUntil || (cfg.pattern === "charge" && b.nextDashAt - now < 500);
+
+        // Boss body collision. "crash" = same severity as any other crash;
+        // "steal" = takes a package (or coins) instead, once per cooldown;
+        // "none" = harmless body (support bosses).
         const bdx = Math.abs(b.worldX - riderWorldX);
-        const bdy = Math.abs(b.y - (world.riderY + RIDER.height / 2));
-        if (bdx < b.hitRadius && bdy < b.hitRadius) {
-          if (!(invincible || absorbHit())) {
+        const bdy = Math.abs(b.y - riderCenterY);
+        const onTouch = cfg.onTouch || "crash";
+        const performSteal = () => {
+          for (const what of cfg.steal || ["coins"]) {
+            if (what === "package" && world.packages > 0) {
+              world.packages -= 1;
+              if (world.packageTypes && world.packageTypes.length) world.packageTypes.shift();
+              addFloatingText(world, "Package stolen!", riderWorldX, world.riderY - 40, "near_miss");
+              b.rewarded = true; // no clear bonus once something was stolen
+              return true;
+            }
+            if (what === "coins" && world.credits > 0) {
+              const n = Math.min(world.credits, cfg.stealCoins || 25);
+              world.credits -= n;
+              addFloatingText(world, `-${n} stolen!`, riderWorldX, world.riderY - 40, "near_miss");
+              b.rewarded = true;
+              return true;
+            }
+          }
+          return false;
+        };
+        if (onTouch !== "none" && !b.pendingTeleport && bdx < b.hitRadius && bdy < b.hitRadius) {
+          if (onTouch === "steal") {
+            if (now >= b.touchCooldownUntil) {
+              b.touchCooldownUntil = now + 1500;
+              if (!(invincible || absorbHit())) {
+                if (!performSteal()) handleCrash(world); // nothing left to steal
+              }
+            }
+          } else if (!(invincible || absorbHit())) {
             handleCrash(world);
           }
+        }
+
+        // Sky Trawler: drops gift crates that fall toward the rider's altitude
+        if (cfg.giftEveryMs && bdx < 650 && now - b.lastGiftAt > cfg.giftEveryMs) {
+          b.lastGiftAt = now;
+          world.bossGifts.push({
+            id: `gift_${now}_${Math.random()}`,
+            worldX: b.worldX,
+            y: b.y + 40,
+            vy: 95,
+            kind: GIFT_KINDS[Math.floor(Math.random() * GIFT_KINDS.length)],
+          });
+        }
+
+        // Orbital Drone mines / Phantom Crow feathers: fuse bombs
+        if (cfg.dropType && !b.pendingTeleport && world.status === "playing" && bdx < 700 && now - b.lastDropAt > cfg.dropEveryMs) {
+          b.lastDropAt = now;
+          const dconf = NEW_PROJECTILE_TYPES[cfg.dropType];
+          world.bossProjectiles.push({
+            id: `proj_${now}_${Math.random()}`,
+            type: cfg.dropType,
+            effect: "fuse",
+            worldX: b.worldX,
+            y: b.y + 20,
+            vy: dconf.vy,
+            speed: dconf.speed,
+            hitRadius: dconf.hitRadius,
+            size: dconf.size,
+            fuseAt: now + dconf.fuseMs,
+            explodeR: dconf.explodeR,
+            exploding: false,
+          });
+        }
+
+        // Volcanic Goliath: telegraphed lava columns timed to reach the rider
+        if (cfg.eruptEveryMs && bdx < 800 && now >= b.nextEruptAt) {
+          b.nextEruptAt = now + cfg.eruptEveryMs;
+          const spd = currentSpeed(world);
+          world.bossHazards.push({
+            id: `lava_${now}_${Math.random()}`,
+            worldX: riderWorldX + spd * 0.9,
+            activeAt: now + LAVA.telegraphMs,
+            endAt: now + LAVA.telegraphMs + LAVA.activeMs,
+            hitDone: false,
+          });
         }
 
         // Throws its named projectile on an interval, only once it's
@@ -1128,7 +1263,7 @@ export function useGameLoop({
         // screens away).
         if (world.status === "playing" && bdx < 700 && now - b.lastProjectileAt > cfg.projectileIntervalMs) {
           b.lastProjectileAt = now;
-          const pconf = PROJECTILE_TYPES[cfg.projectile];
+          const pconf = PROJECTILE_TYPES[cfg.projectile] || NEW_PROJECTILE_TYPES[cfg.projectile];
           const dxToRider = Math.max(80, b.worldX - riderWorldX);
           const travelTime = dxToRider / pconf.speed;
           const vy = (world.riderY + RIDER.height / 2 - b.y) / travelTime;
@@ -1141,6 +1276,7 @@ export function useGameLoop({
             speed: pconf.speed,
             hitRadius: pconf.hitRadius,
             size: pconf.size,
+            effect: pconf.effect || "crash",
           });
         }
 
@@ -1167,10 +1303,42 @@ export function useGameLoop({
           p.worldX -= p.speed * dt;
           p.y += p.vy * dt;
 
+          // Fuse bombs (mines / feathers): explode after the fuse, on the
+          // ground, or when touched; the blast hurts everything within explodeR.
+          if (p.effect === "fuse") {
+            if (!p.exploding) {
+              const near =
+                Math.abs(p.worldX - riderWorldX) < p.hitRadius + 16 &&
+                Math.abs(p.y - (world.riderY + RIDER.height / 2)) < p.hitRadius + 16;
+              if (now >= p.fuseAt || p.y > SCREEN.height * 0.92 || (near && world.status === "playing")) {
+                p.exploding = true;
+                p.explodeStart = now;
+                p.vy = 0;
+                p.speed = 0;
+                const dist = Math.hypot(p.worldX - riderWorldX, p.y - (world.riderY + RIDER.height / 2));
+                if (world.status === "playing" && dist < p.explodeR + 14) {
+                  if (!(invincible || absorbHit())) handleCrash(world);
+                }
+              }
+            } else if (now - p.explodeStart > 300) {
+              world.bossProjectiles.splice(i, 1);
+              continue;
+            }
+            if (p.worldX < world.cameraX - 160) world.bossProjectiles.splice(i, 1);
+            continue;
+          }
+
           if (world.status === "playing") {
             const pdx = Math.abs(p.worldX - riderWorldX);
             const pdy = Math.abs(p.y - (world.riderY + RIDER.height / 2));
             if (pdx < p.hitRadius + 16 && pdy < p.hitRadius + 16) {
+              if (p.effect === "knock") {
+                // Storm Wyvern wind burst: shoves you away instead of crashing
+                world.velocityY += (world.riderY + RIDER.height / 2 >= p.y ? 1 : -1) * 420;
+                addFloatingText(world, "Blown away!", riderWorldX, world.riderY - 40, "near_miss");
+                world.bossProjectiles.splice(i, 1);
+                continue;
+              }
               if (invincible || absorbHit()) {
                 world.bossProjectiles.splice(i, 1);
               } else {
@@ -1182,6 +1350,53 @@ export function useGameLoop({
           if (p.worldX < world.cameraX - 120) {
             world.bossProjectiles.splice(i, 1);
           }
+        }
+      }
+
+      // Gift crates (Sky Trawler / Phantom Crow loot): catch them by flying through.
+      if (world.bossGifts.length > 0) {
+        for (let i = world.bossGifts.length - 1; i >= 0; i--) {
+          const g = world.bossGifts[i];
+          g.y += g.vy * dt;
+          if (
+            world.status === "playing" &&
+            Math.abs(g.worldX - riderWorldX) < 36 &&
+            Math.abs(g.y - (world.riderY + RIDER.height / 2)) < 40
+          ) {
+            if (g.kind === "shield") {
+              world.shieldCharges += 1;
+              addFloatingText(world, "Gift: Shield!", riderWorldX, world.riderY - 40, "score");
+            } else if (g.kind === "boost") {
+              world.overclockUntil = Math.max(world.overclockUntil, now + GIFT_REWARD.boostMs);
+              addFloatingText(world, "Gift: Boost!", riderWorldX, world.riderY - 40, "score");
+            } else {
+              world.credits += GIFT_REWARD.coins;
+              addFloatingText(world, `Gift: +${GIFT_REWARD.coins}`, riderWorldX, world.riderY - 40, "score");
+            }
+            AudioManager.play("pickup");
+            world.bossGifts.splice(i, 1);
+            continue;
+          }
+          if (g.y > SCREEN.height + 40 || g.worldX < world.cameraX - 120) world.bossGifts.splice(i, 1);
+        }
+      }
+
+      // Lava eruption columns (Volcanic Goliath)
+      if (world.bossHazards.length > 0) {
+        for (let i = world.bossHazards.length - 1; i >= 0; i--) {
+          const h = world.bossHazards[i];
+          if (
+            world.status === "playing" &&
+            !h.hitDone &&
+            now >= h.activeAt &&
+            now < h.endAt &&
+            Math.abs(h.worldX - riderWorldX) < LAVA.width / 2 &&
+            world.riderY + RIDER.height / 2 > SCREEN.height * LAVA.topFrac
+          ) {
+            h.hitDone = true;
+            if (!(invincible || absorbHit())) handleCrash(world);
+          }
+          if (now > h.endAt + 200 || h.worldX < world.cameraX - 200) world.bossHazards.splice(i, 1);
         }
       }
 

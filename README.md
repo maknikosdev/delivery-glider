@@ -30,7 +30,7 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Wind Corridors**: μόνιμα κάθετα ρεύματα αέρα με βέλη ↑/↓.
 - **Soft difficulty ramp**: τα πρώτα 5 runs ενός νέου παίκτη είναι πιο ήπια.
 - **Weather/City Events** (κάθε 60-120″): Solar Flare (αντεστραμμένοι χειρισμοί), Acid Rain (διάβρωση), Police Blockade, Sandstorm (τυρβώδεις άνεμοι), Blackout (σκοτάδι + ξεθωριασμένο HUD).
-- **Bosses** (3, μία φορά ανά run): Sky Wyvern, Giant Seagull, Mechanical Drone — με δικά τους sprites, κινήσεις και βλήματα (φλόγα, ψάρι, πύραυλος). Πληρωμή αν τους ξεπεράσεις χωρίς χτύπημα.
+- **9 Bosses, τυχαίοι και σε τυχαία σημεία του run** (ο πρώτος στα ~220–420 μ., μετά ένας κάθε ~420–750 μ., από «τσάντα» ώστε να εμφανιστούν όλοι πριν επαναληφθεί κάποιος): Sky Wyvern, Giant Seagull, Mechanical Drone και οι νέοι **Sky Trawler** (support: ρίχνει δώρα — νομίσματα/ασπίδα/boost), **Junker Shark** (χρεώνει και κλέβει δέμα ή νομίσματα), **Storm Wyvern** (ριπές ανέμου που σε σπρώχνουν, αρπάζει δέματα), **Volcanic Goliath** (φλόγες και στήλες λάβας), **Orbital Drone** (λέιζερ και νάρκες), **Phantom Crow** (teleport, αφήνει λάφυρα αλλά και εκρηκτικά φτερά, κλέβει νομίσματα). Πληρωμή αν τους ξεπεράσεις χωρίς να σου κλέψουν τίποτα.
 - **Wanted Level** (0-3 αστέρια): ανεβαίνει με χτύπημα σε police drone ή 5 χαμένες παραδόσεις· από level 2 σε κυνηγάει chaser drone· πέφτει με 3 παραδόσεις σε κόκκινα μπαλκόνια.
 - **Slipstream** πίσω από ταξί (x2 πόντοι), **Delivery Fever** (3 παραδόσεις → διπλά νομίσματα + ασπίδα), **Express Delivery** (VIP μπαλκόνι με χρονόμετρο, x5), «Close call» μπόνους.
 - **Τύποι φορτίου**: Standard, Fragile (χάνει αξία με βουτιές), Thermal (λήγει σε 13″), VIP (x2.5 αλλά ανεβάζει Wanted Level).
@@ -55,6 +55,12 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Mastery ανά glider**: XP από παραδόσεις και μέτρα, 5 επίπεδα (Αρχάριος → Θρύλος) και +1–3% πόντους.
 - **Ζευγάρια gliders** (10): αν έχεις και τα δύο gliders ενός ζευγαριού, παίρνεις passive perk (+1 ασπίδα / +3% πόντοι / +20% μαγνήτης νομισμάτων).
 - **Achievements που ξεκλειδώνουν περιεχόμενο**: πόντοι, νέα περιβάλλοντα (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), το glider Aero Lance και skin tiers.
+- **Hangar** (Garage → HANGAR): μεγάλη προεπισκόπηση του glider με στατιστικά, 3 θέσεις **εξαρτημάτων** (κινητήρας, φτερά, πυρήνας) και **μπόνους σετ** (Ember, Frost, Volt, Terra). Τα εξαρτήματα πέφτουν από bosses, παραγγελίες, προκλήσεις και events (Κοινό/Σπάνιο/Επικό) και αναβαθμίζονται 1→3 με πόντους.
+- **Ιστορία πιλότου**: 26 πιλότοι με 3 κεφάλαια που ανοίγουν με το Mastery (επίπεδα 1, 3, 5). Στο Mastery 5: μοναδικό skin πιλότου και **GOLD trail**.
+- **Προσωπική πρόκληση ανά glider**: ολοκλήρωσέ την πετώντας με εκείνο το glider και παίρνεις badge + σπάνιο εξάρτημα.
+- **Ξεχωριστό trail και ήχος κινητήρα ανά glider**, και animation όταν ανεβαίνει το Mastery.
+- **Rival ghost** στο Daily Challenge: ένας αντίπαλος με σταθερό ρυθμό· αν τον ξεπεράσεις όταν τελειώνει το run παίρνεις +150 πόντους.
+- **Εβδομαδιαία events** (Fragile, Thermal, VIP, Parcel Rush, Passenger, Coin Rush): αλλάζουν τις παραγγελίες, διπλασιάζουν ένα στατιστικό στους εβδομαδιαίους στόχους και ρίχνουν περιορισμένο εξάρτημα.
 - **Συλλογή** (Garage → ΣΥΛΛΟΓΗ): gliders, περιβάλλοντα, bosses με ιστορία, skins, ζευγάρια, τελευταίες ανταμοιβές.
 - **Εβδομαδιαίοι στόχοι + μηνιαία Σεζόν** (Garage → ΕΒΔΟΜΑΔΑ): 3 στόχοι/εβδομάδα, πόντοι σεζόν και ανταμοιβές στους 4, 8 και 12 πόντους.
 - **25 Achievements** που ξεκλειδώνουν cosmetic skins (χρώματα), **20 Daily Contracts** (4 τυχαία κάθε μέρα), **milestone reward** (δωρεάν Phantom στα 10.000m συνολικά), **Field Guide** (οδηγός εμποδίων, bosses, αντικειμένων, τύπων φορτίου), **Stats** (100% offline).
@@ -93,10 +99,13 @@ src/
     economy.js                 # κόστος Skin Updates
     environments.js            # 5 περιβάλλοντα background + κανόνες + ξεκλείδωμα
     progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements
+    parts.js, pilots.js        # εξαρτήματα/σετ · πιλότοι, προκλήσεις, skins
+    newBosses.js               # 6 νέοι bosses, τυχαίο πρόγραμμα εμφάνισης
+    events.js, rival.js        # εβδομαδιαία events · rival ghost
     achievements.js, contracts.js, seededRandom.js
   store/storage.js, GameContext.js
   audio/AudioManager.js
-  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, ParcelSprite, ...
+  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, HangarPanel, NewBossSprites, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
 assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
 tools/gen_sfx.py
@@ -158,7 +167,7 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Wind Corridors**: fixed vertical air currents with ↑/↓ arrows.
 - **Soft difficulty ramp**: a new player's first 5 runs are gentler.
 - **Weather/City Events** (every 60-120 s): Solar Flare (reversed controls), Acid Rain (corrosion), Police Blockade, Sandstorm (turbulent winds), Blackout (darkness + faded HUD).
-- **Bosses** (3, once per run): Sky Wyvern, Giant Seagull, Mechanical Drone — each with its own sprite, movement and projectiles (fireball, fish, missile). Bonus payout if you pass them without a hit.
+- **9 Bosses, random and at random points of a run** (the first at ~220–420 m, then one every ~420–750 m, drawn from a shuffled bag so every boss appears before any repeats): Sky Wyvern, Giant Seagull, Mechanical Drone and the new **Sky Trawler** (support: drops gifts — coins/shield/boost), **Junker Shark** (charges and steals a package or coins), **Storm Wyvern** (wind bursts that shove you, snatches packages), **Volcanic Goliath** (fireballs and lava columns), **Orbital Drone** (lasers and mines), **Phantom Crow** (teleports, leaves loot but also explosive feathers, steals coins). Bonus payout if you clear them without being robbed.
 - **Wanted Level** (0-3 stars): rises when you hit a police drone or miss 5 deliveries; from level 2 a chaser drone follows you; drops with 3 deliveries to red balconies.
 - **Slipstream** behind taxis (x2 points), **Delivery Fever** (3 deliveries → double coins + shield), **Express Delivery** (timed VIP balcony, x5), "Close call" bonuses.
 - **Cargo types**: Standard, Fragile (loses value with dives), Thermal (spoils after 13 s), VIP (x2.5 but raises Wanted Level).
@@ -180,6 +189,12 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Slower economy**: glider prices are doubled and earnings reduced (delivery 7 points, 1-3 coins per chunk, near-miss 3), so unlocking takes time.
 - **Titan** carries 8 packages and can still climb fully loaded; **Heavy Lifter** is lighter than before.
 - **5 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): a new one unlocks every 3 gliders you own, and each run picks one of the unlocked ones at random. They also carry a small gameplay rule (see above).
+- **Hangar** (Garage → HANGAR): big glider preview with stats, 3 **part** slots (engine, wings, core) and **set bonuses** (Ember, Frost, Volt, Terra). Parts drop from bosses, orders, challenges and events (Common/Rare/Epic) and are upgraded 1→3 with points.
+- **Pilot stories**: 26 pilots with 3 chapters unlocked by Mastery (levels 1, 3, 5). At Mastery 5: a unique pilot skin and a **GOLD trail**.
+- **Personal challenge per glider**: complete it flying that glider for a badge + a rare part.
+- **Distinct trail and engine sound per glider**, and an animation when Mastery levels up.
+- **Rival ghost** in the Daily Challenge: a fixed-pace opponent; beat it when your run ends for +150 points.
+- **Weekly events** (Fragile, Thermal, VIP, Parcel Rush, Passenger, Coin Rush): change the orders, double one stat for weekly goals and drop a limited part.
 - **Glider Mastery**: XP from deliveries and distance, 5 levels (Rookie → Legend) and +1–3% points.
 - **Glider pairs** (10): own both gliders of a pair to get a passive perk (+1 shield / +3% points / +20% coin magnet).
 - **Achievements that unlock content**: points, new environments (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), the Aero Lance glider and skin tiers.
@@ -221,10 +236,13 @@ src/
     economy.js                 # Skin Update costs
     environments.js            # 5 background environments + rules + unlocks
     progress.js                # mastery, pairs, weekly goals, season, achievement rewards
+    parts.js, pilots.js        # parts/sets · pilots, challenges, skins
+    newBosses.js               # 6 new bosses, random spawn schedule
+    events.js, rival.js        # weekly events · rival ghost
     achievements.js, contracts.js, seededRandom.js
   store/storage.js, GameContext.js
   audio/AudioManager.js
-  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, ParcelSprite, ...
+  components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, HangarPanel, NewBossSprites, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
 assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
 tools/gen_sfx.py
