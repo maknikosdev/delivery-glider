@@ -2,6 +2,7 @@ import { GLIDERS } from "./gliders";
 import { getPartTotals, addParts, rollPartId, rollRarity, getPartDef, PARTS } from "./parts";
 import { PILOTS, challengeStatValue, pilotSkinColor } from "./pilots";
 import { eventForWeek, EVENT_PART_CHANCE } from "./events";
+import { modsFor, NEUTRAL, MAX_LEVEL, MAX_PRESTIGE, PRESTIGE_REWARD } from "./masteryPerks";
 
 // ---------------------------------------------------------------------------
 // Meta-progression: Mastery per glider, glider Pairs, Weekly goals + Season,
@@ -11,11 +12,11 @@ import { eventForWeek, EVENT_PART_CHANCE } from "./events";
 // ---------------------------------------------------------------------------
 
 // ---- Mastery ---------------------------------------------------------------
-export const MASTERY_XP = [0, 150, 450, 900, 1500, 2400]; // xp needed for level 0..5
-export const MASTERY_BONUS = [0, 0, 0.01, 0.02, 0.02, 0.03]; // credit bonus at that level
+export const MASTERY_XP = [0, 150, 450, 900, 1500, 2400, 3600, 5200, 7200, 9600, 12500]; // xp needed for level 0..10
+export const MASTERY_BONUS = [0, 0, 0.01, 0.02, 0.02, 0.03, 0.035, 0.04, 0.04, 0.045, 0.05]; // credit bonus at that level
 export const MASTERY_TITLES = {
-  en: ["Rookie", "Courier", "Pilot", "Ace", "Master", "Legend"],
-  el: ["Αρχάριος", "Courier", "Πιλότος", "Άσος", "Μάστορας", "Θρύλος"],
+  en: ["Rookie", "Courier", "Pilot", "Ace", "Master", "Legend", "Elite", "Veteran", "Champion", "Mythic", "Apex"],
+  el: ["Αρχάριος", "Courier", "Πιλότος", "Άσος", "Μάστορας", "Θρύλος", "Ελίτ", "Βετεράνος", "Πρωταθλητής", "Μυθικός", "Κορυφαίος"],
 };
 
 export const masteryXpFromRun = (r) => Math.round((r.deliveries || 0) * 10 + (r.meters || 0) / 10);
@@ -35,7 +36,43 @@ export function masteryInfo(xp = 0) {
     bonus: MASTERY_BONUS[level],
   };
 }
-export const gliderMastery = (save, id) => masteryInfo(((save && save.mastery) || {})[id] || 0);
+export function gliderMastery(save, id) {
+  const info = masteryInfo(((save && save.mastery) || {})[id] || 0);
+  const prestige = ((save && save.prestige) || {})[id] || 0;
+  // storyLevel: pilot chapters / gold trail stay unlocked after a Prestige reset
+  return { ...info, prestige, storyLevel: prestige > 0 ? Math.max(info.level, 5) : info.level };
+}
+
+// Mastery 1-10 perks/penalties + environment affinity + prestige (see masteryPerks.js).
+// Disabled (neutral) in the Daily Challenge so everyone plays on equal terms.
+export function masteryModsFor(save, gliderId, envId, daily = false) {
+  if (daily || !save) return NEUTRAL;
+  const m = gliderMastery(save, gliderId);
+  return modsFor({ gliderId, level: m.level, prestige: m.prestige, choices: ((save.masteryChoices || {})[gliderId]) || {}, envId });
+}
+
+// Prestige: only at level 10. Resets this glider's mastery and perk choices,
+// keeps a permanent +1% credits / -1% gravity per star (max 5) and pays a reward.
+export function prestigePatch(save, gliderId) {
+  const m = gliderMastery(save, gliderId);
+  if (m.level < MAX_LEVEL || m.prestige >= MAX_PRESTIGE) return null;
+  const reward = m.prestige === 0 ? PRESTIGE_REWARD.first : PRESTIGE_REWARD.next;
+  const patch = {
+    mastery: { ...(save.mastery || {}), [gliderId]: 0 },
+    masteryChoices: { ...(save.masteryChoices || {}), [gliderId]: {} },
+    masteryShown: { ...(save.masteryShown || {}), [gliderId]: 0 },
+    prestige: { ...(save.prestige || {}), [gliderId]: m.prestige + 1 },
+    credits: save.credits + reward,
+  };
+  const log = [{ ach: "prestige", kind: "credits", value: reward }];
+  if (m.prestige === 0) {
+    const pid = rollPartId(Math.random, "epic");
+    patch.parts = addParts(save, [pid]);
+    log.push({ ach: "prestige", kind: "part", value: pid });
+  }
+  patch.rewardLog = [...log, ...(save.rewardLog || [])].slice(0, 12);
+  return patch;
+}
 
 // ---- Glider pairs ----------------------------------------------------------
 // Own BOTH gliders of a pair and fly one of them -> small passive perk.
@@ -77,11 +114,12 @@ export function perkTotals(perks) {
 }
 
 // Total end-of-run credit bonus (mastery + pairs) for the glider being flown.
-export function runCreditBonus(save, gliderId) {
+export function runCreditBonus(save, gliderId, envId = null, daily = false) {
   const perks = perkTotals(getPairPerks(gliderId, (save && save.ownedGliders) || []));
   const ev = eventForWeek(weekKey());
-  const bonus = gliderMastery(save, gliderId).bonus + perks.creditBonus + getPartTotals(save, gliderId).creditBonus + (ev.creditBonus || 0);
-  return Math.min(0.25, bonus);
+  const mm = masteryModsFor(save, gliderId, envId, daily);
+  const bonus = gliderMastery(save, gliderId).bonus + perks.creditBonus + getPartTotals(save, gliderId).creditBonus + (ev.creditBonus || 0) + mm.credit;
+  return Math.max(0, Math.min(0.25, bonus));
 }
 
 // ---- Weekly goals + Season -------------------------------------------------

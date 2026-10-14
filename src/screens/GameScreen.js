@@ -11,6 +11,7 @@ import { useGame } from "../store/GameContext";
 import { pickEnvironmentId, getEnvironment } from "../game/environments";
 import { runCreditBonus, gliderMastery, weekKey } from "../game/progress";
 import { eventForWeek } from "../game/events";
+import { affinityOf } from "../game/masteryPerks";
 import { rivalFor, rivalMeters } from "../game/rival";
 import { trailVariant, enginePitch } from "../game/pilots";
 import AudioManager from "../audio/AudioManager";
@@ -72,7 +73,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   const handleGameOver = useCallback(
     (result) => {
       // Mastery + glider-pair bonus on top of the run's credits.
-      const bonus = runCreditBonus(save, gliderConfig.id);
+      const bonus = runCreditBonus(save, gliderConfig.id, envId, !!dailySeed);
       const base = result.creditsEarned || 0;
       const rivalBeaten = !!rival && (result.meters || 0) > rivalMeters(rival, Date.now() - runStartRef.current);
       const out = {
@@ -85,7 +86,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
       };
       onGameOver && onGameOver(out);
     },
-    [onGameOver, save, gliderConfig.id, envId, rival]
+    [onGameOver, save, gliderConfig.id, envId, rival, dailySeed]
   );
 
   const {
@@ -255,6 +256,12 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             <View pointerEvents="none" style={styles.envBanner}>
               <Text style={styles.envName}>{nm}</Text>
               {rt ? <Text style={styles.envRule}>{rt}</Text> : null}
+              {!dailySeed && gliderMastery(save, gliderConfig.id).level > 0 && affinityOf(gliderConfig.id).home.includes(envId) ? (
+                <Text style={styles.envHome}>{lang === "en" ? "🏠 Home turf: pilot bonus" : "🏠 Γνώριμο έδαφος: bonus πιλότου"}</Text>
+              ) : null}
+              {!dailySeed && gliderMastery(save, gliderConfig.id).level > 0 && affinityOf(gliderConfig.id).hostile.includes(envId) ? (
+                <Text style={styles.envHostile}>{lang === "en" ? "⚠ Hostile terrain: pilot penalty" : "⚠ Εχθρικό έδαφος: ποινή πιλότου"}</Text>
+              ) : null}
               <Text style={styles.envEvent}>
                 {weekEvent.icon} {weekEvent.name[lang]}
               </Text>
@@ -466,7 +473,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
         <GliderTrail
           variant={trailVariant(gliderConfig.id)}
-          gold={gliderMastery(save, gliderConfig.id).level >= 5}
+          gold={gliderMastery(save, gliderConfig.id).storyLevel >= 5}
           y={world.riderY}
           color={gliderConfig.color}
           accentColor={gliderConfig.accentColor}
@@ -651,6 +658,8 @@ const styles = StyleSheet.create({
   rivalText: { fontSize: 12, fontWeight: "800" },
   envEvent: { color: "#7de8ff", fontSize: 12, fontWeight: "700", marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   envName: { color: "#fff", fontSize: 15, fontWeight: "800", letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 4 },
+  envHome: { color: "#9dff4d", fontSize: 12, marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
+  envHostile: { color: "#ff8a7a", fontSize: 12, marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   envRule: { color: "#ffe27d", fontSize: 12, marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   container: {
     flex: 1,

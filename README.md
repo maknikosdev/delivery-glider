@@ -53,7 +53,7 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - Ο **Titan** μεταφέρει 8 δέματα και μπορεί να ανέβει ακόμα και γεμάτος· ο **Heavy Lifter** είναι ελαφρύτερος από πριν.
 - **9 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 4 εικονογραφημένα: **Underwater Reef** (-10% βαρύτητα, νομίσματα-φυσαλίδες που πληρώνουν διπλά), **Storm Front** (ριπές ανέμου, +10% πόντοι, βροχή και αστραπές), **Neon Casino** (+5% πόντοι, περισσότερα εμπόδια, neon εφέ), **Ancient Ruins** (περισσότερες στατικές παγίδες, κρυμμένα σεντούκια με δώρα)). Ξεκλειδώνουν με 1/4/5/7/8/10/11/13 gliders ή νωρίτερα από trophies, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Τα 4 νέα έχουν parallax εικόνας με animated εφέ.
 - **15 Trophies για upgrades** (Garage → ΤΡΟΠΑΙΑ): 5 για bosses, 5 για gliders/πιλότους (Mastery, προσωπικές προκλήσεις, Skin Updates), 5 για Hangar (εξαρτήματα, σετ, πλήρης εξοπλισμός). Δίνουν μικρές ανταμοιβές: εξαρτήματα, πόντους, δωρεάν Skin tier ή νωρίτερο ξεκλείδωμα background.
-- **Mastery ανά glider**: XP από παραδόσεις και μέτρα, 5 επίπεδα (Αρχάριος → Θρύλος) και +1–3% πόντους.
+- **Mastery 1–10 ανά glider**: XP από παραδόσεις και μέτρα (Αρχάριος → Κορυφαίος), +1–5% πόντους. Κάθε glider ανήκει σε κατηγορία (Βαρύ, Φρουρός, Ταχύτητα, Νομίσματα, Ταχυδακτυλουργός, Στοιχειακό) και **κάθε level δίνει κάτι και παίρνει κάτι** (βαρύτητα, ταχύτητα, μαγνήτης, βουτιά, πόντοι, ασπίδα). Στα levels 2/4/6/8 διαλέγεις **A ή B** (μόνιμα μέχρι το Prestige), το level 10 είναι capstone. Κάθε glider έχει **γνώριμα και εχθρικά περιβάλλοντα** με bonus/ποινή που μεγαλώνει με το level. **Prestige** στο level 10: reset με μόνιμο ★ (+1% πόντοι, −1% βαρύτητα, μέχρι 5) και ανταμοιβή. Στο Daily Challenge τα perks είναι ανενεργά. Garage → κάρτα glider → ΠΡΟΣΘΕΤΑ & ΠΟΙΝΕΣ.
 - **Ζευγάρια gliders** (10): αν έχεις και τα δύο gliders ενός ζευγαριού, παίρνεις passive perk (+1 ασπίδα / +3% πόντοι / +20% μαγνήτης νομισμάτων).
 - **Achievements που ξεκλειδώνουν περιεχόμενο**: πόντοι, νέα περιβάλλοντα (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), το glider Aero Lance και skin tiers.
 - **Hangar** (Garage → HANGAR): μεγάλη προεπισκόπηση του glider με στατιστικά, 3 θέσεις **εξαρτημάτων** (κινητήρας, φτερά, πυρήνας) και **μπόνους σετ** (Ember, Frost, Volt, Terra). Τα εξαρτήματα πέφτουν από bosses, παραγγελίες, προκλήσεις και events (Κοινό/Σπάνιο/Επικό) και αναβαθμίζονται 1→3 με πόντους.
@@ -100,7 +100,8 @@ src/
     economy.js                 # κόστος Skin Updates
     environments.js            # 9 περιβάλλοντα background + κανόνες + ξεκλείδωμα
     extraAchievements.js       # 15 trophies για upgrades (boss / glider / hangar)
-    progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements
+    progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements, prestige
+    masteryPerks.js            # Mastery 1-10: κατηγορίες, perks/ποινές, επιλογές A/B, affinity
     parts.js, pilots.js        # εξαρτήματα/σετ · πιλότοι, προκλήσεις, skins
     newBosses.js               # 6 νέοι bosses, τυχαίο πρόγραμμα εμφάνισης
     events.js, rival.js        # εβδομαδιαία events · rival ghost
@@ -198,7 +199,7 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Distinct trail and engine sound per glider**, and an animation when Mastery levels up.
 - **Rival ghost** in the Daily Challenge: a fixed-pace opponent; beat it when your run ends for +150 points.
 - **Weekly events** (Fragile, Thermal, VIP, Parcel Rush, Passenger, Coin Rush): change the orders, double one stat for weekly goals and drop a limited part.
-- **Glider Mastery**: XP from deliveries and distance, 5 levels (Rookie → Legend) and +1–3% points.
+- **Glider Mastery 1–10**: XP from deliveries and distance (Rookie → Apex), +1–5% points. Every glider belongs to a class (Heavy, Guard, Speed, Coin, Trickster, Elemental) and **every level gives something and takes something** (gravity, speed, magnet, dive, credits, shield). At levels 2/4/6/8 you pick **A or B** (permanent until Prestige); level 10 is a capstone. Each glider has **home and hostile environments** whose bonus/penalty grows with level. **Prestige** at level 10: reset for a permanent ★ (+1% credits, −1% gravity, up to 5) plus a reward. Perks are off in the Daily Challenge. Garage → glider card → PERKS & PENALTIES.
 - **Glider pairs** (10): own both gliders of a pair to get a passive perk (+1 shield / +3% points / +20% coin magnet).
 - **Achievements that unlock content**: points, new environments (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), the Aero Lance glider and skin tiers.
 - **Collection** (Garage → COLLECTION): gliders, environments, bosses with lore, skins, pairs, latest rewards.
@@ -239,7 +240,8 @@ src/
     economy.js                 # Skin Update costs
     environments.js            # 9 background environments + rules + unlocks
     extraAchievements.js       # 15 upgrade trophies (boss / glider / hangar)
-    progress.js                # mastery, pairs, weekly goals, season, achievement rewards
+    progress.js                # mastery, pairs, weekly goals, season, achievement rewards, prestige
+    masteryPerks.js            # Mastery 1-10: classes, perks/penalties, A/B choices, affinity
     parts.js, pilots.js        # parts/sets · pilots, challenges, skins
     newBosses.js               # 6 new bosses, random spawn schedule
     events.js, rival.js        # weekly events · rival ghost

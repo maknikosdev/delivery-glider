@@ -2,7 +2,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from "./storage";
 import AudioManager from "../audio/AudioManager";
 import { getTranslator } from "../i18n/i18n";
-import { applyRunProgress, applyAchievementRewards } from "../game/progress";
+import { applyRunProgress, applyAchievementRewards, gliderMastery, prestigePatch } from "../game/progress";
+import { tableFor, CHOICE_LEVELS } from "../game/masteryPerks";
 import { evaluateExtraAchievements, EXTRA_REWARDS } from "../game/extraAchievements";
 import { partsOf, upgradeCost, SLOTS } from "../game/parts";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
@@ -178,6 +179,30 @@ export function GameProvider({ children }) {
     setSave(updated);
   }, []);
 
+  // Mastery perk choice (levels 2/4/6/8, option "A" or "B"). Permanent until Prestige.
+  const chooseMasteryPerk = useCallback(async (gliderId, lv, pick) => {
+    const current = await loadSave();
+    if (!CHOICE_LEVELS.includes(lv) || (pick !== "A" && pick !== "B")) return false;
+    if (!Array.isArray(tableFor(gliderId)[lv])) return false;
+    if (gliderMastery(current, gliderId).level < lv) return false;
+    const all = current.masteryChoices || {};
+    const mine = all[gliderId] || {};
+    if (mine[lv]) return false;
+    const updated = await saveSave({ masteryChoices: { ...all, [gliderId]: { ...mine, [lv]: pick } } });
+    setSave(updated);
+    return true;
+  }, []);
+
+  // Prestige (only at Mastery 10): reset the glider, +1 star, reward.
+  const prestigeGlider = useCallback(async (gliderId) => {
+    const current = await loadSave();
+    const patch = prestigePatch(current, gliderId);
+    if (!patch) return false;
+    const updated = await saveSave(patch);
+    setSave(updated);
+    return true;
+  }, []);
+
   const ackExtraAch = useCallback(async () => {
     const current = await loadSave();
     if (!(current.extraAchNew || []).length) return;
@@ -346,6 +371,8 @@ export function GameProvider({ children }) {
     buySkinTier,
     equipPart,
     ackExtraAch,
+    chooseMasteryPerk,
+    prestigeGlider,
     upgradePart,
     ackParts,
     ackMastery,

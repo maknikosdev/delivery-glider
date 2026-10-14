@@ -36,7 +36,7 @@ import { eventForWeek } from "./events";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
-import { getPairPerks, perkTotals, weekKey } from "./progress";
+import { getPairPerks, perkTotals, weekKey, masteryModsFor } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
@@ -266,6 +266,12 @@ export function useGameLoop({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [gliderConfig.id, gameSave && gameSave.parts]
   );
+  // Mastery 1-10 perks/penalties + environment affinity + prestige (off in Daily).
+  const mm = useMemo(
+    () => masteryModsFor(gameSave, gliderConfig.id, envId, !!dailySeed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gliderConfig.id, envId, dailySeed, gameSave && gameSave.mastery, gameSave && gameSave.masteryChoices, gameSave && gameSave.prestige]
+  );
   setOrderBias(eventForWeek(weekKey()).orderBias);
   const pairPerks = useMemo(
     () => perkTotals(getPairPerks(gliderConfig.id, (gameSave && gameSave.ownedGliders) || [])),
@@ -386,7 +392,7 @@ export function useGameLoop({
 
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
-  const magnetMult = effectiveMagnetMult * pairPerks.magnetMult * partTotals.magnetMult;
+  const magnetMult = effectiveMagnetMult * pairPerks.magnetMult * partTotals.magnetMult * mm.magnetMult;
   const maxCapacity = isPassenger ? Math.min(gliderConfig.capacity, PASSENGER.capacity) : gliderConfig.capacity;
 
   const hasGadget = useCallback(
@@ -511,7 +517,7 @@ export function useGameLoop({
     w.nextBossAtMeters = firstBossMeters(rng);
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
-    w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield;
+    w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield + mm.shield;
     if (isPassenger) w.packageTypes = Array(maxCapacity).fill("passenger");
     initGliderSkills(w, skillDef, level);
     ensureChunksAhead(w);
@@ -522,7 +528,7 @@ export function useGameLoop({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gliderConfig.id]);
 
-  const mutatorGravityMult = (mutator?.gravityMult || 1) * (envRule.gravityMult || 1) * partTotals.gravityMult;
+  const mutatorGravityMult = (mutator?.gravityMult || 1) * (envRule.gravityMult || 1) * partTotals.gravityMult * mm.gravityMult;
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
@@ -544,7 +550,7 @@ export function useGameLoop({
     [weightFactor, mutatorGravityMult]
   );
 
-  const mutatorSpeedMult = (mutator?.speedMult || 1) * (envRule.speedMult || 1);
+  const mutatorSpeedMult = (mutator?.speedMult || 1) * (envRule.speedMult || 1) * mm.speedMult;
   const mutatorCreditsMult = (mutator?.creditsMult || 1) * (envRule.creditsMult || 1);
   const currentSpeed = useCallback(
     (world) => {
@@ -772,12 +778,12 @@ export function useGameLoop({
 
     const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
-      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy * partTotals.diveMult);
+      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult);
     } else {
-      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy * partTotals.diveMult);
+      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult);
     }
     AudioManager.play("swipe");
-  }, [isStormImmune, addFloatingText, isPassenger, partTotals.diveMult]);
+  }, [isStormImmune, addFloatingText, isPassenger, partTotals.diveMult, mm.diveMult]);
 
   const setThrust = useCallback((held) => {
     worldRef.current.thrustHeld = held;

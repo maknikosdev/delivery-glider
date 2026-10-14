@@ -211,7 +211,7 @@ export default function HangarPanel() {
       <Text style={s.title}>{tx.story}</Text>
       {pilot
         ? pilot.chapters.map((ch, i) => {
-            const open = mastery.level >= CHAPTER_LEVELS[i];
+            const open = mastery.storyLevel >= CHAPTER_LEVELS[i];
             return (
               <Text key={i} style={open ? s.story : s.dim}>
                 {open ? `${i + 1}. ${ch[l]}` : `${i + 1}. 🔒 ${tx.locked} ${CHAPTER_LEVELS[i]}`}

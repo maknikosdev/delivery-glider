@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import { GLIDERS } from "../game/gliders";
@@ -21,7 +21,8 @@ import { getPartDef, RARITY } from "../game/parts";
 import { PILOTS } from "../game/pilots";
 import { eventForWeek, EVENTS } from "../game/events";
 import { EXTRA_ACHIEVEMENTS } from "../game/extraAchievements";
-const xaName = (id, l) => { const a = EXTRA_ACHIEVEMENTS.find((x) => x.id === id); return a ? a.name[l] : id; };
+import { classOf, CLASS_NAME, CLASS_DESC, tableFor, CHOICE_LEVELS, MAX_LEVEL, MAX_PRESTIGE, affinityOf, fxText } from "../game/masteryPerks";
+const xaName = (id, l) => { if (id === "prestige") return "Prestige"; const a = EXTRA_ACHIEVEMENTS.find((x) => x.id === id); return a ? a.name[l] : id; };
 
 const BOSS_IDS = ["sky_wyvern", "giant_seagull", "mech_drone", "sky_trawler", "junker_shark", "storm_wyvern", "volcanic_goliath", "orbital_drone", "phantom_crow"];
 const BOSS_ICON = { sky_wyvern: "🐉", giant_seagull: "🕊️", mech_drone: "🤖", sky_trawler: "🎈", junker_shark: "🦈", storm_wyvern: "🌪️", volcanic_goliath: "🌋", orbital_drone: "🛰️", phantom_crow: "🐦‍⬛" };
@@ -60,23 +61,116 @@ function Bar({ value, color = COLORS.neonYellow }) {
   );
 }
 
-// Per-glider card section: mastery level/xp + active pair perks.
+// Per-glider card section: mastery level/xp, perks & penalties (levels 1-10),
+// A/B choices, environment affinity, Prestige + active pair perks.
+const M = {
+  el: { perks: "ΠΡΟΣΘΕΤΑ & ΠΟΙΝΕΣ", hide: "ΚΡΥΨΕ", cls: "Κατηγορία", home: "Γνώριμα", hostile: "Εχθρικά", choose: "Διάλεξε (μόνιμο μέχρι Prestige)", pending: "διάλεξε!", prestige: "PRESTIGE", prestigeHint: "Μηδενίζει το Mastery αυτού του glider (και τις επιλογές) αλλά δίνει μόνιμα ★: +1% πόντοι, −1% βαρύτητα και ανταμοιβή.", capstone: "Κορυφαίο", dailyNote: "Στο Daily Challenge τα perks/ποινές είναι ανενεργά." },
+  en: { perks: "PERKS & PENALTIES", hide: "HIDE", cls: "Class", home: "Home", hostile: "Hostile", choose: "Choose (permanent until Prestige)", pending: "choose!", prestige: "PRESTIGE", prestigeHint: "Resets this glider's Mastery (and choices) but grants a permanent ★: +1% credits, -1% gravity and a reward.", capstone: "Capstone", dailyNote: "Perks/penalties are off in the Daily Challenge." },
+};
+const envLabel = (id, l) => {
+  const e = ENVIRONMENTS.find((x) => x.id === id);
+  return e ? (typeof e.name === "object" ? e.name[l] || e.name.en : e.name) : id;
+};
+
+function FxLine({ fx, l }) {
+  return (
+    <Text style={s.fxLine}>
+      {fxText(fx, l).map((t, i) => (
+        <Text key={i} style={{ color: t.good ? "#9dff4d" : "#ff8a7a" }}>
+          {i ? "  ·  " : ""}
+          {t.good ? "▲ " : "▼ "}
+          {t.text}
+        </Text>
+      ))}
+    </Text>
+  );
+}
+
 export function MasteryRow({ glider }) {
-  const { save, language } = useGame();
+  const { save, language, chooseMasteryPerk, prestigeGlider } = useGame();
+  const [open, setOpen] = React.useState(false);
   if (!save) return null;
   const l = lang(language);
   const tx = L[l];
+  const mx = M[l];
   const m = gliderMastery(save, glider.id);
   const perks = getPairPerks(glider.id, save.ownedGliders || []);
   const title = (MASTERY_TITLES[l] || MASTERY_TITLES.en)[m.level] || "";
-  const next = m.level >= 5 ? 1 : (m.xp - MASTERY_XP[m.level]) / (MASTERY_XP[m.level + 1] - MASTERY_XP[m.level]);
+  const next = m.maxed ? 1 : (m.xp - MASTERY_XP[m.level]) / (MASTERY_XP[m.level + 1] - MASTERY_XP[m.level]);
+  const table = tableFor(glider.id);
+  const choices = (save.masteryChoices || {})[glider.id] || {};
+  const pendingN = CHOICE_LEVELS.filter((lv) => m.level >= lv && !choices[lv]).length;
+  const aff = affinityOf(glider.id);
+  const stars = m.prestige > 0 ? " " + "★".repeat(m.prestige) : "";
   return (
     <View style={s.section}>
       <Text style={s.label}>
-        {tx.mastery} · {title} ({tx.level} {m.level}
-        {m.level >= 5 ? ` ${tx.max}` : ""}) {m.bonus > 0 ? `· +${Math.round(m.bonus * 100)}% ${tx.bonus}` : ""}
+        {tx.mastery} · {title}
+        {stars} ({tx.level} {m.level}
+        {m.maxed ? ` ${tx.max}` : ""}) {m.bonus > 0 ? `· +${Math.round(m.bonus * 1000) / 10}% ${tx.bonus}` : ""}
       </Text>
       <Bar value={next} color="#9dff4d" />
+      <Pressable onPress={() => setOpen(!open)} style={s.toggle}>
+        <Text style={s.toggleText}>
+          {open ? "▾ " + mx.hide : "▸ " + mx.perks}
+          {pendingN > 0 ? `  ●  ${pendingN} ${mx.pending}` : ""}
+        </Text>
+      </Pressable>
+      {open ? (
+        <View>
+          <Text style={s.dim}>
+            {mx.cls}: {CLASS_NAME[classOf(glider.id)][l]} — {CLASS_DESC[classOf(glider.id)][l]}
+          </Text>
+          <Text style={s.ok}>🏠 {mx.home}: {aff.home.map((e) => envLabel(e, l)).join(", ")}</Text>
+          <Text style={[s.dim, { color: "#ff8a7a" }]}>⚠ {mx.hostile}: {aff.hostile.map((e) => envLabel(e, l)).join(", ")}</Text>
+          {Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map((lv) => {
+            const e = table[lv];
+            const reached = m.level >= lv;
+            const choice = Array.isArray(e);
+            return (
+              <View key={lv} style={[s.lvRow, reached && s.lvRowOn]}>
+                <Text style={[s.lvTitle, reached && { color: "#fff" }]}>
+                  {reached ? "✓" : "🔒"} {tx.level} {lv}
+                  {lv === MAX_LEVEL ? ` · ${mx.capstone}` : ""}
+                  {choice && reached && !choices[lv] ? `  — ${mx.choose}` : ""}
+                </Text>
+                {choice ? (
+                  e.map((fx, idx) => {
+                    const key = idx === 0 ? "A" : "B";
+                    const chosen = choices[lv] === key;
+                    const canPick = reached && !choices[lv];
+                    return (
+                      <Pressable
+                        key={key}
+                        disabled={!canPick}
+                        onPress={() => chooseMasteryPerk(glider.id, lv, key)}
+                        style={[s.opt, chosen && s.optOn, canPick && s.optPick, choices[lv] && !chosen && { opacity: 0.35 }]}
+                      >
+                        <Text style={s.optKey}>{key}</Text>
+                        <View style={{ flex: 1 }}>
+                          <FxLine fx={fx} l={l} />
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                ) : (
+                  <FxLine fx={e} l={l} />
+                )}
+              </View>
+            );
+          })}
+          <Text style={[s.dim, { marginTop: 6 }]}>{mx.dailyNote}</Text>
+          {m.level >= MAX_LEVEL && m.prestige < MAX_PRESTIGE ? (
+            <View style={s.prestigeBox}>
+              <Text style={s.prestigeTitle}>★ {mx.prestige} {m.prestige + 1}/{MAX_PRESTIGE}</Text>
+              <Text style={s.dim}>{mx.prestigeHint}</Text>
+              <Pressable onPress={() => prestigeGlider(glider.id)} style={s.prestigeBtn}>
+                <Text style={s.prestigeBtnText}>{mx.prestige}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       <Text style={[s.label, { marginTop: 8 }]}>{tx.pairs}</Text>
       {perks.length === 0 ? (
         <Text style={s.dim}>{tx.noPairs}</Text>
@@ -266,6 +360,20 @@ export function WeeklyPanel() {
 }
 
 const s = StyleSheet.create({
+  toggle: { paddingVertical: 6 },
+  toggleText: { color: COLORS.neonCyan, fontSize: 11, fontWeight: "800", letterSpacing: 0.6 },
+  fxLine: { fontSize: 11, lineHeight: 16 },
+  lvRow: { borderWidth: 1, borderColor: "#2a2142", borderRadius: 8, padding: 6, marginTop: 5, opacity: 0.7 },
+  lvRowOn: { borderColor: "#3f3366", opacity: 1 },
+  lvTitle: { color: "#8a84a3", fontSize: 10, fontWeight: "800", letterSpacing: 0.5, marginBottom: 3 },
+  opt: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderColor: "#2a2142", borderRadius: 8, padding: 5, marginTop: 3 },
+  optOn: { borderColor: "#9dff4d", backgroundColor: "rgba(157,255,77,0.08)" },
+  optPick: { borderColor: COLORS.neonCyan },
+  optKey: { color: "#fff", fontWeight: "900", width: 16, textAlign: "center" },
+  prestigeBox: { borderWidth: 1.5, borderColor: "#ffd34d", borderRadius: 10, padding: 8, marginTop: 8 },
+  prestigeTitle: { color: "#ffd34d", fontWeight: "900", fontSize: 12, marginBottom: 3 },
+  prestigeBtn: { marginTop: 6, alignSelf: "flex-start", borderWidth: 1.5, borderColor: "#ffd34d", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 6 },
+  prestigeBtnText: { color: "#ffd34d", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
   section: { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#241a3f" },
   label: { color: COLORS.textDim, fontSize: 10, fontWeight: "800", letterSpacing: 0.8, marginBottom: 6 },
   title: { color: "#fff", fontSize: 14, fontWeight: "800", marginTop: 16, marginBottom: 8, letterSpacing: 0.5 },
