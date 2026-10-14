@@ -86,6 +86,27 @@ function FxLine({ fx, l }) {
   );
 }
 
+// Strengths / weaknesses of a glider + how each background treats it.
+export function GliderTraits({ glider }) {
+  const { language } = useGame();
+  const l = lang(language);
+  const aff = affinityOf(glider.id);
+  const innate = fxText(glider.traits || {}, l);
+  const T = l === "en"
+    ? { good: "Strengths", bad: "Weaknesses", home: "Easy on", hostile: "Hard on" }
+    : { good: "Δυνατά", bad: "Αδύνατα", home: "Εύκολο σε", hostile: "Δύσκολο σε" };
+  const goods = innate.filter((x) => x.good);
+  const bads = innate.filter((x) => !x.good);
+  return (
+    <View style={{ marginTop: 4 }}>
+      {goods.length ? <Text style={[s.fxLine, { color: "#9dff4d" }]}>▲ {T.good}: {goods.map((x) => x.text).join(" · ")}</Text> : null}
+      {bads.length ? <Text style={[s.fxLine, { color: "#ff8a7a" }]}>▼ {T.bad}: {bads.map((x) => x.text).join(" · ")}</Text> : null}
+      <Text style={[s.fxLine, { color: "#9dff4d" }]}>🏠 {T.home}: {aff.home.map((e) => envLabel(e, l)).join(", ")}</Text>
+      <Text style={[s.fxLine, { color: "#ff8a7a" }]}>⚠ {T.hostile}: {aff.hostile.map((e) => envLabel(e, l)).join(", ")}</Text>
+    </View>
+  );
+}
+
 export function MasteryRow({ glider }) {
   const { save, language, chooseMasteryPerk, prestigeGlider } = useGame();
   const [open, setOpen] = React.useState(false);

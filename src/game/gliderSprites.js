@@ -1,4 +1,4 @@
-// Artwork for the 12 additional gliders (assets/sprites/glider_<id>.png).
+// Artwork for the 28 additional gliders (assets/sprites/glider_<id>.png).
 // The original 14 gliders keep using the shared idle/moving sprites, so they
 // are simply not listed here.
 export const GLIDER_SPRITES = {
@@ -14,4 +14,20 @@ export const GLIDER_SPRITES = {
   verdant: require("../../assets/sprites/glider_verdant.png"),
   magma: require("../../assets/sprites/glider_magma.png"),
   runic: require("../../assets/sprites/glider_runic.png"),
+  frost_wing: require("../../assets/sprites/glider_frost_wing.png"),
+  jungle_flyer: require("../../assets/sprites/glider_jungle_flyer.png"),
+  toxic_blades: require("../../assets/sprites/glider_toxic_blades.png"),
+  inferno: require("../../assets/sprites/glider_inferno.png"),
+  thunder_bolt: require("../../assets/sprites/glider_thunder_bolt.png"),
+  cupid: require("../../assets/sprites/glider_cupid.png"),
+  night_hunter: require("../../assets/sprites/glider_night_hunter.png"),
+  solar_flare: require("../../assets/sprites/glider_solar_flare.png"),
+  biohazard: require("../../assets/sprites/glider_biohazard.png"),
+  mecha_forge: require("../../assets/sprites/glider_mecha_forge.png"),
+  galaxy: require("../../assets/sprites/glider_galaxy.png"),
+  crystal_shard: require("../../assets/sprites/glider_crystal_shard.png"),
+  neon_beats: require("../../assets/sprites/glider_neon_beats.png"),
+  racing_gear: require("../../assets/sprites/glider_racing_gear.png"),
+  ocean_breeze: require("../../assets/sprites/glider_ocean_breeze.png"),
+  alien_tech: require("../../assets/sprites/glider_alien_tech.png"),
 };

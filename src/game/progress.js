@@ -46,9 +46,12 @@ export function gliderMastery(save, id) {
 // Mastery 1-10 perks/penalties + environment affinity + prestige (see masteryPerks.js).
 // Disabled (neutral) in the Daily Challenge so everyone plays on equal terms.
 export function masteryModsFor(save, gliderId, envId, daily = false) {
-  if (daily || !save) return NEUTRAL;
+  const g = GLIDERS.find((x) => x.id === gliderId);
+  const innate = (g && g.traits) || null; // strengths/weaknesses of the newer gliders (always on)
+  if (!save) return innate ? modsFor({ gliderId, innate }) : NEUTRAL;
+  if (daily) return innate ? modsFor({ gliderId, innate }) : NEUTRAL;
   const m = gliderMastery(save, gliderId);
-  return modsFor({ gliderId, level: m.level, prestige: m.prestige, choices: ((save.masteryChoices || {})[gliderId]) || {}, envId });
+  return modsFor({ gliderId, level: m.level, prestige: m.prestige, choices: ((save.masteryChoices || {})[gliderId]) || {}, envId, innate });
 }
 
 // Prestige: only at level 10. Resets this glider's mastery and perk choices,
@@ -87,6 +90,14 @@ export const PAIRS = [
   { id: "heist_crew", a: "vault_runner", b: "riftwalker", perk: "credit", name: { en: "Heist Crew", el: "Συμμορία" } },
   { id: "rescue_crew", a: "lifeline", b: "anti_grav_heavy", perk: "shield", name: { en: "Rescue Crew", el: "Ομάδα Διάσωσης" } },
   { id: "workshop", a: "gearhead", b: "heavy_lifter", perk: "credit", name: { en: "Workshop", el: "Συνεργείο" } },
+  { id: "fire_ice", a: "frost_wing", b: "inferno", perk: "credit", name: { en: "Fire & Ice", el: "Φωτιά & Πάγος" } },
+  { id: "storm_sprint", a: "thunder_bolt", b: "racing_gear", perk: "magnet", name: { en: "Storm Sprint", el: "Σπριντ Καταιγίδας" } },
+  { id: "eden", a: "jungle_flyer", b: "ocean_breeze", perk: "shield", name: { en: "Eden", el: "Παράδεισος" } },
+  { id: "nightlife", a: "night_hunter", b: "neon_beats", perk: "credit", name: { en: "Nightlife", el: "Νυχτερινή Ζωή" } },
+  { id: "cosmos", a: "galaxy", b: "alien_tech", perk: "magnet", name: { en: "Cosmos", el: "Κόσμος" } },
+  { id: "toxic_lab", a: "toxic_blades", b: "biohazard", perk: "shield", name: { en: "Toxic Lab", el: "Τοξικό Εργαστήριο" } },
+  { id: "sweethearts", a: "cupid", b: "solar_flare", perk: "credit", name: { en: "Sweethearts", el: "Ερωτευμένοι" } },
+  { id: "iron_crystal", a: "mecha_forge", b: "crystal_shard", perk: "shield", name: { en: "Iron & Crystal", el: "Σίδερο & Κρύσταλλο" } },
 ];
 export const PERK_TEXT = {
   shield: { en: "+1 starting shield", el: "+1 ασπίδα στην αρχή" },

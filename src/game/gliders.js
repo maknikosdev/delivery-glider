@@ -14,6 +14,7 @@
 // drone refuels during a run — see src/game/useGameLoop.js). It is exactly
 // like an arcade high-score/coin system, not an in-app purchase.
 import { NEW_GLIDERS } from "./newGliders";
+import { NEW_GLIDERS_2 } from "./newGliders2";
 
 const BASE_GLIDERS = [
   {
@@ -218,7 +219,7 @@ const BASE_GLIDERS = [
   },
 ];
 
-export const GLIDERS = [...BASE_GLIDERS, ...NEW_GLIDERS];
+export const GLIDERS = [...BASE_GLIDERS, ...NEW_GLIDERS, ...NEW_GLIDERS_2];
 
 export function gliderById(id) {
   return GLIDERS.find((g) => g.id === id);

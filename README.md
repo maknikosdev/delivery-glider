@@ -44,14 +44,15 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Gadgets** πριν το run (έως 2): Ejector Seat, Package Magnet, Fuel Canister.
 
 **Gliders & πρόοδος**
-- **26 gliders**, ξεκλειδώνονται μόνο με πόντους που μαζεύεις παίζοντας:
+- **42 gliders**, ξεκλειδώνονται μόνο με πόντους που μαζεύεις παίζοντας:
   - 14 βασικοί (Starter, Swift, Heavy Lifter, Phantom, Pulse-Wave, Hologram, Anti-Grav Heavy, Solar-Wing, Storm Chaser, Iron Courier, Nomad, Riftwalker, Storm Breaker, Titan) με skills όπως EMP Blast, Decoy Drone, Mass Reduction, Coin Magnet & Boost, Turbo Dash, Reinforced Hull, Phase Shift, Storm Immunity.
   - 12 νέοι, καθένας με δικό του artwork και μοναδική μηχανική: **Purr-cel** (Lucky Paws), **Aero Lance** (4 δέματα, πολύ ευέλικτο), **Gearhead** (Overdrive Gears), **Verdant** (Photosynthesis), **Glacier** (Cryo Field), **Bastion** (Supply Drop), **Specter** (Low Profile), **Vault Runner** (Lucrative Contracts), **Nebula** (Singularity), **Magma** (Inferno Trail), **Runic** (Chrono Rune), **Lifeline** (Revive Beacon).
+  - 16 νεότεροι (Frost Wing, Jungle Flyer, Toxic Blades, Inferno, Thunder Bolt, Cupid, Night Hunter, Solar Flare, Biohazard, Mecha Forge, Galaxy, Crystal Shard, Neon Beats, Racing Gear, Ocean Breeze, Alien Tech): ο καθένας έχει **δυνατά και αδύνατα σημεία** (βαρύτητα, ταχύτητα, μαγνήτης, βουτιά, πόντοι, ασπίδα) και 3 περιβάλλοντα όπου είναι **εύκολος** και 3 όπου είναι **δύσκολος**.
 - **Skill Upgrade Tree**: κάθε skill ανεβαίνει 0→3, και στο level 2 διαλέγεις κατεύθυνση (branch).
 - **Skin Updates I-III** για κάθε glider που έχεις: Neon Trail, Plasma Trail, Legend Aura — τρέιλ πίσω από το glider, αγοράζονται με τη σειρά με επιπλέον πόντους (25%/50%/90% της τιμής του glider, ελάχιστη βάση 1000).
 - **Πιο αργή οικονομία**: οι τιμές των gliders είναι διπλάσιες και τα κέρδη μειωμένα (παράδοση 7 πόντοι, νομίσματα 1-3 ανά chunk, near-miss 3), ώστε το ξεκλείδωμα να παίρνει χρόνο.
 - Ο **Titan** μεταφέρει 8 δέματα και μπορεί να ανέβει ακόμα και γεμάτος· ο **Heavy Lifter** είναι ελαφρύτερος από πριν.
-- **9 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 4 εικονογραφημένα: **Underwater Reef** (-10% βαρύτητα, νομίσματα-φυσαλίδες που πληρώνουν διπλά), **Storm Front** (ριπές ανέμου, +10% πόντοι, βροχή και αστραπές), **Neon Casino** (+5% πόντοι, περισσότερα εμπόδια, neon εφέ), **Ancient Ruins** (περισσότερες στατικές παγίδες, κρυμμένα σεντούκια με δώρα)). Ξεκλειδώνουν με 1/4/5/7/8/10/11/13 gliders ή νωρίτερα από trophies, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Τα 4 νέα έχουν parallax εικόνας με animated εφέ.
+- **13 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 8 εικονογραφημένα: **Galactic Orbit** (ζώνη αστεροειδών: -5% βαρύτητα, +8% πόντοι, περισσότερα εμπόδια), **Sunken Kingdom** (θησαυρός στο βυθό: νομίσματα-φυσαλίδες, σεντούκια), **Lava Canyon** (+5% ταχύτητα, +12% πόντοι, παγίδες, θερμά ρεύματα), **Sky Islands** (δυνατοί άνεμοι, αιωρούμενα σεντούκια), **Underwater Reef** (-10% βαρύτητα, νομίσματα-φυσαλίδες που πληρώνουν διπλά), **Storm Front** (ριπές ανέμου, +10% πόντοι, βροχή και αστραπές), **Neon Casino** (+5% πόντοι, περισσότερα εμπόδια, neon εφέ), **Ancient Ruins** (περισσότερες στατικές παγίδες, κρυμμένα σεντούκια με δώρα)). Ξεκλειδώνουν με 1/4/5/7/8/10/11/13/15/17/19/21 gliders ή νωρίτερα από trophies, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Τα 8 εικονογραφημένα έχουν parallax εικόνας με animated εφέ. Κάθε glider έχει δικά του γνώριμα/εχθρικά περιβάλλοντα.
 - **15 Trophies για upgrades** (Garage → ΤΡΟΠΑΙΑ): 5 για bosses, 5 για gliders/πιλότους (Mastery, προσωπικές προκλήσεις, Skin Updates), 5 για Hangar (εξαρτήματα, σετ, πλήρης εξοπλισμός). Δίνουν μικρές ανταμοιβές: εξαρτήματα, πόντους, δωρεάν Skin tier ή νωρίτερο ξεκλείδωμα background.
 - **Mastery 1–10 ανά glider**: XP από παραδόσεις και μέτρα (Αρχάριος → Κορυφαίος), +1–5% πόντους. Κάθε glider ανήκει σε κατηγορία (Βαρύ, Φρουρός, Ταχύτητα, Νομίσματα, Ταχυδακτυλουργός, Στοιχειακό) και **κάθε level δίνει κάτι και παίρνει κάτι** (βαρύτητα, ταχύτητα, μαγνήτης, βουτιά, πόντοι, ασπίδα). Στα levels 2/4/6/8 διαλέγεις **A ή B** (μόνιμα μέχρι το Prestige), το level 10 είναι capstone. Κάθε glider έχει **γνώριμα και εχθρικά περιβάλλοντα** με bonus/ποινή που μεγαλώνει με το level. **Prestige** στο level 10: reset με μόνιμο ★ (+1% πόντοι, −1% βαρύτητα, μέχρι 5) και ανταμοιβή. Στο Daily Challenge τα perks είναι ανενεργά. Garage → κάρτα glider → ΠΡΟΣΘΕΤΑ & ΠΟΙΝΕΣ.
 - **Ζευγάρια gliders** (10): αν έχεις και τα δύο gliders ενός ζευγαριού, παίρνεις passive perk (+1 ασπίδα / +3% πόντοι / +20% μαγνήτης νομισμάτων).
@@ -94,11 +95,11 @@ src/
     chunks.js                  # chunk pool, route branching, spawner
     randomizer.js              # τυχαία layouts (procedural + shuffle), seed-aware
     parcels.js                 # pick-up parcels
-    gliders.js, newGliders.js  # 14 + 12 gliders
-    gliderSkills.js            # skills των 12 νέων gliders
+    gliders.js, newGliders.js, newGliders2.js  # 14 + 12 + 16 gliders
+    gliderSkills.js            # skills των 12 νέων gliders (οι 16 νεότεροι: traits στο newGliders2.js)
     gliderSprites.js           # artwork των νέων gliders
     economy.js                 # κόστος Skin Updates
-    environments.js            # 9 περιβάλλοντα background + κανόνες + ξεκλείδωμα
+    environments.js            # 13 περιβάλλοντα background + κανόνες + ξεκλείδωμα
     extraAchievements.js       # 15 trophies για upgrades (boss / glider / hangar)
     progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements, prestige
     masteryPerks.js            # Mastery 1-10: κατηγορίες, perks/ποινές, επιλογές A/B, affinity
@@ -184,14 +185,15 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Gadgets** before a run (up to 2): Ejector Seat, Package Magnet, Fuel Canister.
 
 **Gliders & progression**
-- **26 gliders**, unlocked only with points earned by playing:
+- **42 gliders**, unlocked only with points earned by playing:
   - 14 base gliders (Starter, Swift, Heavy Lifter, Phantom, Pulse-Wave, Hologram, Anti-Grav Heavy, Solar-Wing, Storm Chaser, Iron Courier, Nomad, Riftwalker, Storm Breaker, Titan) with skills like EMP Blast, Decoy Drone, Mass Reduction, Coin Magnet & Boost, Turbo Dash, Reinforced Hull, Phase Shift, Storm Immunity.
   - 12 new gliders, each with its own artwork and a unique mechanic: **Purr-cel** (Lucky Paws), **Aero Lance** (4 packages, very agile), **Gearhead** (Overdrive Gears), **Verdant** (Photosynthesis), **Glacier** (Cryo Field), **Bastion** (Supply Drop), **Specter** (Low Profile), **Vault Runner** (Lucrative Contracts), **Nebula** (Singularity), **Magma** (Inferno Trail), **Runic** (Chrono Rune), **Lifeline** (Revive Beacon).
+  - 16 newer gliders (Frost Wing, Jungle Flyer, Toxic Blades, Inferno, Thunder Bolt, Cupid, Night Hunter, Solar Flare, Biohazard, Mecha Forge, Galaxy, Crystal Shard, Neon Beats, Racing Gear, Ocean Breeze, Alien Tech): each has **strengths and weaknesses** (gravity, speed, magnet, dive, credits, shield) and 3 backgrounds where it is **easy** and 3 where it is **hard**.
 - **Skill Upgrade Tree**: every skill levels 0→3, and at level 2 you pick a branch.
 - **Skin Updates I-III** for every glider you own: Neon Trail, Plasma Trail, Legend Aura — a trail behind the glider, bought in order for extra points (25% / 50% / 90% of the glider's price, minimum base 1000).
 - **Slower economy**: glider prices are doubled and earnings reduced (delivery 7 points, 1-3 coins per chunk, near-miss 3), so unlocking takes time.
 - **Titan** carries 8 packages and can still climb fully loaded; **Heavy Lifter** is lighter than before.
-- **9 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 4 illustrated ones: **Underwater Reef** (-10% gravity, bubble coins pay double), **Storm Front** (wind gusts, +10% points, rain and lightning), **Neon Casino** (+5% points, more obstacles, neon effects), **Ancient Ruins** (more static traps, hidden chests with gifts)). They unlock at 1/4/5/7/8/10/11/13 gliders or earlier through trophies, and each run picks one of the unlocked ones at random. The 4 new ones use image parallax with animated effects.
+- **13 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 8 illustrated ones: **Galactic Orbit** (asteroid belt: -5% gravity, +8% credits, more obstacles), **Sunken Kingdom** (treasure deep: bubble coins, chests), **Lava Canyon** (+5% speed, +12% credits, traps, heat updrafts), **Sky Islands** (strong winds, floating chests), **Underwater Reef** (-10% gravity, bubble coins pay double), **Storm Front** (wind gusts, +10% points, rain and lightning), **Neon Casino** (+5% points, more obstacles, neon effects), **Ancient Ruins** (more static traps, hidden chests with gifts)). They unlock at 1/4/5/7/8/10/11/13/15/17/19/21 gliders or earlier through trophies, and each run picks one of the unlocked ones at random. The 8 illustrated ones use image parallax with animated effects. Every glider has its own easy/hard backgrounds.
 - **15 upgrade Trophies** (Garage → TROPHIES): 5 for bosses, 5 for gliders/pilots (Mastery, personal challenges, Skin Updates), 5 for the Hangar (parts, sets, full loadout). Small rewards: parts, credits, a free Skin tier or an earlier background unlock.
 - **Hangar** (Garage → HANGAR): big glider preview with stats, 3 **part** slots (engine, wings, core) and **set bonuses** (Ember, Frost, Volt, Terra). Parts drop from bosses, orders, challenges and events (Common/Rare/Epic) and are upgraded 1→3 with points.
 - **Pilot stories**: 26 pilots with 3 chapters unlocked by Mastery (levels 1, 3, 5). At Mastery 5: a unique pilot skin and a **GOLD trail**.
@@ -234,11 +236,11 @@ src/
     chunks.js                  # chunk pool, route branching, spawner
     randomizer.js              # random layouts (procedural + shuffle), seed-aware
     parcels.js                 # pick-up parcels
-    gliders.js, newGliders.js  # 14 + 12 gliders
-    gliderSkills.js            # skills of the 12 new gliders
+    gliders.js, newGliders.js, newGliders2.js  # 14 + 12 + 16 gliders
+    gliderSkills.js            # skills of the 12 new gliders (the 16 newest: traits in newGliders2.js)
     gliderSprites.js           # artwork of the new gliders
     economy.js                 # Skin Update costs
-    environments.js            # 9 background environments + rules + unlocks
+    environments.js            # 13 background environments + rules + unlocks
     extraAchievements.js       # 15 upgrade trophies (boss / glider / hangar)
     progress.js                # mastery, pairs, weekly goals, season, achievement rewards, prestige
     masteryPerks.js            # Mastery 1-10: classes, perks/penalties, A/B choices, affinity

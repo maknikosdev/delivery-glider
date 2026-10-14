@@ -10,7 +10,7 @@ import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import ScreenBackground from "../components/ScreenBackground";
 import SkinUpdatesRow from "../components/SkinUpdatesRow";
-import { MasteryRow, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
+import { MasteryRow, GliderTraits, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
 import TrophiesPanel from "../components/TrophiesPanel";
 import HangarPanel, { LevelUpToast } from "../components/HangarPanel";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
@@ -125,6 +125,7 @@ export default function GarageScreen({ onBack }) {
                   <Text style={styles.gliderStat}>
                     {t("garage.capacity")}: {g.capacity}
                   </Text>
+                  <GliderTraits glider={g} />
                 </View>
 
                 {owned ? (

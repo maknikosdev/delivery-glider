@@ -256,11 +256,11 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             <View pointerEvents="none" style={styles.envBanner}>
               <Text style={styles.envName}>{nm}</Text>
               {rt ? <Text style={styles.envRule}>{rt}</Text> : null}
-              {!dailySeed && gliderMastery(save, gliderConfig.id).level > 0 && affinityOf(gliderConfig.id).home.includes(envId) ? (
-                <Text style={styles.envHome}>{lang === "en" ? "🏠 Home turf: pilot bonus" : "🏠 Γνώριμο έδαφος: bonus πιλότου"}</Text>
+              {!dailySeed && affinityOf(gliderConfig.id).home.includes(envId) ? (
+                <Text style={styles.envHome}>{lang === "en" ? "🏠 Easy terrain for this glider: bonus" : "🏠 Εύκολο έδαφος για αυτό το glider: bonus"}</Text>
               ) : null}
-              {!dailySeed && gliderMastery(save, gliderConfig.id).level > 0 && affinityOf(gliderConfig.id).hostile.includes(envId) ? (
-                <Text style={styles.envHostile}>{lang === "en" ? "⚠ Hostile terrain: pilot penalty" : "⚠ Εχθρικό έδαφος: ποινή πιλότου"}</Text>
+              {!dailySeed && affinityOf(gliderConfig.id).hostile.includes(envId) ? (
+                <Text style={styles.envHostile}>{lang === "en" ? "⚠ Hard terrain for this glider: penalty" : "⚠ Δύσκολο έδαφος για αυτό το glider: ποινή"}</Text>
               ) : null}
               <Text style={styles.envEvent}>
                 {weekEvent.icon} {weekEvent.name[lang]}

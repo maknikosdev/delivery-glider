@@ -19,6 +19,13 @@ export const CLASS_OF = {
   solar_wing: "coin", purrcel: "coin", vault_runner: "coin", nomad: "coin",
   phantom: "trick", specter: "trick", hologram: "trick", riftwalker: "trick",
   glacier: "elemental", magma: "elemental", verdant: "elemental", nebula: "elemental",
+  // 16 newer gliders
+  frost_wing: "elemental", jungle_flyer: "elemental", inferno: "elemental", galaxy: "elemental", ocean_breeze: "elemental",
+  toxic_blades: "trick", night_hunter: "trick", alien_tech: "trick",
+  thunder_bolt: "speed", solar_flare: "speed", racing_gear: "speed",
+  cupid: "coin", neon_beats: "coin",
+  biohazard: "guard", crystal_shard: "guard",
+  mecha_forge: "heavy",
 };
 export const classOf = (gliderId) => CLASS_OF[gliderId] || "speed";
 
@@ -118,27 +125,46 @@ export const tableFor = (gliderId) => TABLES[classOf(gliderId)];
 
 // Affinity: home / hostile environments per class (elemental gliders override).
 const CLASS_AFFINITY = {
-  heavy: { home: ["ancient_ruins", "crimson_dunes"], hostile: ["orbital_ring", "underwater_reef"] },
-  guard: { home: ["storm_front", "ancient_ruins"], hostile: ["neon_casino", "bio_jungle"] },
-  speed: { home: ["storm_front", "orbital_ring"], hostile: ["frozen_peaks", "ancient_ruins"] },
-  coin: { home: ["neon_casino", "neon_city"], hostile: ["storm_front", "crimson_dunes"] },
-  trick: { home: ["neon_city", "bio_jungle"], hostile: ["crimson_dunes", "storm_front"] },
+  heavy: { home: ["ancient_ruins", "crimson_dunes", "lava_canyon"], hostile: ["orbital_ring", "underwater_reef", "sky_islands"] },
+  guard: { home: ["storm_front", "ancient_ruins", "sunken_kingdom"], hostile: ["neon_casino", "bio_jungle", "galactic_orbit"] },
+  speed: { home: ["storm_front", "orbital_ring", "sky_islands"], hostile: ["frozen_peaks", "ancient_ruins", "sunken_kingdom"] },
+  coin: { home: ["neon_casino", "neon_city", "sunken_kingdom"], hostile: ["storm_front", "crimson_dunes", "lava_canyon"] },
+  trick: { home: ["neon_city", "bio_jungle", "galactic_orbit"], hostile: ["crimson_dunes", "storm_front", "sky_islands"] },
 };
+// Every glider with an entry here has its own 3 home / 3 hostile backgrounds.
 const GLIDER_AFFINITY = {
-  glacier: { home: ["frozen_peaks", "underwater_reef"], hostile: ["crimson_dunes", "neon_casino"] },
-  magma: { home: ["crimson_dunes", "ancient_ruins"], hostile: ["frozen_peaks", "underwater_reef"] },
-  verdant: { home: ["bio_jungle", "underwater_reef"], hostile: ["crimson_dunes", "frozen_peaks"] },
-  nebula: { home: ["orbital_ring", "neon_city"], hostile: ["bio_jungle", "ancient_ruins"] },
+  glacier: { home: ["frozen_peaks", "underwater_reef", "sky_islands"], hostile: ["crimson_dunes", "neon_casino", "lava_canyon"] },
+  magma: { home: ["crimson_dunes", "ancient_ruins", "lava_canyon"], hostile: ["frozen_peaks", "underwater_reef", "sunken_kingdom"] },
+  verdant: { home: ["bio_jungle", "underwater_reef", "sky_islands"], hostile: ["crimson_dunes", "frozen_peaks", "lava_canyon"] },
+  nebula: { home: ["orbital_ring", "neon_city", "galactic_orbit"], hostile: ["bio_jungle", "ancient_ruins", "sunken_kingdom"] },
+  frost_wing: { home: ["frozen_peaks", "sky_islands", "galactic_orbit"], hostile: ["lava_canyon", "crimson_dunes", "bio_jungle"] },
+  jungle_flyer: { home: ["bio_jungle", "sunken_kingdom", "ancient_ruins"], hostile: ["frozen_peaks", "neon_casino", "galactic_orbit"] },
+  toxic_blades: { home: ["bio_jungle", "neon_city", "crimson_dunes"], hostile: ["sky_islands", "frozen_peaks", "underwater_reef"] },
+  inferno: { home: ["lava_canyon", "crimson_dunes", "ancient_ruins"], hostile: ["frozen_peaks", "sunken_kingdom", "underwater_reef"] },
+  thunder_bolt: { home: ["storm_front", "sky_islands", "orbital_ring"], hostile: ["sunken_kingdom", "underwater_reef", "ancient_ruins"] },
+  cupid: { home: ["neon_casino", "sky_islands", "neon_city"], hostile: ["lava_canyon", "crimson_dunes", "galactic_orbit"] },
+  night_hunter: { home: ["neon_city", "galactic_orbit", "bio_jungle"], hostile: ["sky_islands", "crimson_dunes", "storm_front"] },
+  solar_flare: { home: ["crimson_dunes", "lava_canyon", "sky_islands"], hostile: ["frozen_peaks", "galactic_orbit", "sunken_kingdom"] },
+  biohazard: { home: ["bio_jungle", "lava_canyon", "ancient_ruins"], hostile: ["sky_islands", "frozen_peaks", "neon_casino"] },
+  mecha_forge: { home: ["lava_canyon", "ancient_ruins", "neon_city"], hostile: ["sunken_kingdom", "underwater_reef", "sky_islands"] },
+  galaxy: { home: ["galactic_orbit", "orbital_ring", "neon_casino"], hostile: ["lava_canyon", "sunken_kingdom", "bio_jungle"] },
+  crystal_shard: { home: ["frozen_peaks", "ancient_ruins", "galactic_orbit"], hostile: ["lava_canyon", "storm_front", "neon_casino"] },
+  neon_beats: { home: ["neon_casino", "neon_city", "galactic_orbit"], hostile: ["ancient_ruins", "frozen_peaks", "bio_jungle"] },
+  racing_gear: { home: ["neon_city", "storm_front", "lava_canyon"], hostile: ["sunken_kingdom", "bio_jungle", "frozen_peaks"] },
+  ocean_breeze: { home: ["sunken_kingdom", "underwater_reef", "sky_islands"], hostile: ["lava_canyon", "crimson_dunes", "ancient_ruins"] },
+  alien_tech: { home: ["galactic_orbit", "orbital_ring", "bio_jungle"], hostile: ["crimson_dunes", "ancient_ruins", "neon_casino"] },
 };
 export function affinityOf(gliderId) {
   return GLIDER_AFFINITY[gliderId] || CLASS_AFFINITY[classOf(gliderId)] || { home: [], hostile: [] };
 }
 
-const AFF_HOME = { credit: 0.015, grav: -0.02 }; // at level 10
-const AFF_HOSTILE = { grav: 0.03, magnet: -0.1 };
+// Ease/difficulty of a background depends on the glider. Full strength at Mastery 10,
+// half strength at Mastery 0 (so it matters from the very first run).
+const AFF_HOME = { credit: 0.02, grav: -0.03, magnet: 0.06 };
+const AFF_HOSTILE = { grav: 0.04, magnet: -0.12, dive: -0.06 };
 export function affinityFx(gliderId, envId, level) {
   const a = affinityOf(gliderId);
-  const k = (level / MAX_LEVEL) * (classOf(gliderId) === "elemental" ? 1.6 : 1);
+  const k = (0.5 + 0.5 * (level / MAX_LEVEL)) * (classOf(gliderId) === "elemental" ? 1.5 : 1);
   const base = a.home.includes(envId) ? AFF_HOME : a.hostile.includes(envId) ? AFF_HOSTILE : null;
   if (!base) return null;
   const out = {};
@@ -168,8 +194,9 @@ export function activeFx(gliderId, level, choices = {}) {
 }
 
 // Final multipliers used by the game loop. `level`/`prestige`/`choices` come from the save.
-export function modsFor({ gliderId, level = 0, prestige = 0, choices = {}, envId = null }) {
+export function modsFor({ gliderId, level = 0, prestige = 0, choices = {}, envId = null, innate = null }) {
   const acc = activeFx(gliderId, level, choices);
+  add(acc, innate);
   add(acc, affinityFx(gliderId, envId, level));
   const p = Math.min(prestige, MAX_PRESTIGE);
   acc.credit = (acc.credit || 0) + 0.01 * p;

@@ -418,6 +418,34 @@ function ImageEnvBackground({ cameraX, E }) {
       const y = H * (0.05 + ((i * 53) % 55) / 100);
       fxItems.push(<Circle key={`s${i}`} cx={x} cy={y} r={1.6 + (i % 3)} fill={i % 2 ? "#ff5ce1" : "#6fe3ff"} opacity={tw * 0.7} />);
     }
+  } else if (E.fx === "space") {
+    for (let i = 0; i < 22; i++) {
+      const tw = 0.2 + 0.8 * Math.abs(Math.sin(t * (0.8 + (i % 5) * 0.4) + i));
+      const x = ((i * 97) % W);
+      const y = H * (0.04 + ((i * 41) % 80) / 100);
+      fxItems.push(<Circle key={`st${i}`} cx={x} cy={y} r={0.8 + (i % 3) * 0.5} fill="#ffffff" opacity={tw * 0.8} />);
+    }
+    for (let i = 0; i < 3; i++) {
+      const ph = ((t * 0.35 + i * 0.37) % 1);
+      const x = W * (1.1 - ph * 1.4) + i * 30;
+      const y = H * (0.12 + i * 0.22) + ph * 40;
+      fxItems.push(<Line key={`sh${i}`} x1={x} y1={y} x2={x + 46} y2={y - 14} stroke="#bfe3ff" strokeWidth={1.4} opacity={0.5 * Math.sin(Math.PI * ph)} />);
+    }
+  } else if (E.fx === "embers") {
+    for (let i = 0; i < 22; i++) {
+      const sp = 26 + (i % 5) * 12;
+      const y = H - (((t * sp) + i * 53) % (H * 0.95)) - 6;
+      const x = ((i * 89) % W) + Math.sin(t * 1.1 + i * 1.7) * 16 - ((cameraX * 0.06) % W);
+      const xx = ((x % W) + W) % W;
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * 2.2 + i));
+      fxItems.push(<Circle key={`em${i}`} cx={xx} cy={y} r={1.4 + (i % 3) * 0.7} fill={i % 2 ? "#ffb347" : "#ff5a2e"} opacity={tw * 0.85} />);
+    }
+  } else if (E.fx === "clouds") {
+    for (let i = 0; i < 7; i++) {
+      const x = (((i * 211) - t * (14 + (i % 3) * 8) - cameraX * 0.12) % (W + 240) + (W + 240)) % (W + 240) - 120;
+      const y = H * (0.1 + ((i * 37) % 70) / 100);
+      fxItems.push(<Ellipse key={`cl${i}`} cx={x} cy={y} rx={70 + (i % 3) * 22} ry={14 + (i % 2) * 6} fill="#ffffff" opacity={0.16} />);
+    }
   } else if (E.fx === "ruins") {
     for (let i = 0; i < 16; i++) {
       const sp = 14 + (i % 5) * 6;
@@ -435,7 +463,7 @@ function ImageEnvBackground({ cameraX, E }) {
     if (ph < 350) flash = ph < 120 ? 0.28 : ph < 200 ? 0.04 : 0.2 * (1 - (ph - 200) / 150);
   }
   // Neon flicker (casino)
-  const flicker = E.fx === "casino" ? 0.05 + 0.05 * Math.abs(Math.sin(t * 3.1) * Math.sin(t * 1.3)) : 0;
+  const flicker = E.fx === "casino" ? 0.05 + 0.05 * Math.abs(Math.sin(t * 3.1) * Math.sin(t * 1.3)) : E.fx === "embers" ? 0.03 + 0.04 * Math.abs(Math.sin(t * 2.3) * Math.sin(t * 0.9)) : 0;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

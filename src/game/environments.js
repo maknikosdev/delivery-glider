@@ -1,6 +1,6 @@
 import { COLORS } from "../constants/gameConfig";
 
-// 9 διαφορετικά (5 code-drawn + 4 image-based: reef/storm/casino/ruins) περιβάλλοντα background. Καθαρά διακοσμητικά — δεν επηρεάζουν
+// 13 διαφορετικά (5 code-drawn + 8 image-based) περιβάλλοντα background. Καθαρά διακοσμητικά — δεν επηρεάζουν
 // collisions/δυσκολία. Το πρώτο (neon_city) είναι το υπάρχον look.
 //
 // Ξεκλείδωμα: κάθε περιβάλλον ανοίγει όταν ο παίκτης έχει >= unlockAt gliders.
@@ -146,6 +146,26 @@ export const ENVIRONMENTS = [
     id: "ancient_ruins", unlockAt: 13, name: "Ancient Ruins", image: require("../../assets/backgrounds/bg_ancient_ruins.jpg"), fx: "ruins",
     rule: { staticHazards: 1, secretGiftChance: 0.4, text: { en: "Cursed ruins: more static traps, hidden chests", el: "Καταραμένα ερείπια: περισσότερες παγίδες, κρυμμένα σεντούκια" } },
     bg: "#0a1a24", scrim: 0.2, accent: "#ffcf6a", fogs: [], extra: null,
+  },
+  {
+    id: "galactic_orbit", unlockAt: 15, name: "Galactic Orbit", image: require("../../assets/backgrounds/bg_galactic_orbit.jpg"), fx: "space",
+    rule: { gravityMult: 0.95, creditsMult: 1.08, extraHazards: 1, secretGiftChance: 0.2, text: { en: "Asteroid belt: -5% gravity, +8% credits, more obstacles, loot crates", el: "Ζώνη αστεροειδών: -5% βαρύτητα, +8% πόντοι, περισσότερα εμπόδια, κρυμμένα crates" } },
+    bg: "#0b0830", scrim: 0.16, accent: "#8a6bff", fogs: [], extra: null,
+  },
+  {
+    id: "sunken_kingdom", unlockAt: 17, name: "Sunken Kingdom", image: require("../../assets/backgrounds/bg_sunken_kingdom.jpg"), fx: "bubbles",
+    rule: { gravityMult: 0.93, speedMult: 0.97, bubbleCoinChance: 0.25, secretGiftChance: 0.3, text: { en: "Treasure deep: -7% gravity, -3% speed, bubble coins, sunken chests", el: "Θησαυρός στο βυθό: -7% βαρύτητα, -3% ταχύτητα, νομίσματα-φυσαλίδες, βυθισμένα σεντούκια" } },
+    bg: "#052a45", scrim: 0.18, accent: "#6fe3ff", fogs: [], extra: null,
+  },
+  {
+    id: "lava_canyon", unlockAt: 19, name: "Lava Canyon", image: require("../../assets/backgrounds/bg_lava_canyon.jpg"), fx: "embers",
+    rule: { speedMult: 1.05, creditsMult: 1.12, extraHazards: 1, staticHazards: 1, windForce: 80, text: { en: "Molten risk: +5% speed, +12% credits, more traps, heat updrafts", el: "Λιωμένος κίνδυνος: +5% ταχύτητα, +12% πόντοι, περισσότερες παγίδες, θερμά ρεύματα" } },
+    bg: "#2a0a05", scrim: 0.2, accent: "#ff7a2f", fogs: [], extra: null,
+  },
+  {
+    id: "sky_islands", unlockAt: 21, name: "Sky Islands", image: require("../../assets/backgrounds/bg_sky_islands.jpg"), fx: "clouds",
+    rule: { gravityMult: 0.97, windForce: 110, creditsMult: 1.04, secretGiftChance: 0.25, text: { en: "Open sky: -3% gravity, strong crosswinds, +4% credits, floating chests", el: "Ανοιχτός ουρανός: -3% βαρύτητα, δυνατοί άνεμοι, +4% πόντοι, αιωρούμενα σεντούκια" } },
+    bg: "#5aa0e0", scrim: 0.32, accent: "#ffffff", fogs: [], extra: null,
   },
 ];
 
