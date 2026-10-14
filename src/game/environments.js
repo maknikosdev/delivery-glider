@@ -130,42 +130,42 @@ export const ENVIRONMENTS = [
   {
     id: "underwater_reef", unlockAt: 5, name: "Underwater Reef", image: require("../../assets/backgrounds/bg_underwater_reef.jpg"), fx: "bubbles",
     rule: { gravityMult: 0.9, bubbleCoinChance: 0.2, text: { en: "Deep water: -10% gravity, bubble coins (20% pay double)", el: "Βαθιά νερά: -10% βαρύτητα, νομίσματα-φυσαλίδες (20% διπλά)" } },
-    bg: "#04304f", scrim: 0.18, accent: "#6fe3ff", fogs: [], extra: null,
+    bg: "#04304f", scrim: 0.4, accent: "#6fe3ff", fogs: [], extra: null,
   },
   {
     id: "storm_front", unlockAt: 8, name: "Storm Front", image: require("../../assets/backgrounds/bg_storm_front.jpg"), fx: "storm",
     rule: { windForce: 150, creditsMult: 1.1, text: { en: "Gale winds: turbulent air, +10% points", el: "Θύελλα: ριπές ανέμου, +10% πόντοι" } },
-    bg: "#0b1530", scrim: 0.22, accent: "#bfe3ff", fogs: [], extra: null,
+    bg: "#0b1530", scrim: 0.42, accent: "#bfe3ff", fogs: [], extra: null,
   },
   {
     id: "neon_casino", unlockAt: 11, name: "Neon Casino", image: require("../../assets/backgrounds/bg_neon_casino.jpg"), fx: "casino",
     rule: { creditsMult: 1.05, extraHazards: 1, text: { en: "High stakes: +5% credits, more obstacles", el: "Υψηλά στοιχήματα: +5% πόντοι, περισσότερα εμπόδια" } },
-    bg: "#14052e", scrim: 0.2, accent: "#ff5ce1", fogs: [], extra: null,
+    bg: "#14052e", scrim: 0.4, accent: "#ff5ce1", fogs: [], extra: null,
   },
   {
     id: "ancient_ruins", unlockAt: 13, name: "Ancient Ruins", image: require("../../assets/backgrounds/bg_ancient_ruins.jpg"), fx: "ruins",
     rule: { staticHazards: 1, secretGiftChance: 0.4, text: { en: "Cursed ruins: more static traps, hidden chests", el: "Καταραμένα ερείπια: περισσότερες παγίδες, κρυμμένα σεντούκια" } },
-    bg: "#0a1a24", scrim: 0.2, accent: "#ffcf6a", fogs: [], extra: null,
+    bg: "#0a1a24", scrim: 0.4, accent: "#ffcf6a", fogs: [], extra: null,
   },
   {
     id: "galactic_orbit", unlockAt: 15, name: "Galactic Orbit", image: require("../../assets/backgrounds/bg_galactic_orbit.jpg"), fx: "space",
     rule: { gravityMult: 0.95, creditsMult: 1.08, extraHazards: 1, secretGiftChance: 0.2, text: { en: "Asteroid belt: -5% gravity, +8% credits, more obstacles, loot crates", el: "Ζώνη αστεροειδών: -5% βαρύτητα, +8% πόντοι, περισσότερα εμπόδια, κρυμμένα crates" } },
-    bg: "#0b0830", scrim: 0.16, accent: "#8a6bff", fogs: [], extra: null,
+    bg: "#0b0830", scrim: 0.4, accent: "#8a6bff", fogs: [], extra: null,
   },
   {
     id: "sunken_kingdom", unlockAt: 17, name: "Sunken Kingdom", image: require("../../assets/backgrounds/bg_sunken_kingdom.jpg"), fx: "bubbles",
     rule: { gravityMult: 0.93, speedMult: 0.97, bubbleCoinChance: 0.25, secretGiftChance: 0.3, text: { en: "Treasure deep: -7% gravity, -3% speed, bubble coins, sunken chests", el: "Θησαυρός στο βυθό: -7% βαρύτητα, -3% ταχύτητα, νομίσματα-φυσαλίδες, βυθισμένα σεντούκια" } },
-    bg: "#052a45", scrim: 0.18, accent: "#6fe3ff", fogs: [], extra: null,
+    bg: "#052a45", scrim: 0.4, accent: "#6fe3ff", fogs: [], extra: null,
   },
   {
     id: "lava_canyon", unlockAt: 19, name: "Lava Canyon", image: require("../../assets/backgrounds/bg_lava_canyon.jpg"), fx: "embers",
     rule: { speedMult: 1.05, creditsMult: 1.12, extraHazards: 1, staticHazards: 1, windForce: 80, text: { en: "Molten risk: +5% speed, +12% credits, more traps, heat updrafts", el: "Λιωμένος κίνδυνος: +5% ταχύτητα, +12% πόντοι, περισσότερες παγίδες, θερμά ρεύματα" } },
-    bg: "#2a0a05", scrim: 0.2, accent: "#ff7a2f", fogs: [], extra: null,
+    bg: "#2a0a05", scrim: 0.4, accent: "#ff7a2f", fogs: [], extra: null,
   },
   {
     id: "sky_islands", unlockAt: 21, name: "Sky Islands", image: require("../../assets/backgrounds/bg_sky_islands.jpg"), fx: "clouds",
     rule: { gravityMult: 0.97, windForce: 110, creditsMult: 1.04, secretGiftChance: 0.25, text: { en: "Open sky: -3% gravity, strong crosswinds, +4% credits, floating chests", el: "Ανοιχτός ουρανός: -3% βαρύτητα, δυνατοί άνεμοι, +4% πόντοι, αιωρούμενα σεντούκια" } },
-    bg: "#5aa0e0", scrim: 0.32, accent: "#ffffff", fogs: [], extra: null,
+    bg: "#5aa0e0", scrim: 0.5, accent: "#ffffff", fogs: [], extra: null,
   },
 ];
 

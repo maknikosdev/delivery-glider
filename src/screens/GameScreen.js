@@ -498,6 +498,18 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           thrusting={world.thrustHeld}
         />
 
+        {getEnvironment(envId).image ? (
+          // Soft dark pool behind the glider so it stays readable on busy artwork
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width: 1, height: 1 }}>
+            {[70, 54, 40, 28].map((r) => (
+              <View
+                key={r}
+                style={{ position: "absolute", left: RIDER.screenX - r, top: world.riderY + RIDER.height / 2 + 10 - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: "rgba(2,6,22,0.17)" }}
+              />
+            ))}
+          </View>
+        ) : null}
+
         <RiderComp
           gliderId={gliderConfig.id}
           y={world.riderY}

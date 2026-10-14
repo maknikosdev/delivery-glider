@@ -43,7 +43,7 @@ import AudioManager from "../audio/AudioManager";
 import { useGame } from "../store/GameContext";
 
 // Portal Balcony tuning: random chance per delivery, spaced out, capped per run.
-export const PORTAL = { chance: 0.14, minGapMeters: 250, maxPerRun: 4, lossPct: 0.2, minLoss: 15 };
+export const PORTAL = { chance: 0.35, minGapMeters: 100, maxPerRun: 12, lossPct: 0.1, minLoss: 10 };
 
 function buildRunResult(world) {
   return {

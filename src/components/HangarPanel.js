@@ -121,8 +121,8 @@ export default function HangarPanel() {
     <View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
         {owned.map((g) => (
-          <Pressable key={g.id} onPress={() => setGid(g.id)} style={[s.pick, { borderColor: g.id === glider.id ? g.color : "#3a3355" }]}>
-            <Text style={[s.pickText, { color: g.id === glider.id ? g.color : "#8a84a3" }]}>{g.name}</Text>
+          <Pressable key={g.id} onPress={() => setGid(g.id)} style={[s.pick, { borderColor: g.color, shadowColor: g.color }, g.id === glider.id && { backgroundColor: `${g.color}38`, shadowOpacity: 1, shadowRadius: 10, elevation: 8 }]}>
+            <Text style={[s.pickText, { color: g.id === glider.id ? "#ffffff" : g.color }]}>{g.name}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -295,8 +295,8 @@ const s = StyleSheet.create({
   story: { color: "#d7d2f0", fontSize: 12, marginBottom: 5, lineHeight: 17 },
   barBg: { height: 6, borderRadius: 3, backgroundColor: "#241a3f", overflow: "hidden", marginBottom: 2 },
   barFill: { height: 6, borderRadius: 3 },
-  pick: { borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, marginRight: 8 },
-  pickText: { fontSize: 11, fontWeight: "800" },
+  pick: { borderWidth: 2, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginRight: 8, backgroundColor: "rgba(10,12,28,0.9)", shadowOpacity: 0.55, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  pickText: { fontSize: 12, fontWeight: "900", letterSpacing: 0.4 },
   slot: { borderWidth: 1.5, borderColor: "#3a3355", borderRadius: 12, padding: 10, marginBottom: 8 },
   slotHead: { color: "#fff", fontSize: 12, fontWeight: "800", marginBottom: 4 },
   partName: { fontSize: 12, fontWeight: "800", marginBottom: 2 },

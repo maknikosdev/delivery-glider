@@ -15,6 +15,8 @@ import TrophiesPanel from "../components/TrophiesPanel";
 import MissionsPanel, { MissionRun } from "../components/MissionsPanel";
 import HangarPanel, { LevelUpToast } from "../components/HangarPanel";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
+// The 14 original gliders are drawn in gameplay with this same drone sprite.
+const BASE_DRONE = require("../../assets/sprites/glider_idle.png");
 
 function skillUpgradeCost(level) {
   return Math.round(SKILL_UPGRADES.baseCost * Math.pow(SKILL_UPGRADES.costGrowth, level));
@@ -35,6 +37,8 @@ export default function GarageScreen({ onBack }) {
     weekly: language === "en" ? "WEEKLY" : "ΕΒΔΟΜΑΔΑ",
     trophies: language === "en" ? "TROPHIES" : "ΤΡΟΠΑΙΑ",
   };
+
+  const TAB_ICONS = { gliders: "🛩️", hangar: "🔧", collection: "📖", runs: "🎯", weekly: "📅", trophies: "🏆" };
 
   const unlockedSkins = save.unlockedSkins || [];
 
@@ -59,7 +63,8 @@ export default function GarageScreen({ onBack }) {
       </View>
 
       <LevelUpToast />
-      <View style={styles.tabRow}>
+      <View style={styles.tabBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
         {Object.keys(TAB_LABELS).map((k) => (
           <Pressable
             key={k}
@@ -69,9 +74,10 @@ export default function GarageScreen({ onBack }) {
             }}
             style={[styles.tabBtn, tab === k && styles.tabBtnOn]}
           >
-            <Text style={[styles.tabText, tab === k && styles.tabTextOn]}>{TAB_LABELS[k]}</Text>
+            <Text style={[styles.tabText, tab === k && styles.tabTextOn]}>{TAB_ICONS[k]} {TAB_LABELS[k]}</Text>
           </Pressable>
         ))}
+      </ScrollView>
       </View>
 
       {tab !== "gliders" ? (
@@ -112,7 +118,9 @@ export default function GarageScreen({ onBack }) {
                 {GLIDER_SPRITES[g.id] ? (
                   <Image source={GLIDER_SPRITES[g.id]} style={styles.gliderThumb} resizeMode="contain" />
                 ) : (
-                  <View style={[styles.gliderSwatch, { backgroundColor: g.color }]} />
+                  <View style={[styles.gliderIconTile, { borderColor: g.color, backgroundColor: `${g.color}26`, shadowColor: g.color }]}>
+                    <Image source={BASE_DRONE} style={styles.gliderIconImg} resizeMode="contain" />
+                  </View>
                 )}
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.gliderName}>{g.name}</Text>
@@ -245,10 +253,11 @@ export default function GarageScreen({ onBack }) {
 }
 
 const styles = StyleSheet.create({
-  tabRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
-  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: "#3a3355", alignItems: "center" },
-  tabBtnOn: { borderColor: COLORS.neonCyan, backgroundColor: "rgba(40,224,255,0.1)" },
-  tabText: { color: COLORS.textDim, fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+  tabBar: { backgroundColor: "rgba(4,6,16,0.96)", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 6, marginBottom: 14, borderWidth: 1.5, borderColor: "#28e0ff55" },
+  tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 2 },
+  tabBtn: { paddingVertical: 10, paddingHorizontal: 14, backgroundColor: "rgba(20,24,48,0.9)", borderRadius: 10, borderWidth: 2, borderColor: "#28e0ffaa", alignItems: "center", shadowColor: "#28e0ff", shadowOpacity: 0.55, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  tabBtnOn: { borderColor: "#7df3ff", backgroundColor: "rgba(40,224,255,0.30)", shadowOpacity: 1, shadowRadius: 10, elevation: 8 },
+  tabText: { flexShrink: 0, color: "#c9d2f2", fontSize: 12, fontWeight: "800", letterSpacing: 0.8 },
   tabTextOn: { color: COLORS.neonCyan },
   container: { flex: 1, backgroundColor: COLORS.bgDeep, paddingTop: 50, paddingHorizontal: 16 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
@@ -268,6 +277,8 @@ const styles = StyleSheet.create({
   gliderCardInner: { padding: 16 },
   gliderRow: { flexDirection: "row", alignItems: "center" },
   gliderSwatch: { width: 36, height: 36, borderRadius: 10 },
+  gliderIconTile: { width: 52, height: 52, borderRadius: 12, borderWidth: 2, alignItems: "center", justifyContent: "center", shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  gliderIconImg: { width: 42, height: 42 },
   gliderThumb: { width: 52, height: 52 },
   gliderName: { color: COLORS.textPrimary, fontWeight: "800", fontSize: 15 },
   skillBadge: {
