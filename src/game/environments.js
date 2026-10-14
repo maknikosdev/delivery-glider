@@ -1,10 +1,11 @@
 import { COLORS } from "../constants/gameConfig";
 
-// 5 διαφορετικά περιβάλλοντα background. Καθαρά διακοσμητικά — δεν επηρεάζουν
+// 9 διαφορετικά (5 code-drawn + 4 image-based: reef/storm/casino/ruins) περιβάλλοντα background. Καθαρά διακοσμητικά — δεν επηρεάζουν
 // collisions/δυσκολία. Το πρώτο (neon_city) είναι το υπάρχον look.
 //
 // Ξεκλείδωμα: κάθε περιβάλλον ανοίγει όταν ο παίκτης έχει >= unlockAt gliders.
 // (1 = από την αρχή, μετά ένα νέο κάθε 3 ξεκλειδώματα gliders.)
+// Reef 5 / Storm 8 / Casino 11 / Ruins 13 gliders — ή νωρίτερα μέσω των νέων achievements (extraAchievements.js).
 // Μπορούν να ξεκλειδώσουν και από achievements (save.bonusEnvs).
 // Κάθε περιβάλλον έχει μικρό `rule` (βαρύτητα / ταχύτητα / πόντοι) που εφαρμόζει το useGameLoop.
 // Σε κάθε νέο run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα.
@@ -125,6 +126,26 @@ export const ENVIRONMENTS = [
     horizon: "#4cc9ff",
     search: "#ff5ce1",
     extra: "planet",
+  },
+  {
+    id: "underwater_reef", unlockAt: 5, name: "Underwater Reef", image: require("../../assets/backgrounds/bg_underwater_reef.jpg"), fx: "bubbles",
+    rule: { gravityMult: 0.9, bubbleCoinChance: 0.2, text: { en: "Deep water: -10% gravity, bubble coins (20% pay double)", el: "Βαθιά νερά: -10% βαρύτητα, νομίσματα-φυσαλίδες (20% διπλά)" } },
+    bg: "#04304f", scrim: 0.18, accent: "#6fe3ff", fogs: [], extra: null,
+  },
+  {
+    id: "storm_front", unlockAt: 8, name: "Storm Front", image: require("../../assets/backgrounds/bg_storm_front.jpg"), fx: "storm",
+    rule: { windForce: 150, creditsMult: 1.1, text: { en: "Gale winds: turbulent air, +10% points", el: "Θύελλα: ριπές ανέμου, +10% πόντοι" } },
+    bg: "#0b1530", scrim: 0.22, accent: "#bfe3ff", fogs: [], extra: null,
+  },
+  {
+    id: "neon_casino", unlockAt: 11, name: "Neon Casino", image: require("../../assets/backgrounds/bg_neon_casino.jpg"), fx: "casino",
+    rule: { creditsMult: 1.05, extraHazards: 1, text: { en: "High stakes: +5% credits, more obstacles", el: "Υψηλά στοιχήματα: +5% πόντοι, περισσότερα εμπόδια" } },
+    bg: "#14052e", scrim: 0.2, accent: "#ff5ce1", fogs: [], extra: null,
+  },
+  {
+    id: "ancient_ruins", unlockAt: 13, name: "Ancient Ruins", image: require("../../assets/backgrounds/bg_ancient_ruins.jpg"), fx: "ruins",
+    rule: { staticHazards: 1, secretGiftChance: 0.4, text: { en: "Cursed ruins: more static traps, hidden chests", el: "Καταραμένα ερείπια: περισσότερες παγίδες, κρυμμένα σεντούκια" } },
+    bg: "#0a1a24", scrim: 0.2, accent: "#ffcf6a", fogs: [], extra: null,
   },
 ];
 

@@ -279,16 +279,22 @@ export const ACHIEVEMENT_REWARDS = {
   vip_specialist: { skinTier: true },
 };
 
-export function applyAchievementRewards(save, ids) {
+export function applyAchievementRewards(save, ids, table = ACHIEVEMENT_REWARDS) {
   const patch = {};
   const log = [];
   let credits = save.credits;
   let owned = [...(save.ownedGliders || [])];
   let bonusEnvs = [...(save.bonusEnvs || [])];
   let skinTiers = { ...(save.skinTiers || {}) };
+  const partDrops = [];
   for (const id of ids) {
-    const r = ACHIEVEMENT_REWARDS[id];
+    const r = table[id];
     if (!r) continue;
+    if (r.part) {
+      const pid = rollPartId(Math.random, r.part);
+      partDrops.push(pid);
+      log.push({ ach: id, kind: "part", value: pid });
+    }
     if (r.credits) {
       credits += r.credits;
       log.push({ ach: id, kind: "credits", value: r.credits });
@@ -325,6 +331,7 @@ export function applyAchievementRewards(save, ids) {
   patch.ownedGliders = owned;
   patch.bonusEnvs = bonusEnvs;
   patch.skinTiers = skinTiers;
+  if (partDrops.length) patch.parts = addParts(save, partDrops);
   patch.rewardLog = [...log, ...(save.rewardLog || [])].slice(0, 12);
   return { patch, log };
 }

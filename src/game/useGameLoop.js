@@ -400,7 +400,7 @@ export function useGameLoop({
   const ensureChunksAhead = useCallback((world) => {
     while (world.lastChunkEndX < world.cameraX + SCREEN.width * 3) {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
-      const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult);
+      const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult) + (envRule.extraHazards || 0);
       const yBounds = zone.tunnelMode ? { min: zone.tunnelTop + 0.04, max: zone.tunnelBottom - 0.04 } : undefined;
 
       // Route Branching: once this chunk's start position would cross the
@@ -424,6 +424,24 @@ export function useGameLoop({
       const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds, rng);
       world.chunks.push(chunk);
       world.lastChunkEndX = chunk.endX;
+
+      // Environment rules (Ancient Ruins): extra static traps + hidden chests
+      if (envRule.staticHazards && !zone.tunnelMode) {
+        for (let k = 0; k < envRule.staticHazards; k++) {
+          const relX = 200 + rng() * (CHUNK_WIDTH - 400);
+          const ry = SCREEN.height * (0.2 + rng() * 0.55);
+          chunk.obstacles.push({ type: "static_antenna", id: `obs_env_${Math.floor(rng() * 1e9)}`, worldX: chunk.startX + relX, baseY: ry, y: ry, hit: false });
+        }
+      }
+      if (envRule.secretGiftChance && Math.random() < envRule.secretGiftChance) {
+        world.bossGifts.push({
+          id: `chest_${Math.floor(Math.random() * 1e9)}`,
+          worldX: chunk.startX + CHUNK_WIDTH * (0.25 + Math.random() * 0.5),
+          y: SCREEN.height * (0.22 + Math.random() * 0.5),
+          vy: 0,
+          kind: GIFT_KINDS[Math.floor(Math.random() * GIFT_KINDS.length)],
+        });
+      }
 
       if (template === ROUTE_BRANCH_CHUNK) {
         const signX = chunk.startX + 80;
@@ -1022,6 +1040,11 @@ export function useGameLoop({
         if (hit) break;
       }
 
+      // Storm Front: turbulent gusts (zero-mean, so it only adds wobble)
+      if (envRule.windForce) {
+        g += envRule.windForce * Math.sin(now / 1100) * Math.sin(now / 2900 + 1);
+      }
+
       world.velocityY += g * dt;
       world.velocityY = Math.max(PHYSICS.maxRiseSpeed, Math.min(PHYSICS.maxFallSpeed, world.velocityY));
       world.riderY += world.velocityY * dt;
@@ -1516,6 +1539,11 @@ export function useGameLoop({
             const feverActive = now < world.feverUntil;
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
             world.credits += COIN.value * (feverActive ? FEVER.coinValueMult : 1) * weatherMult;
+            if (envRule.bubbleCoinChance && Math.random() < envRule.bubbleCoinChance) {
+              world.credits += COIN.value; // bubble coin pays double
+              world.bubbleCoins = (world.bubbleCoins || 0) + 1;
+              addFloatingText(world, "Bubble x2!", riderWorldX, world.riderY - 40, "score");
+            }
             world.coinStreak += 1;
             world.coinsThisRun += 1;
             AudioManager.play("pickup");

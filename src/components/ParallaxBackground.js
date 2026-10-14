@@ -1,5 +1,5 @@
 import React, { useMemo, memo } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Image } from "react-native";
 import Svg, { Rect, Line, Circle, Ellipse, Polygon, G } from "react-native-svg";
 import { SCREEN } from "../constants/gameConfig";
 import { getEnvironment } from "../game/environments";
@@ -295,7 +295,7 @@ const HoloAdsLayer = memo(function HoloAdsLayer({ holoAds, offset, bg }) {
 const ROUND_STEP = 3;
 const round = (v) => Math.round(v / ROUND_STEP) * ROUND_STEP;
 
-export default function ParallaxBackground({ cameraX, env = "neon_city" }) {
+function CodeBackground({ cameraX, env = "neon_city" }) {
   const now = Date.now();
   const E = getEnvironment(env);
 
@@ -378,6 +378,99 @@ export default function ParallaxBackground({ cameraX, env = "neon_city" }) {
       <View style={[styles.horizonGlow, { backgroundColor: E.horizon }]} />
     </View>
   );
+}
+
+
+// ---- Image-based environments (Reef / Storm / Casino / Ruins) ------------
+// Η εικόνα επαναλαμβάνεται οριζόντια (κάθε δεύτερο αντίγραφο καθρεφτισμένο →
+// χωρίς ραφή), με parallax και animated εφέ από πάνω (φυσαλίδες, βροχή +
+// αστραπές, neon flicker, πυγολαμπίδες). Μόνο διακοσμητικό.
+const IMG_ASPECT = 766 / 454;
+
+function ImageEnvBackground({ cameraX, E }) {
+  const now = Date.now();
+  const H = SCREEN.height;
+  const W = SCREEN.width;
+  const imgW = Math.max(W, H * IMG_ASPECT);
+  const period = imgW * 2;
+  const off = -((cameraX * 0.09) % period);
+  const t = now / 1000;
+  const fxItems = [];
+  if (E.fx === "bubbles") {
+    for (let i = 0; i < 14; i++) {
+      const sp = 22 + (i % 5) * 9;
+      const y = H - (((t * sp) + i * 97) % (H + 40)) + 20;
+      const x = ((i * 137) % W) + Math.sin(t * 1.3 + i) * 14 - ((cameraX * 0.03) % W);
+      const xx = ((x % W) + W) % W;
+      fxItems.push(<Circle key={`b${i}`} cx={xx} cy={y} r={3 + (i % 4) * 2} fill="none" stroke="#bff3ff" strokeWidth={1.2} opacity={0.5} />);
+    }
+  } else if (E.fx === "storm") {
+    for (let i = 0; i < 26; i++) {
+      const sp = 520 + (i % 4) * 90;
+      const y = (((t * sp) + i * 61) % (H + 60)) - 30;
+      const x = (((i * 83) - t * 380 - cameraX * 0.2) % (W + 80) + (W + 80)) % (W + 80) - 20;
+      fxItems.push(<Line key={`r${i}`} x1={x} y1={y} x2={x - 18} y2={y + 34} stroke="#cfe6ff" strokeWidth={1.2} opacity={0.35} />);
+    }
+  } else if (E.fx === "casino") {
+    for (let i = 0; i < 12; i++) {
+      const tw = 0.25 + 0.75 * Math.abs(Math.sin(t * (1.2 + (i % 4) * 0.5) + i));
+      const x = ((i * 151) % W);
+      const y = H * (0.05 + ((i * 53) % 55) / 100);
+      fxItems.push(<Circle key={`s${i}`} cx={x} cy={y} r={1.6 + (i % 3)} fill={i % 2 ? "#ff5ce1" : "#6fe3ff"} opacity={tw * 0.7} />);
+    }
+  } else if (E.fx === "ruins") {
+    for (let i = 0; i < 16; i++) {
+      const sp = 14 + (i % 5) * 6;
+      const y = H - (((t * sp) + i * 71) % (H * 0.8)) - 10;
+      const x = ((i * 119) % W) + Math.sin(t * 0.9 + i * 2) * 20 - ((cameraX * 0.05) % W);
+      const xx = ((x % W) + W) % W;
+      const tw = 0.3 + 0.7 * Math.abs(Math.sin(t * 1.7 + i));
+      fxItems.push(<Circle key={`f${i}`} cx={xx} cy={y} r={1.8 + (i % 3) * 0.6} fill="#ffd77a" opacity={tw * 0.75} />);
+    }
+  }
+  // Lightning flash (storm): ~every 9s, 350ms
+  let flash = 0;
+  if (E.fx === "storm") {
+    const ph = now % 9000;
+    if (ph < 350) flash = ph < 120 ? 0.28 : ph < 200 ? 0.04 : 0.2 * (1 - (ph - 200) / 150);
+  }
+  // Neon flicker (casino)
+  const flicker = E.fx === "casino" ? 0.05 + 0.05 * Math.abs(Math.sin(t * 3.1) * Math.sin(t * 1.3)) : 0;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: E.bg }]} />
+      {[0, 1, 2].map((k) => {
+        const x = off + k * imgW;
+        const mirrored = k % 2 === 1;
+        return (
+          <Image
+            key={`bgimg-${k}`}
+            source={E.image}
+            resizeMode="cover"
+            fadeDuration={0}
+            style={{ position: "absolute", top: 0, left: x, width: imgW + 1, height: H, transform: [{ scaleX: mirrored ? -1 : 1 }] }}
+          />
+        );
+      })}
+      {/* ο 4ος/5ος κύκλος για να μη φαίνεται κενό όταν το offset πλησιάζει το -period */}
+      {[3].map((k) => (
+        <Image key="bgimg-3" source={E.image} resizeMode="cover" fadeDuration={0}
+          style={{ position: "absolute", top: 0, left: off + k * imgW, width: imgW + 1, height: H, transform: [{ scaleX: -1 }] }} />
+      ))}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: E.scrim ?? 0.2 }]} />
+      {flicker > 0 ? <View style={[StyleSheet.absoluteFill, { backgroundColor: E.accent, opacity: flicker }]} /> : null}
+      <Svg width={W} height={H} style={StyleSheet.absoluteFill}>{fxItems}</Svg>
+      {flash > 0 ? <View style={[StyleSheet.absoluteFill, { backgroundColor: "#dff0ff", opacity: flash }]} /> : null}
+      <View style={[styles.horizonGlow, { backgroundColor: E.accent }]} />
+    </View>
+  );
+}
+
+export default function ParallaxBackground({ cameraX, env = "neon_city" }) {
+  const E0 = getEnvironment(env);
+  if (E0.image) return <ImageEnvBackground cameraX={cameraX} E={E0} />;
+  return <CodeBackground cameraX={cameraX} env={env} />;
 }
 
 const styles = StyleSheet.create({

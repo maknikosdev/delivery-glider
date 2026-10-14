@@ -3,8 +3,24 @@ import { loadSave, saveSave, recordRunResult, updateDailyContractsForRun } from 
 import AudioManager from "../audio/AudioManager";
 import { getTranslator } from "../i18n/i18n";
 import { applyRunProgress, applyAchievementRewards } from "../game/progress";
+import { evaluateExtraAchievements, EXTRA_REWARDS } from "../game/extraAchievements";
 import { partsOf, upgradeCost, SLOTS } from "../game/parts";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
+
+// Evaluates the extra achievements against a save (no run result) and applies
+// rewards. Used after Hangar actions; finishRun does the same inline.
+async function grantExtraAchievements(base, result) {
+  try {
+    const newIds = evaluateExtraAchievements(base, result);
+    if (!newIds.length) return base;
+    let next = await saveSave({ extraAch: [...(base.extraAch || []), ...newIds], extraAchNew: [...(base.extraAchNew || []), ...newIds] });
+    const { patch } = applyAchievementRewards(next, newIds, EXTRA_REWARDS);
+    if (patch) next = await saveSave(patch);
+    return next;
+  } catch (e) {
+    return base;
+  }
+}
 
 const GameContext = createContext(null);
 
@@ -70,6 +86,8 @@ export function GameProvider({ children }) {
     } catch (e) {
       // progression is a bonus layer - never block the Game Over flow
     }
+    // 15 extra achievements tied to glider upgrades (game/extraAchievements.js)
+    finalSave = await grantExtraAchievements(finalSave, result);
     setSave(finalSave);
     setLastRun(result);
     return newMilestones;
@@ -98,10 +116,11 @@ export function GameProvider({ children }) {
     if (!current.ownedGliders.includes(gliderId)) return false;
     const have = (current.skinTiers || {})[gliderId] || 0;
     if (tier !== have + 1 || tier > 3 || current.credits < cost) return false;
-    const updated = await saveSave({
+    let updated = await saveSave({
       credits: current.credits - cost,
       skinTiers: { ...(current.skinTiers || {}), [gliderId]: tier },
     });
+    updated = await grantExtraAchievements(updated, null);
     setSave(updated);
     return true;
   }, []);
@@ -123,7 +142,8 @@ export function GameProvider({ children }) {
     equipped[gliderId] = { ...(equipped[gliderId] || {}) };
     if (uid == null) delete equipped[gliderId][slot];
     else equipped[gliderId][slot] = uid;
-    const updated = await saveSave({ parts: { ...parts, equipped } });
+    let updated = await saveSave({ parts: { ...parts, equipped } });
+    updated = await grantExtraAchievements(updated, null);
     setSave(updated);
     return true;
   }, []);
@@ -136,7 +156,8 @@ export function GameProvider({ children }) {
     const cost = upgradeCost(item);
     if (cost == null || current.credits < cost) return false;
     const items = parts.items.map((i) => (i.uid === uid ? { ...i, level: i.level + 1 } : i));
-    const updated = await saveSave({ credits: current.credits - cost, parts: { ...parts, items } });
+    let updated = await saveSave({ credits: current.credits - cost, parts: { ...parts, items } });
+    updated = await grantExtraAchievements(updated, null);
     setSave(updated);
     return true;
   }, []);
@@ -154,6 +175,13 @@ export function GameProvider({ children }) {
   // (drives the level-up animation in the Garage).
   const ackMastery = useCallback(async (levels) => {
     const updated = await saveSave({ masteryShown: levels });
+    setSave(updated);
+  }, []);
+
+  const ackExtraAch = useCallback(async () => {
+    const current = await loadSave();
+    if (!(current.extraAchNew || []).length) return;
+    const updated = await saveSave({ extraAchNew: [] });
     setSave(updated);
   }, []);
 
@@ -317,6 +345,7 @@ export function GameProvider({ children }) {
     buyGlider,
     buySkinTier,
     equipPart,
+    ackExtraAch,
     upgradePart,
     ackParts,
     ackMastery,

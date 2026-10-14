@@ -20,6 +20,8 @@ import {
 import { getPartDef, RARITY } from "../game/parts";
 import { PILOTS } from "../game/pilots";
 import { eventForWeek, EVENTS } from "../game/events";
+import { EXTRA_ACHIEVEMENTS } from "../game/extraAchievements";
+const xaName = (id, l) => { const a = EXTRA_ACHIEVEMENTS.find((x) => x.id === id); return a ? a.name[l] : id; };
 
 const BOSS_IDS = ["sky_wyvern", "giant_seagull", "mech_drone", "sky_trawler", "junker_shark", "storm_wyvern", "volcanic_goliath", "orbital_drone", "phantom_crow"];
 const BOSS_ICON = { sky_wyvern: "🐉", giant_seagull: "🕊️", mech_drone: "🤖", sky_trawler: "🎈", junker_shark: "🦈", storm_wyvern: "🌪️", volcanic_goliath: "🌋", orbital_drone: "🛰️", phantom_crow: "🐦‍⬛" };
@@ -186,8 +188,8 @@ export function CollectionPanel() {
           {log.map((r, i) => (
             <Text key={i} style={s.dim}>
               🏆 {r.kind === "part"
-                ? `${{ boss: "Boss", order: l === "en" ? "Order" : "Παραγγελία", challenge: l === "en" ? "Challenge" : "Πρόκληση" }[r.ach] || (EVENTS.find((e) => e.id === r.ach) || {}).name?.[l] || r.ach} → ${(getPartDef(r.value) || { name: { en: r.value, el: r.value } }).name[l]}`
-                : `${r.ach} → ${tx.rg[r.kind] || r.kind}: ${r.kind === "glider" || r.kind === "skinTier" ? gname(r.value) : r.kind === "env" ? (ENVIRONMENTS.find((e) => e.id === r.value) ? envName(ENVIRONMENTS.find((e) => e.id === r.value)) : r.value) : r.value}`}
+                ? `${{ boss: "Boss", order: l === "en" ? "Order" : "Παραγγελία", challenge: l === "en" ? "Challenge" : "Πρόκληση" }[r.ach] || (EVENTS.find((e) => e.id === r.ach) || {}).name?.[l] || xaName(r.ach, l)} → ${(getPartDef(r.value) || { name: { en: r.value, el: r.value } }).name[l]}`
+                : `${xaName(r.ach, l)} → ${tx.rg[r.kind] || r.kind}: ${r.kind === "glider" || r.kind === "skinTier" ? gname(r.value) : r.kind === "env" ? (ENVIRONMENTS.find((e) => e.id === r.value) ? envName(ENVIRONMENTS.find((e) => e.id === r.value)) : r.value) : r.value}`}
             </Text>
           ))}
         </>

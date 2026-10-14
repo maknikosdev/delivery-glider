@@ -51,7 +51,8 @@ Neo-Athens Grid, 2088 — παραδίδεις δέματα πετώντας α�
 - **Skin Updates I-III** για κάθε glider που έχεις: Neon Trail, Plasma Trail, Legend Aura — τρέιλ πίσω από το glider, αγοράζονται με τη σειρά με επιπλέον πόντους (25%/50%/90% της τιμής του glider, ελάχιστη βάση 1000).
 - **Πιο αργή οικονομία**: οι τιμές των gliders είναι διπλάσιες και τα κέρδη μειωμένα (παράδοση 7 πόντοι, νομίσματα 1-3 ανά chunk, near-miss 3), ώστε το ξεκλείδωμα να παίρνει χρόνο.
 - Ο **Titan** μεταφέρει 8 δέματα και μπορεί να ανέβει ακόμα και γεμάτος· ο **Heavy Lifter** είναι ελαφρύτερος από πριν.
-- **5 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): ένα νέο ξεκλειδώνει κάθε 3 gliders που αποκτάς, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Έχουν και μικρό κανόνα gameplay (βλ. παραπάνω).
+- **9 περιβάλλοντα background** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 4 εικονογραφημένα: **Underwater Reef** (-10% βαρύτητα, νομίσματα-φυσαλίδες που πληρώνουν διπλά), **Storm Front** (ριπές ανέμου, +10% πόντοι, βροχή και αστραπές), **Neon Casino** (+5% πόντοι, περισσότερα εμπόδια, neon εφέ), **Ancient Ruins** (περισσότερες στατικές παγίδες, κρυμμένα σεντούκια με δώρα)). Ξεκλειδώνουν με 1/4/5/7/8/10/11/13 gliders ή νωρίτερα από trophies, και σε κάθε run επιλέγεται τυχαία ένα από τα ξεκλειδωμένα. Τα 4 νέα έχουν parallax εικόνας με animated εφέ.
+- **15 Trophies για upgrades** (Garage → ΤΡΟΠΑΙΑ): 5 για bosses, 5 για gliders/πιλότους (Mastery, προσωπικές προκλήσεις, Skin Updates), 5 για Hangar (εξαρτήματα, σετ, πλήρης εξοπλισμός). Δίνουν μικρές ανταμοιβές: εξαρτήματα, πόντους, δωρεάν Skin tier ή νωρίτερο ξεκλείδωμα background.
 - **Mastery ανά glider**: XP από παραδόσεις και μέτρα, 5 επίπεδα (Αρχάριος → Θρύλος) και +1–3% πόντους.
 - **Ζευγάρια gliders** (10): αν έχεις και τα δύο gliders ενός ζευγαριού, παίρνεις passive perk (+1 ασπίδα / +3% πόντοι / +20% μαγνήτης νομισμάτων).
 - **Achievements που ξεκλειδώνουν περιεχόμενο**: πόντοι, νέα περιβάλλοντα (Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring), το glider Aero Lance και skin tiers.
@@ -97,7 +98,8 @@ src/
     gliderSkills.js            # skills των 12 νέων gliders
     gliderSprites.js           # artwork των νέων gliders
     economy.js                 # κόστος Skin Updates
-    environments.js            # 5 περιβάλλοντα background + κανόνες + ξεκλείδωμα
+    environments.js            # 9 περιβάλλοντα background + κανόνες + ξεκλείδωμα
+    extraAchievements.js       # 15 trophies για upgrades (boss / glider / hangar)
     progress.js                # mastery, ζευγάρια, εβδομαδιαίοι στόχοι, σεζόν, ανταμοιβές achievements
     parts.js, pilots.js        # εξαρτήματα/σετ · πιλότοι, προκλήσεις, skins
     newBosses.js               # 6 νέοι bosses, τυχαίο πρόγραμμα εμφάνισης
@@ -107,7 +109,7 @@ src/
   audio/AudioManager.js
   components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, HangarPanel, NewBossSprites, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
-assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
+assets/                        # icon, splash, sprites (gliders, bosses, UI), backgrounds, audio
 tools/gen_sfx.py
 android/                       # native project (expo prebuild)
 ```
@@ -188,7 +190,8 @@ Neo-Athens Grid, 2088 — deliver packages while gliding between balconies, flyi
 - **Skin Updates I-III** for every glider you own: Neon Trail, Plasma Trail, Legend Aura — a trail behind the glider, bought in order for extra points (25% / 50% / 90% of the glider's price, minimum base 1000).
 - **Slower economy**: glider prices are doubled and earnings reduced (delivery 7 points, 1-3 coins per chunk, near-miss 3), so unlocking takes time.
 - **Titan** carries 8 packages and can still climb fully loaded; **Heavy Lifter** is lighter than before.
-- **5 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring): a new one unlocks every 3 gliders you own, and each run picks one of the unlocked ones at random. They also carry a small gameplay rule (see above).
+- **9 background environments** (Neon City, Crimson Dunes, Frozen Peaks, Bio Jungle, Orbital Ring + 4 illustrated ones: **Underwater Reef** (-10% gravity, bubble coins pay double), **Storm Front** (wind gusts, +10% points, rain and lightning), **Neon Casino** (+5% points, more obstacles, neon effects), **Ancient Ruins** (more static traps, hidden chests with gifts)). They unlock at 1/4/5/7/8/10/11/13 gliders or earlier through trophies, and each run picks one of the unlocked ones at random. The 4 new ones use image parallax with animated effects.
+- **15 upgrade Trophies** (Garage → TROPHIES): 5 for bosses, 5 for gliders/pilots (Mastery, personal challenges, Skin Updates), 5 for the Hangar (parts, sets, full loadout). Small rewards: parts, credits, a free Skin tier or an earlier background unlock.
 - **Hangar** (Garage → HANGAR): big glider preview with stats, 3 **part** slots (engine, wings, core) and **set bonuses** (Ember, Frost, Volt, Terra). Parts drop from bosses, orders, challenges and events (Common/Rare/Epic) and are upgraded 1→3 with points.
 - **Pilot stories**: 26 pilots with 3 chapters unlocked by Mastery (levels 1, 3, 5). At Mastery 5: a unique pilot skin and a **GOLD trail**.
 - **Personal challenge per glider**: complete it flying that glider for a badge + a rare part.
@@ -234,7 +237,8 @@ src/
     gliderSkills.js            # skills of the 12 new gliders
     gliderSprites.js           # artwork of the new gliders
     economy.js                 # Skin Update costs
-    environments.js            # 5 background environments + rules + unlocks
+    environments.js            # 9 background environments + rules + unlocks
+    extraAchievements.js       # 15 upgrade trophies (boss / glider / hangar)
     progress.js                # mastery, pairs, weekly goals, season, achievement rewards
     parts.js, pilots.js        # parts/sets · pilots, challenges, skins
     newBosses.js               # 6 new bosses, random spawn schedule
@@ -244,7 +248,7 @@ src/
   audio/AudioManager.js
   components/                  # sprites, HUD, ParallaxBackground, GliderTrail, SkinUpdatesRow, GaragePanels, HangarPanel, NewBossSprites, ParcelSprite, ...
   screens/                     # Menu, Game, GameOver, Garage, Loadout, Stats, Achievements, Contracts, FieldGuide, ...
-assets/                        # icon, splash, sprites (gliders, bosses, UI), audio
+assets/                        # icon, splash, sprites (gliders, bosses, UI), backgrounds, audio
 tools/gen_sfx.py
 android/                       # native project (expo prebuild)
 ```
