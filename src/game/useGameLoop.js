@@ -42,6 +42,9 @@ import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
 import { useGame } from "../store/GameContext";
 
+// Portal Balcony tuning: random chance per delivery, spaced out, capped per run.
+export const PORTAL = { chance: 0.14, minGapMeters: 250, maxPerRun: 4, lossPct: 0.2, minLoss: 15 };
+
 function buildRunResult(world) {
   return {
     meters: world.score,
@@ -67,6 +70,8 @@ function buildRunResult(world) {
     missionId: world.missionMeta ? world.missionMeta.id : null,
     gliderId: world.gliderId || null,
     courseCleared: !!world.courseCleared,
+    envsVisited: world.envsVisited || [],
+    portalsUsed: world.portalsUsed || 0,
   };
 }
 
@@ -224,6 +229,8 @@ export function useGameLoop({
   dailySeed = null,
   envId = null,
   mission = null,
+  portalEnvIds = null,
+  onEnvSwitch = null,
   onGameOver,
 }) {
   // Mutators: an optional, player-picked run modifier (see LoadoutScreen.js
@@ -234,6 +241,11 @@ export function useGameLoop({
   const isPassenger = !!(mutator && mutator.passengerMode);
   // Environment rule (gravity / speed / credits tweak of the background)
   const envRule = (envId && getEnvironment(envId).rule) || {};
+  // Callbacks read the live rule through this ref so a mid-run Portal switch applies at once.
+  const envRuleRef = useRef(envRule);
+  envRuleRef.current = envRule;
+  const envIdRef = useRef(envId);
+  envIdRef.current = envId;
 
   // Daily Challenge: when a seed is provided, every random roll that
   // shapes the track (chunk choice, obstacle/coin/powerup placement,
@@ -412,7 +424,7 @@ export function useGameLoop({
   const ensureChunksAhead = useCallback((world) => {
     while (world.lastChunkEndX < world.cameraX + SCREEN.width * 3) {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
-      const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult) + (envRule.extraHazards || 0);
+      const extra = Math.round((zone.extraHazards + (world.wantedLevel >= 3 ? 2 : 0)) * softHazardMult) + (envRuleRef.current.extraHazards || 0);
       const yBounds = zone.tunnelMode ? { min: zone.tunnelTop + 0.04, max: zone.tunnelBottom - 0.04 } : undefined;
 
       // Route Branching: once this chunk's start position would cross the
@@ -438,8 +450,8 @@ export function useGameLoop({
       world.lastChunkEndX = chunk.endX;
 
       // Environment rules (Ancient Ruins): extra static traps + hidden chests
-      if (envRule.staticHazards && !zone.tunnelMode) {
-        for (let k = 0; k < envRule.staticHazards; k++) {
+      if (envRuleRef.current.staticHazards && !zone.tunnelMode) {
+        for (let k = 0; k < envRuleRef.current.staticHazards; k++) {
           const relX = 200 + rng() * (CHUNK_WIDTH - 400);
           const ry = SCREEN.height * (0.2 + rng() * 0.55);
           chunk.obstacles.push({ type: "static_antenna", id: `obs_env_${Math.floor(rng() * 1e9)}`, worldX: chunk.startX + relX, baseY: ry, y: ry, hit: false });
@@ -455,7 +467,7 @@ export function useGameLoop({
         if (Math.random() < (mission.heart || 0)) addOrb("nano_repair");
         if (Math.random() < (mission.boost || 0)) addOrb("overclock");
       }
-      if (envRule.secretGiftChance && Math.random() < envRule.secretGiftChance) {
+      if (envRuleRef.current.secretGiftChance && Math.random() < envRuleRef.current.secretGiftChance) {
         world.bossGifts.push({
           id: `chest_${Math.floor(Math.random() * 1e9)}`,
           worldX: chunk.startX + CHUNK_WIDTH * (0.25 + Math.random() * 0.5),
@@ -533,6 +545,9 @@ export function useGameLoop({
     w.nextBossAtMeters = firstBossMeters(rng);
     w.missionMeta = mission ? { mode: mission.mode, id: mission.id } : null;
     w.gliderId = gliderConfig.id;
+    w.envsVisited = envId ? [envId] : [];
+    w.portalsUsed = 0;
+    w.portalLastMeters = 0;
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
     w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield + mm.shield;
@@ -765,12 +780,34 @@ export function useGameLoop({
             AudioManager.play("deliver");
             world.deliveryPulseAt = now; // Juice: brief camera punch-in, read by GameScreen.js
             delivered = true;
+
+            // 🌀 Portal Balcony: on a random delivery the courier is whisked to another
+            // background mid-run, dropping part of this run's credits on the way.
+            if (
+              !mission && !dailySeed && onEnvSwitch && portalEnvIds && portalEnvIds.length > 1 &&
+              world.status === "playing" && (world.portalsUsed || 0) < PORTAL.maxPerRun &&
+              world.score - (world.portalLastMeters || 0) >= PORTAL.minGapMeters &&
+              Math.random() < PORTAL.chance
+            ) {
+              const pool = portalEnvIds.filter((e) => e !== envIdRef.current);
+              if (pool.length) {
+                const next = pool[Math.floor(Math.random() * pool.length)];
+                const lost = Math.min(world.credits, Math.max(PORTAL.minLoss, Math.round(world.credits * PORTAL.lossPct)));
+                world.credits -= lost;
+                world.portalsUsed = (world.portalsUsed || 0) + 1;
+                world.portalLastMeters = world.score;
+                world.portalFlashAt = now;
+                if (!world.envsVisited.includes(next)) world.envsVisited.push(next);
+                addFloatingText(world, lost > 0 ? `🌀 PORTAL  -${lost}` : "🌀 PORTAL", b.worldX, b.y - 70, "banner");
+                onEnvSwitch(next, lost);
+              }
+            }
           }
         }
       }
       return delivered;
     },
-    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult, mutatorCreditsMult, isPassenger]
+    [addFloatingText, boostMult, deliveryTolerance, effectiveWeatherCreditMult, mutatorCreditsMult, isPassenger, mission, dailySeed, onEnvSwitch, portalEnvIds]
   );
 
   const applyDive = useCallback((world) => {
@@ -1072,8 +1109,8 @@ export function useGameLoop({
       }
 
       // Storm Front: turbulent gusts (zero-mean, so it only adds wobble)
-      if (envRule.windForce) {
-        g += envRule.windForce * Math.sin(now / 1100) * Math.sin(now / 2900 + 1);
+      if (envRuleRef.current.windForce) {
+        g += envRuleRef.current.windForce * Math.sin(now / 1100) * Math.sin(now / 2900 + 1);
       }
 
       world.velocityY += g * dt;
@@ -1570,7 +1607,7 @@ export function useGameLoop({
             const feverActive = now < world.feverUntil;
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
             world.credits += COIN.value * (feverActive ? FEVER.coinValueMult : 1) * weatherMult;
-            if (envRule.bubbleCoinChance && Math.random() < envRule.bubbleCoinChance) {
+            if (envRuleRef.current.bubbleCoinChance && Math.random() < envRuleRef.current.bubbleCoinChance) {
               world.credits += COIN.value; // bubble coin pays double
               world.bubbleCoins = (world.bubbleCoins || 0) + 1;
               addFloatingText(world, "Bubble x2!", riderWorldX, world.riderY - 40, "score");

@@ -8,7 +8,7 @@ import ParcelSprite from "../components/ParcelSprite";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 import GliderTrail from "../components/GliderTrail";
 import { useGame } from "../store/GameContext";
-import { pickEnvironmentId, getEnvironment } from "../game/environments";
+import { pickEnvironmentId, getEnvironment, unlockedEnvironments } from "../game/environments";
 import { runCreditBonus, gliderMastery, weekKey } from "../game/progress";
 import { eventForWeek } from "../game/events";
 import { affinityOf } from "../game/masteryPerks";
@@ -41,10 +41,23 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   const { save, language } = useGame();
   // Random background for this run, from the environments unlocked so far
   // (one more every 3 gliders owned + achievement-unlocked ones).
-  const [envId] = useState(() =>
+  const [envId, setEnvId] = useState(() =>
     (mission && mission.envId) || pickEnvironmentId(((save && save.ownedGliders) || []).length, (save && save.bonusEnvs) || [])
   );
   const [bannerVisible, setBannerVisible] = useState(true);
+  const bannerTimer = useRef(null);
+  // Portal Balcony: environments the run may jump to (all unlocked ones)
+  const portalEnvIds = useMemo(
+    () => unlockedEnvironments(Math.max(1, ((save && save.ownedGliders) || []).length), (save && save.bonusEnvs) || []).map((e) => e.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const onEnvSwitch = useCallback((next) => {
+    setEnvId(next);
+    setBannerVisible(true);
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    bannerTimer.current = setTimeout(() => setBannerVisible(false), 3200);
+  }, []);
   React.useEffect(() => {
     const id = setTimeout(() => setBannerVisible(false), 3200);
     return () => clearTimeout(id);
@@ -114,6 +127,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     dailySeed,
     envId,
     mission,
+    portalEnvIds,
+    onEnvSwitch,
     onGameOver: handleGameOver,
   });
 
@@ -592,6 +607,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         </>
       )}
 
+      {world.portalFlashAt && Date.now() - world.portalFlashAt < 700 ? (
+        <View pointerEvents="none" style={[styles.portalFlash, { opacity: 0.75 * (1 - (Date.now() - world.portalFlashAt) / 700) }]} />
+      ) : null}
+
       <WantedStars level={world.wantedLevel} />
 
       <WeatherBanner
@@ -673,6 +692,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   orderBadgeOn: { borderColor: "#7dffb0", backgroundColor: "rgba(20,90,50,0.7)" },
+  portalFlash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#b46bff" },
   envBanner: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center" },
   rivalWrap: { position: "absolute", top: 120, right: 14, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   rivalText: { fontSize: 12, fontWeight: "800" },

@@ -223,7 +223,7 @@ export function applyRunProgress(save, result, now = new Date()) {
   if (result.bossClearedIds && result.bossClearedIds.length) {
     patch.bossesDefeated = uniq([...(save.bossesDefeated || []), ...result.bossClearedIds]);
   }
-  if (result.envId) patch.seenEnvs = uniq([...(save.seenEnvs || []), result.envId]);
+  if (result.envId || (result.envsVisited || []).length) patch.seenEnvs = uniq([...(save.seenEnvs || []), ...(result.envId ? [result.envId] : []), ...(result.envsVisited || [])]);
   patch.passengersTotal = (save.passengersTotal || 0) + (result.passengersDelivered || 0);
   patch.ordersTotal = (save.ordersTotal || 0) + (result.ordersCompleted || 0);
 

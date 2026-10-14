@@ -289,3 +289,8 @@ Bump `versionCode` (and `version`) in `app.json` before every new build, and upl
 **EL:** 15 διαφορετικά Daily Runs (ένα ανοιχτό κάθε φορά· το επόμενο ανοίγει 24 ώρες μετά το τελευταίο που ολοκλήρωσες) με σταθερό περιβάλλον/στόχο, πόντους, Mastery XP, σφραγίδα στο glider και 9 Daily τρόπαια. Επιπλέον 15 εύκολες Πίστες Εξάσκησης (όποτε θες): κανονικοί εχθροί και μπαλκόνια, έξτρα καρδιές (+1 ασπίδα) και Overclock, γραμμή τερματισμού, 3 αστέρια, αλλά μόνο 30% των πόντων.
 
 **EN:** 15 distinct Daily Runs (one open at a time; the next unlocks 24 h after your last completion) with a fixed environment/goal, credits, Mastery XP, a stamp on your glider and 9 Daily trophies. Plus 15 easier Training Courses (any time): normal enemies and balconies, extra hearts (+1 shield) and Overclock orbs, a finish line, 3 stars, but only 30% of credits.
+
+## 🌀 Portal Balconies
+**EL:** Σε τυχαία παράδοση (~14%, τουλάχιστον 250 μ. μεταξύ τους, έως 4 ανά run) ο courier μεταφέρεται σε άλλο background και συνεχίζει εκεί, χάνοντας ~20% των πόντων του run. Ισχύουν οι κανόνες/affinity του νέου περιβάλλοντος. Δεν ενεργοποιείται σε Daily/Training runs.
+
+**EN:** On a random delivery (~14%, at least 250 m apart, up to 4 per run) the courier is whisked to another background and keeps running there, dropping ~20% of the run's credits. The new environment's rules/affinity apply. Disabled in Daily/Training runs.
