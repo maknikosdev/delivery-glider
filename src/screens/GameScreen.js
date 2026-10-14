@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, PanResponder, Pressable } from "react-native";
+import { View, Text, StyleSheet, PanResponder } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
@@ -108,7 +108,6 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     setThrust,
     swipeRight,
     swipeComboDrop,
-    choosePortal,
     swipeDown,
     activateSkill,
     reviveContinue,
@@ -645,54 +644,11 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
                 </Text>
               </View>
             ) : null}
-            {world.portalBonusMult > 1 ? (
-              <View style={[styles.objChip, { borderColor: "#ff9d4d" }]}>
-                <Text style={[styles.objText, { color: "#ffb36b" }]}>🔥 {lang === "en" ? "PAY" : "ΚΕΡΔΗ"} x{world.portalBonusMult}</Text>
-              </View>
-            ) : null}
             {!mission && (world.score || 0) < 160 ? (
               <Text style={styles.gestureHint}>
                 {lang === "en" ? "→ quick drop   ↗ combo drop (x1.5, risky)" : "→ γρήγορη παράδοση   ↗ combo drop (x1.5, ρίσκο)"}
               </Text>
             ) : null}
-          </View>
-        );
-      })() : null}
-
-      {world.portalChoice ? (() => {
-        const lang = language === "el" ? "el" : "en";
-        const nameOf = (id) => {
-          const e = getEnvironment(id);
-          return e && e.name ? (typeof e.name === "object" ? e.name[lang] || e.name.en : e.name) : id;
-        };
-        return (
-          <View style={styles.portalOverlay}>
-            <Text style={styles.portalTitle}>🌀 {lang === "en" ? "PORTAL OPENS" : "ΑΝΟΙΓΕΙ ΠΥΛΗ"}</Text>
-            <Text style={styles.portalSub}>{lang === "en" ? "Choose your next world" : "Διάλεξε τον επόμενο κόσμο"}</Text>
-            {world.portalChoice.options.map((opt, i) => (
-              <Pressable
-                key={opt.kind}
-                onPress={() => choosePortal(i)}
-                style={[styles.portalCard, opt.kind === "easy" ? styles.portalEasy : styles.portalHard]}
-              >
-                <Text style={styles.portalCardTitle}>
-                  {opt.kind === "easy" ? "🟢 " : "🔴 "}
-                  {nameOf(opt.envId)}
-                </Text>
-                <Text style={styles.portalCardText}>
-                  {opt.kind === "easy"
-                    ? lang === "en"
-                      ? `${opt.home ? "🏠 Suits your glider" : "Calmer terrain"} · −${Math.round(opt.lossPct * 100)}% credits`
-                      : `${opt.home ? "🏠 Ταιριάζει στο glider σου" : "Πιο ήρεμο έδαφος"} · −${Math.round(opt.lossPct * 100)}% πόντων`
-                    : lang === "en"
-                    ? `${opt.hostile ? "⚠ Hard for your glider" : "Harsh terrain"} · PAY x${opt.payMult} · −${Math.round(opt.lossPct * 100)}% credits`
-                    : `${opt.hostile ? "⚠ Δύσκολο για το glider σου" : "Σκληρό έδαφος"} · ΚΕΡΔΗ x${opt.payMult} · −${Math.round(opt.lossPct * 100)}% πόντων`}
-                </Text>
-              </Pressable>
-            ))}
-            <Pressable onPress={() => choosePortal(-1)} style={styles.portalStay}>
-              <Text style={styles.portalStayText}>{lang === "en" ? "Stay here" : "Μένω εδώ"}</Text>
-            </Pressable>
           </View>
         );
       })() : null}
@@ -789,16 +745,6 @@ const styles = StyleSheet.create({
   objText: { color: "#7df9ff", fontSize: 12, fontWeight: "800" },
   objSub: { color: "#fff", fontSize: 10.5, marginTop: 1 },
   gestureHint: { color: "#fff", fontSize: 10.5, fontWeight: "700", opacity: 0.85, textShadowColor: "#000", textShadowRadius: 3, marginTop: 4 },
-  portalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(6,4,24,0.86)", alignItems: "center", justifyContent: "center", paddingHorizontal: 22, zIndex: 40 },
-  portalTitle: { color: "#d9a8ff", fontSize: 22, fontWeight: "900", letterSpacing: 1.5 },
-  portalSub: { color: "#c9d2f2", fontSize: 12, marginBottom: 16, marginTop: 4 },
-  portalCard: { width: "100%", borderRadius: 14, borderWidth: 2.5, paddingVertical: 14, paddingHorizontal: 16, marginBottom: 12, backgroundColor: "rgba(12,14,34,0.95)" },
-  portalEasy: { borderColor: "#6dffa5" },
-  portalHard: { borderColor: "#ff6a6a" },
-  portalCardTitle: { color: "#fff", fontSize: 17, fontWeight: "900" },
-  portalCardText: { color: "#c9d2f2", fontSize: 12, marginTop: 4 },
-  portalStay: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 10, borderWidth: 1.5, borderColor: "#8f9bc0", marginTop: 4 },
-  portalStayText: { color: "#c9d2f2", fontSize: 13, fontWeight: "800" },
   envBanner: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center" },
   rivalWrap: { position: "absolute", top: 120, right: 14, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   rivalText: { fontSize: 12, fontWeight: "800" },

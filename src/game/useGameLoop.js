@@ -36,7 +36,7 @@ import { eventForWeek } from "./events";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
-import { PORTAL, buildPortalOptions } from "./portals";
+import { PORTAL, pickPortalEnv } from "./portals";
 import { initObjectives, objectiveEvent, tickObjectives } from "./objectives";
 import { getPairPerks, perkTotals, weekKey, masteryModsFor } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
@@ -553,8 +553,6 @@ export function useGameLoop({
     w.envsVisited = envId ? [envId] : [];
     w.portalsUsed = 0;
     w.portalLastMeters = 0;
-    w.portalBonusMult = 1;
-    w.portalChoice = null;
     initObjectives(w);
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
@@ -675,7 +673,7 @@ export function useGameLoop({
 
   const tryDeliver = useCallback(
     (world, comboDrop = false) => {
-      if (world.portalChoice || world.status !== "playing") return false;
+      if (world.status !== "playing") return false;
       const riderWorldX = world.cameraX + RIDER.screenX;
       const riderTop = world.riderY;
       const riderBottom = world.riderY + RIDER.height;
@@ -737,7 +735,6 @@ export function useGameLoop({
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
             let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult * mutatorCreditsMult;
             if (comboDrop) earned *= RISK.payMult;
-            if (world.portalBonusMult > 1) earned *= world.portalBonusMult;
 
             if (b.express && b.expiresAt && now <= b.expiresAt) {
               earned = earned * EXPRESS.rewardMult;
@@ -801,20 +798,24 @@ export function useGameLoop({
             objectiveEvent(world, "deliver", 1, objFt);
             objectiveEvent(world, "combo", world.combo, objFt);
 
-            // 🌀 Portal Balcony: on a random delivery a portal opens. The game pauses and
-            // the player picks: an easy world for this glider, a hard one with bonus pay, or stay.
+            // 🌀 Portal Balcony: on a random delivery the courier is whisked to a random
+            // other world mid-run, dropping part of this run's credits on the way.
             if (
               !mission && !dailySeed && onEnvSwitch && portalEnvIds && portalEnvIds.length > 1 &&
               (world.portalsUsed || 0) < PORTAL.maxPerRun &&
               world.score - (world.portalLastMeters || 0) >= PORTAL.minGapMeters &&
               Math.random() < PORTAL.chance
             ) {
-              const options = buildPortalOptions(world.gliderId, envIdRef.current, portalEnvIds);
-              if (options.length) {
-                world.portalChoice = { options, at: now };
-                runningRef.current = false;
-                addFloatingText(world, "🌀 PORTAL", b.worldX, b.y - 70, "banner");
-                forceRender((n) => n + 1);
+              const next = pickPortalEnv(envIdRef.current, portalEnvIds);
+              if (next) {
+                const lost = Math.min(world.credits, Math.max(PORTAL.minLoss, Math.round(world.credits * PORTAL.lossPct)));
+                world.credits -= lost;
+                world.portalsUsed = (world.portalsUsed || 0) + 1;
+                world.portalLastMeters = world.score;
+                world.portalFlashAt = now;
+                if (!world.envsVisited.includes(next)) world.envsVisited.push(next);
+                addFloatingText(world, lost > 0 ? `🌀 PORTAL  -${lost}` : "🌀 PORTAL", b.worldX, b.y - 70, "banner");
+                onEnvSwitch(next, lost);
               }
             }
           }
@@ -830,7 +831,6 @@ export function useGameLoop({
   );
 
   const applyDive = useCallback((world) => {
-    if (world.portalChoice) return;
     const now = Date.now();
     objectiveEvent(world, "dive", 1, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind));
     world.longestNoDiveMs = Math.max(world.longestNoDiveMs, now - world.lastDiveAt);
@@ -1828,31 +1828,6 @@ export function useGameLoop({
     onGameOver && onGameOver(result);
   }, [onGameOver, resumeLoop]);
 
-  // Portal choice: index into world.portalChoice.options, or -1 to stay in this world.
-  const choosePortal = useCallback(
-    (idx) => {
-      const w = worldRef.current;
-      const choice = w.portalChoice;
-      if (!choice) return;
-      const opt = idx >= 0 ? choice.options[idx] : null;
-      w.portalChoice = null;
-      w.portalLastMeters = w.score;
-      if (opt) {
-        const lost = Math.min(w.credits, Math.max(PORTAL.minLoss, Math.round(w.credits * opt.lossPct)));
-        w.credits -= lost;
-        w.portalsUsed = (w.portalsUsed || 0) + 1;
-        w.portalFlashAt = Date.now();
-        w.portalBonusMult = opt.payMult || 1;
-        if (!w.envsVisited.includes(opt.envId)) w.envsVisited.push(opt.envId);
-        addFloatingText(w, lost > 0 ? `🌀 -${lost}${opt.payMult > 1 ? `  PAY x${opt.payMult}` : ""}` : "🌀", w.cameraX + RIDER.screenX, w.riderY - 60, "banner");
-        onEnvSwitch && onEnvSwitch(opt.envId, lost);
-      }
-      forceRender((n) => n + 1);
-      resumeLoop();
-    },
-    [addFloatingText, onEnvSwitch, resumeLoop]
-  );
-
   const now = Date.now();
   const world = worldRef.current;
 
@@ -1861,7 +1836,6 @@ export function useGameLoop({
     setThrust,
     swipeRight,
     swipeComboDrop,
-    choosePortal,
     swipeDown,
     activateSkill,
     pause,
