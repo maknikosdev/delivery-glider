@@ -272,6 +272,10 @@ export function applyRunProgress(save, result, now = new Date()) {
     drops.push(rollPartId(Math.random));
     log.push({ ach: "boss", kind: "part", value: drops[drops.length - 1] });
   }
+  for (let i = 0; i < (result.bossEnragedClears || 0); i++) {
+    drops.push(rollPartId(Math.random, "rare"));
+    log.push({ ach: "boss2", kind: "part", value: drops[drops.length - 1] });
+  }
   const orderN = result.ordersCompleted || 0;
   let orderDrops = 0;
   for (let i = 0; i < orderN && orderDrops < 2; i++) {

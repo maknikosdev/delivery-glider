@@ -36,14 +36,16 @@ import { eventForWeek } from "./events";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
+import { PORTAL, buildPortalOptions } from "./portals";
+import { initObjectives, objectiveEvent, tickObjectives } from "./objectives";
 import { getPairPerks, perkTotals, weekKey, masteryModsFor } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
 import AudioManager from "../audio/AudioManager";
 import { useGame } from "../store/GameContext";
 
-// Portal Balcony tuning: random chance per delivery, spaced out, capped per run.
-export const PORTAL = { chance: 0.35, minGapMeters: 100, maxPerRun: 12, lossPct: 0.1, minLoss: 10 };
+// Risk delivery (swipe up-right): tighter window, big pay, combo +2, miss = combo reset.
+const RISK = { tolMult: 0.6, payMult: 1.5 };
 
 function buildRunResult(world) {
   return {
@@ -72,6 +74,9 @@ function buildRunResult(world) {
     courseCleared: !!world.courseCleared,
     envsVisited: world.envsVisited || [],
     portalsUsed: world.portalsUsed || 0,
+    objectivesDone: world.objectivesDone || 0,
+    bossEnragedClears: world.bossEnragedClears || 0,
+    comboDrops: world.comboDrops || 0,
   };
 }
 
@@ -548,6 +553,9 @@ export function useGameLoop({
     w.envsVisited = envId ? [envId] : [];
     w.portalsUsed = 0;
     w.portalLastMeters = 0;
+    w.portalBonusMult = 1;
+    w.portalChoice = null;
+    initObjectives(w);
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
     w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield + mm.shield;
@@ -666,13 +674,15 @@ export function useGameLoop({
   );
 
   const tryDeliver = useCallback(
-    (world) => {
+    (world, comboDrop = false) => {
+      if (world.portalChoice || world.status !== "playing") return false;
       const riderWorldX = world.cameraX + RIDER.screenX;
       const riderTop = world.riderY;
       const riderBottom = world.riderY + RIDER.height;
       let delivered = false;
       const now = Date.now();
-      const tol = 90 * deliveryTolerance;
+      const tol = 90 * deliveryTolerance * (comboDrop ? RISK.tolMult : 1);
+      const objFt = (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind);
       for (const chunk of world.chunks) {
         for (const b of chunk.balconies) {
           if (b.delivered) continue;
@@ -711,6 +721,11 @@ export function useGameLoop({
             }
             world.lastDeliveryAt = now;
             world.maxCombo = Math.max(world.maxCombo, world.combo);
+            if (comboDrop) {
+              world.combo = Math.min(COMBO.maxMultiplier, world.combo + 1);
+              world.maxCombo = Math.max(world.maxCombo, world.combo);
+              world.comboDrops = (world.comboDrops || 0) + 1;
+            }
 
             if (world.combo >= FEVER.triggerCombo && now > world.feverUntil) {
               world.feverUntil = now + FEVER.durationMs;
@@ -721,6 +736,8 @@ export function useGameLoop({
             const slipMult = now < world.slipstreamUntil ? SLIPSTREAM.scoreMult : 1;
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
             let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult * mutatorCreditsMult;
+            if (comboDrop) earned *= RISK.payMult;
+            if (world.portalBonusMult > 1) earned *= world.portalBonusMult;
 
             if (b.express && b.expiresAt && now <= b.expiresAt) {
               earned = earned * EXPRESS.rewardMult;
@@ -781,29 +798,31 @@ export function useGameLoop({
             world.deliveryPulseAt = now; // Juice: brief camera punch-in, read by GameScreen.js
             delivered = true;
 
-            // 🌀 Portal Balcony: on a random delivery the courier is whisked to another
-            // background mid-run, dropping part of this run's credits on the way.
+            objectiveEvent(world, "deliver", 1, objFt);
+            objectiveEvent(world, "combo", world.combo, objFt);
+
+            // 🌀 Portal Balcony: on a random delivery a portal opens. The game pauses and
+            // the player picks: an easy world for this glider, a hard one with bonus pay, or stay.
             if (
               !mission && !dailySeed && onEnvSwitch && portalEnvIds && portalEnvIds.length > 1 &&
-              world.status === "playing" && (world.portalsUsed || 0) < PORTAL.maxPerRun &&
+              (world.portalsUsed || 0) < PORTAL.maxPerRun &&
               world.score - (world.portalLastMeters || 0) >= PORTAL.minGapMeters &&
               Math.random() < PORTAL.chance
             ) {
-              const pool = portalEnvIds.filter((e) => e !== envIdRef.current);
-              if (pool.length) {
-                const next = pool[Math.floor(Math.random() * pool.length)];
-                const lost = Math.min(world.credits, Math.max(PORTAL.minLoss, Math.round(world.credits * PORTAL.lossPct)));
-                world.credits -= lost;
-                world.portalsUsed = (world.portalsUsed || 0) + 1;
-                world.portalLastMeters = world.score;
-                world.portalFlashAt = now;
-                if (!world.envsVisited.includes(next)) world.envsVisited.push(next);
-                addFloatingText(world, lost > 0 ? `🌀 PORTAL  -${lost}` : "🌀 PORTAL", b.worldX, b.y - 70, "banner");
-                onEnvSwitch(next, lost);
+              const options = buildPortalOptions(world.gliderId, envIdRef.current, portalEnvIds);
+              if (options.length) {
+                world.portalChoice = { options, at: now };
+                runningRef.current = false;
+                addFloatingText(world, "🌀 PORTAL", b.worldX, b.y - 70, "banner");
+                forceRender((n) => n + 1);
               }
             }
           }
         }
+      }
+      if (comboDrop && !delivered) {
+        world.combo = 1;
+        addFloatingText(world, "COMBO DROP MISSED", riderWorldX, world.riderY - 50, "near_miss");
       }
       return delivered;
     },
@@ -811,7 +830,9 @@ export function useGameLoop({
   );
 
   const applyDive = useCallback((world) => {
+    if (world.portalChoice) return;
     const now = Date.now();
+    objectiveEvent(world, "dive", 1, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind));
     world.longestNoDiveMs = Math.max(world.longestNoDiveMs, now - world.lastDiveAt);
     world.lastDiveAt = now;
 
@@ -910,6 +931,7 @@ export function useGameLoop({
             c.collected = true;
             world.coinStreak += 1;
             world.coinsThisRun += 1;
+            objectiveEvent(world, "coin", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
             pulled += 1;
           }
         }
@@ -1038,6 +1060,7 @@ export function useGameLoop({
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
       world.score = world.cameraX * METERS_PER_PX;
+      tickObjectives(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind), !(mission && mission.mode === "daily"));
       if (mission && mission.finishMeters && world.status === "playing" && world.score >= mission.finishMeters) {
         world.courseCleared = true;
         runningRef.current = false;
@@ -1203,6 +1226,14 @@ export function useGameLoop({
         const b = world.activeBossEntity;
         const cfg = b.config;
         b.phase += dt;
+        // Phase 2 ("ENRAGED"): once the rider passes the middle of the encounter the boss
+        // attacks faster. A clean clear in phase 2 drops a rare part.
+        if (!b.enraged && riderWorldX > b.startX + (b.endX - b.startX) * 0.5) {
+          b.enraged = true;
+          world.bossEnragedFlashAt = now;
+          addFloatingText(world, "⚠ ENRAGED!", riderWorldX + 120, SCREEN.height * 0.18, "banner");
+        }
+        const eF = b.enraged ? 0.65 : 1; // interval multiplier
 
         if (cfg.pattern === "chase") {
           // Sky Wyvern: actively closes in on the rider's altitude — a
@@ -1210,7 +1241,7 @@ export function useGameLoop({
           // without ever being unfair (it can't instantly teleport onto you).
           const targetY = world.riderY + RIDER.height / 2;
           const diff = targetY - b.y;
-          const maxStep = cfg.chaseSpeed * dt;
+          const maxStep = cfg.chaseSpeed * (b.enraged ? 1.3 : 1) * dt;
           b.y += Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
         } else if (cfg.pattern === "ram" || cfg.pattern === "charge") {
           // Giant Seagull: weaves normally, but every few seconds locks
@@ -1225,7 +1256,7 @@ export function useGameLoop({
             if (now >= b.nextDashAt) {
               b.dashUntil = now + cfg.dashDurationMs;
               b.dashTargetY = world.riderY + RIDER.height / 2;
-              b.nextDashAt = now + cfg.dashEveryMs;
+              b.nextDashAt = now + cfg.dashEveryMs * eF;
             }
           }
         } else if (cfg.pattern === "hover") {
@@ -1249,7 +1280,7 @@ export function useGameLoop({
         } else if (cfg.pattern === "teleport") {
           // Phantom Crow: blinks out, reappears ahead of the rider and drops loot
           if (!b.pendingTeleport && now >= b.nextTeleportAt) {
-            b.nextTeleportAt = now + cfg.teleportEveryMs;
+            b.nextTeleportAt = now + cfg.teleportEveryMs * eF;
             b.pendingTeleport = true;
             b.fadeUntil = now + 260;
           }
@@ -1317,7 +1348,7 @@ export function useGameLoop({
         }
 
         // Orbital Drone mines / Phantom Crow feathers: fuse bombs
-        if (cfg.dropType && !b.pendingTeleport && world.status === "playing" && bdx < 700 && now - b.lastDropAt > cfg.dropEveryMs) {
+        if (cfg.dropType && !b.pendingTeleport && world.status === "playing" && bdx < 700 && now - b.lastDropAt > cfg.dropEveryMs * eF) {
           b.lastDropAt = now;
           const dconf = NEW_PROJECTILE_TYPES[cfg.dropType];
           world.bossProjectiles.push({
@@ -1338,7 +1369,7 @@ export function useGameLoop({
 
         // Volcanic Goliath: telegraphed lava columns timed to reach the rider
         if (cfg.eruptEveryMs && bdx < 800 && now >= b.nextEruptAt) {
-          b.nextEruptAt = now + cfg.eruptEveryMs;
+          b.nextEruptAt = now + cfg.eruptEveryMs * eF;
           const spd = currentSpeed(world);
           world.bossHazards.push({
             id: `lava_${now}_${Math.random()}`,
@@ -1352,7 +1383,7 @@ export function useGameLoop({
         // Throws its named projectile on an interval, only once it's
         // close enough to be relevant (no point firing at a target 2
         // screens away).
-        if (world.status === "playing" && bdx < 700 && now - b.lastProjectileAt > cfg.projectileIntervalMs) {
+        if (world.status === "playing" && bdx < 700 && now - b.lastProjectileAt > cfg.projectileIntervalMs * eF) {
           b.lastProjectileAt = now;
           const pconf = PROJECTILE_TYPES[cfg.projectile] || NEW_PROJECTILE_TYPES[cfg.projectile];
           const dxToRider = Math.max(80, b.worldX - riderWorldX);
@@ -1378,6 +1409,10 @@ export function useGameLoop({
             world.credits += b.rewardCredits;
             addFloatingText(world, `Boss cleared! +${b.rewardCredits}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
             if (!world.bossClearedIds.includes(b.id)) world.bossClearedIds.push(b.id);
+            if (b.enraged) {
+              world.bossEnragedClears = (world.bossEnragedClears || 0) + 1;
+              addFloatingText(world, "🔧 RARE PART EARNED!", world.cameraX + RIDER.screenX, world.riderY - 110, "banner");
+            }
             addFloatingText(world, t(`bosses.${b.id}_win`), world.cameraX + RIDER.screenX, world.riderY - 80, "banner");
           }
           world.activeBossEntity = null;
@@ -1559,6 +1594,7 @@ export function useGameLoop({
               world.nearMissCooldowns[o.id] = now;
               world.credits += NEAR_MISS.bonusCredits;
               addFloatingText(world, `Close call! +${NEAR_MISS.bonusCredits}`, o.worldX, o.y - 34, "near_miss");
+              objectiveEvent(world, "nearmiss", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
               world.hitStopUntil = now + 55; // Juice: tiny freeze-frame punctuates the dodge
             }
           }
@@ -1614,6 +1650,7 @@ export function useGameLoop({
             }
             world.coinStreak += 1;
             world.coinsThisRun += 1;
+            objectiveEvent(world, "coin", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
             AudioManager.play("pickup");
             if (isCoinMagnetBoost && world.coinStreak % effectiveStreakForBoost === 0) {
               world.velocityY = Math.min(world.velocityY, SKILLS.coin_magnet_boost.boostVy);
@@ -1629,6 +1666,7 @@ export function useGameLoop({
           if (dx < POWERUP.pickupRadius && dy < POWERUP.pickupRadius) {
             p.collected = true;
             AudioManager.play("pickup");
+            objectiveEvent(world, "powerup", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
             if (p.type === "overclock") {
               world.overclockUntil = now + POWERUP.types.overclock.durationMs;
               world.invincibleUntil = Math.max(world.invincibleUntil, world.overclockUntil);
@@ -1714,7 +1752,12 @@ export function useGameLoop({
   }, [step]);
 
   const swipeRight = useCallback(() => {
-    tryDeliver(worldRef.current);
+    tryDeliver(worldRef.current, false);
+  }, [tryDeliver]);
+
+  // Swipe up-right: risky "combo drop" (tight window, x1.5 pay, combo +2, miss resets combo).
+  const swipeComboDrop = useCallback(() => {
+    tryDeliver(worldRef.current, true);
   }, [tryDeliver]);
 
   const swipeDown = useCallback(() => {
@@ -1785,6 +1828,31 @@ export function useGameLoop({
     onGameOver && onGameOver(result);
   }, [onGameOver, resumeLoop]);
 
+  // Portal choice: index into world.portalChoice.options, or -1 to stay in this world.
+  const choosePortal = useCallback(
+    (idx) => {
+      const w = worldRef.current;
+      const choice = w.portalChoice;
+      if (!choice) return;
+      const opt = idx >= 0 ? choice.options[idx] : null;
+      w.portalChoice = null;
+      w.portalLastMeters = w.score;
+      if (opt) {
+        const lost = Math.min(w.credits, Math.max(PORTAL.minLoss, Math.round(w.credits * opt.lossPct)));
+        w.credits -= lost;
+        w.portalsUsed = (w.portalsUsed || 0) + 1;
+        w.portalFlashAt = Date.now();
+        w.portalBonusMult = opt.payMult || 1;
+        if (!w.envsVisited.includes(opt.envId)) w.envsVisited.push(opt.envId);
+        addFloatingText(w, lost > 0 ? `🌀 -${lost}${opt.payMult > 1 ? `  PAY x${opt.payMult}` : ""}` : "🌀", w.cameraX + RIDER.screenX, w.riderY - 60, "banner");
+        onEnvSwitch && onEnvSwitch(opt.envId, lost);
+      }
+      forceRender((n) => n + 1);
+      resumeLoop();
+    },
+    [addFloatingText, onEnvSwitch, resumeLoop]
+  );
+
   const now = Date.now();
   const world = worldRef.current;
 
@@ -1792,6 +1860,8 @@ export function useGameLoop({
     world,
     setThrust,
     swipeRight,
+    swipeComboDrop,
+    choosePortal,
     swipeDown,
     activateSkill,
     pause,

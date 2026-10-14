@@ -291,6 +291,11 @@ Bump `versionCode` (and `version`) in `app.json` before every new build, and upl
 **EN:** 15 distinct Daily Runs (one open at a time; the next unlocks 24 h after your last completion) with a fixed environment/goal, credits, Mastery XP, a stamp on your glider and 9 Daily trophies. Plus 15 easier Training Courses (any time): normal enemies and balconies, extra hearts (+1 shield) and Overclock orbs, a finish line, 3 stars, but only 30% of credits.
 
 ## 🌀 Portal Balconies
-**EL:** Σε τυχαία παράδοση (~35%, τουλάχιστον 100 μ. μεταξύ τους, έως 12 ανά run) ο courier μεταφέρεται σε άλλο background και συνεχίζει εκεί, χάνοντας ~10% των πόντων του run. Ισχύουν οι κανόνες/affinity του νέου περιβάλλοντος. Δεν ενεργοποιείται σε Daily/Training runs.
+**EL:** Σε τυχαία παράδοση (~25%, τουλάχιστον 150 μ. μεταξύ τους, έως 8 ανά run) ο courier μεταφέρεται σε άλλο background και συνεχίζει εκεί, χάνοντας ~10% των πόντων του run. Ισχύουν οι κανόνες/affinity του νέου περιβάλλοντος. Δεν ενεργοποιείται σε Daily/Training runs.
 
-**EN:** On a random delivery (~35%, at least 100 m apart, up to 12 per run) the courier is whisked to another background and keeps running there, dropping ~10% of the run's credits. The new environment's rules/affinity apply. Disabled in Daily/Training runs.
+**EN:** On a random delivery (~25%, at least 150 m apart, up to 8 per run) the courier is whisked to another background and keeps running there, dropping ~10% of the run's credits. The new environment's rules/affinity apply. Disabled in Daily/Training runs.
+
+## ⚔️ Gameplay depth (v2.0)
+**EL:** 🎯 **Mini-objectives**: κάθε ~300 μ. εμφανίζεται τυχαία πρόκληση (π.χ. 3 παρ' ολίγον, 2 παραδόσεις χωρίς dive) με bonus πόντων. 🌀 **Έξυπνες πύλες**: το παιχνίδι σταματά και διαλέγεις ανάμεσα σε «εύκολο» κόσμο για τον glider σου, «δύσκολο» με ×1.3 κέρδη, ή μένεις. ↗ **Combo drop**: swipe πάνω-δεξιά για παράδοση με στενό παράθυρο, ×1.5 κέρδη, combo +2 (αν αστοχήσεις, το combo μηδενίζεται). 💥 **Bosses 2 φάσεων**: στη μέση της συνάντησης γίνονται έξαλλοι (πιο γρήγορες επιθέσεις)· καθαρό clear σε φάση 2 δίνει σπάνιο εξάρτημα.
+
+**EN:** 🎯 **Mini-objectives**: every ~300 m a random challenge appears (e.g. 3 close calls, 2 deliveries without diving) with a credit bonus. 🌀 **Smart portals**: the game pauses and you choose an "easy" world for your glider, a "hard" one with x1.3 pay, or stay. ↗ **Combo drop**: swipe up-right for a tight-window delivery, x1.5 pay, combo +2 (miss and your combo resets). 💥 **Two-phase bosses**: they enrage halfway through the encounter (faster attacks); a clean clear in phase 2 drops a rare part.

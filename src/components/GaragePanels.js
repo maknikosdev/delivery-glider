@@ -228,8 +228,8 @@ export function CollectionPanel() {
         {GLIDERS.map((g) => {
           const has = owned.includes(g.id);
           return (
-            <View key={g.id} style={[s.chip, { borderColor: has ? g.color : "#3a3355", opacity: has ? 1 : 0.45 }]}>
-              <Text style={[s.chipText, { color: has ? g.color : "#8a84a3" }]}>{has ? g.name : tx.unknown}</Text>
+            <View key={g.id} style={[s.chip, { borderColor: has ? g.color : "#3a3355", opacity: has ? 1 : 0.4 }]}>
+              <Text style={[s.chipText, { color: has ? g.color : "#8a84a3" }]}>{g.name}</Text>
             </View>
           );
         })}
@@ -243,7 +243,7 @@ export function CollectionPanel() {
         const isUnl = unlockedEnv.includes(e.id);
         return (
           <Text key={e.id} style={isSeen ? s.ok : s.dim}>
-            {isSeen ? "✓" : isUnl ? "○" : "🔒"} {isUnl || isSeen ? envName(e) : tx.unknown} ·{" "}
+            {isSeen ? "✓" : isUnl ? "○" : "🔒"} {envName(e)} ·{" "}
             {isSeen ? tx.seen : isUnl ? tx.unlocked : tx.locked}
             {isSeen && e.rule && e.rule.text ? ` — ${e.rule.text[l]}` : ""}
           </Text>
@@ -258,7 +258,7 @@ export function CollectionPanel() {
         return (
           <View key={id} style={{ marginBottom: 6 }}>
             <Text style={d ? s.ok : s.dim}>
-              {BOSS_ICON[id]} {d ? t(`bosses.${id}_name`) : tx.unknown} · {d ? tx.defeated : tx.locked}
+              {BOSS_ICON[id]} {t(`bosses.${id}_name`)} · {d ? tx.defeated : tx.locked}
             </Text>
             {d ? <Text style={s.story}>{t(`bosses.${id}_story`)}</Text> : null}
           </View>
