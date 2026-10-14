@@ -29,6 +29,7 @@ import WeatherBanner from "../components/WeatherBanner";
 import WantedStars from "../components/WantedStars";
 import FloatingText from "../components/FloatingText";
 import HUD from "../components/HUD";
+import { goalValue, goalText } from "../game/missions";
 import SkillIndicator from "../components/SkillIndicator";
 import RevivePrompt from "../components/RevivePrompt";
 import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
@@ -36,12 +37,12 @@ import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULT
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
-export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, onGameOver }) {
+export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, mission, onGameOver }) {
   const { save, language } = useGame();
   // Random background for this run, from the environments unlocked so far
   // (one more every 3 gliders owned + achievement-unlocked ones).
   const [envId] = useState(() =>
-    pickEnvironmentId(((save && save.ownedGliders) || []).length, (save && save.bonusEnvs) || [])
+    (mission && mission.envId) || pickEnvironmentId(((save && save.ownedGliders) || []).length, (save && save.bonusEnvs) || [])
   );
   const [bannerVisible, setBannerVisible] = useState(true);
   React.useEffect(() => {
@@ -50,7 +51,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   }, []);
 
   // Daily Challenge rival ghost: a deterministic pacer per daily seed.
-  const rival = useMemo(() => (dailySeed ? rivalFor(dailySeed) : null), [dailySeed]);
+  const rival = useMemo(() => (dailySeed && !mission ? rivalFor(dailySeed) : null), [dailySeed, mission]);
   const runStartRef = useRef(Date.now());
   const weekEvent = useMemo(() => eventForWeek(weekKey()), []);
 
@@ -112,6 +113,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     mutatorId,
     dailySeed,
     envId,
+    mission,
     onGameOver: handleGameOver,
   });
 
@@ -596,6 +598,24 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         eventId={world.weatherEvent ? world.weatherEvent.id : null}
         corrosion={world.weatherEvent && world.weatherEvent.id === "acid_rain" ? world.corrosion : null}
       />
+
+      {mission && world.status === "playing" ? (() => {
+        const lang = language === "el" ? "el" : "en";
+        const nm = mission.name ? mission.name[lang] : "";
+        let line;
+        if (mission.mode === "training") {
+          line = `${Math.min(Math.round(world.score || 0), mission.finishMeters)} / ${mission.finishMeters} m  🏁`;
+        } else {
+          const v = goalValue({ meters: world.score, deliveries: world.deliveries, coinsThisRun: world.coinsThisRun, maxCombo: world.maxCombo, bossClearedIds: world.bossClearedIds, parcelsPickedUp: world.parcelsPickedUp, ordersCompleted: world.ordersCompleted }, mission.goal.stat);
+          line = `${goalText(mission.goal, lang)}  ·  ${Math.min(v, mission.goal.target)} / ${mission.goal.target}${v >= mission.goal.target ? " ✓" : ""}`;
+        }
+        return (
+          <View pointerEvents="none" style={styles.rivalWrap}>
+            <Text style={[styles.rivalText, { color: "#7df9ff" }]}>{mission.mode === "training" ? "🎯" : "📅"} {nm}</Text>
+            <Text style={[styles.rivalText, { color: "#fff" }]}>{line}</Text>
+          </View>
+        );
+      })() : null}
 
       {rival && world.status === "playing" ? (() => {
         const rm = rivalMeters(rival, Date.now() - runStartRef.current);

@@ -1,6 +1,7 @@
 import { masteryInfo } from "./progress";
 import { equippedItems, setCounts, partsOf, SLOTS } from "./parts";
 import { GLIDERS } from "./gliders";
+import { dailyStats } from "./missions";
 
 // ---------------------------------------------------------------------------
 // 15 έξτρα achievements δεμένα με upgrades των gliders:
@@ -49,6 +50,16 @@ export const EXTRA_ACHIEVEMENTS = [
   { id: "xa_set2", group: "hangar", icon: "🔗", name: { en: "Matching Pair", el: "Ταιριαστό Ζευγάρι" }, desc: { en: "Equip 2 parts of the same set", el: "Εφόδιασε 2 εξαρτήματα του ίδιου set" }, reward: { part: "rare" }, check: ({ save }) => bestSetCount(save) >= 2 },
   { id: "xa_loadout", group: "hangar", icon: "🛠️", name: { en: "Full Loadout", el: "Πλήρης Εξοπλισμός" }, desc: { en: "Fill all 3 part slots of one glider", el: "Γέμισε και τις 3 θέσεις εξαρτημάτων ενός glider" }, reward: { credits: 250 }, check: ({ save }) => fullLoadout(save) },
   { id: "xa_set3", group: "hangar", icon: "💎", name: { en: "Perfect Set", el: "Τέλειο Set" }, desc: { en: "Equip a complete 3-part set", el: "Εφόδιασε ολόκληρο set 3 εξαρτημάτων" }, reward: { skinTier: true }, check: ({ save }) => bestSetCount(save) >= 3 },
+  // --- Daily Runs (Garage → RUNS) ---
+  { id: "dr_first", group: "daily", icon: "📅", name: { en: "Day One", el: "Πρώτη Μέρα" }, desc: { en: "Complete a Daily Run", el: "Ολοκλήρωσε ένα Daily Run" }, reward: { credits: 200 }, check: ({ save }) => dailyStats(save).total >= 1, progress: ({ save }) => [dailyStats(save).total, 1] },
+  { id: "dr_five", group: "daily", icon: "🗓️", name: { en: "Regular", el: "Σταθερός" }, desc: { en: "Complete 5 Daily Runs", el: "Ολοκλήρωσε 5 Daily Runs" }, reward: { part: "rare" }, check: ({ save }) => dailyStats(save).total >= 5, progress: ({ save }) => [dailyStats(save).total, 5] },
+  { id: "dr_ten", group: "daily", icon: "📆", name: { en: "Dedicated", el: "Αφοσιωμένος" }, desc: { en: "Complete 10 Daily Runs", el: "Ολοκλήρωσε 10 Daily Runs" }, reward: { skinTier: true }, check: ({ save }) => dailyStats(save).total >= 10, progress: ({ save }) => [dailyStats(save).total, 10] },
+  { id: "dr_all", group: "daily", icon: "🏆", name: { en: "Full Calendar", el: "Πλήρες Ημερολόγιο" }, desc: { en: "Complete all 15 different Daily Runs", el: "Ολοκλήρωσε και τα 15 διαφορετικά Daily Runs" }, reward: { credits: 1000, part: "epic" }, check: ({ save }) => dailyStats(save).distinct >= 15, progress: ({ save }) => [dailyStats(save).distinct, 15] },
+  { id: "dr_glider3", group: "daily", icon: "🎖️", name: { en: "Loyal Wings", el: "Πιστά Φτερά" }, desc: { en: "Complete 3 Daily Runs with the same glider", el: "Ολοκλήρωσε 3 Daily Runs με το ίδιο glider" }, reward: { credits: 300 }, check: ({ save }) => dailyStats(save).bestGlider >= 3, progress: ({ save }) => [dailyStats(save).bestGlider, 3] },
+  { id: "dr_glider6", group: "daily", icon: "🥇", name: { en: "One-Glider Legend", el: "Θρύλος ενός Glider" }, desc: { en: "Complete 6 Daily Runs with the same glider", el: "Ολοκλήρωσε 6 Daily Runs με το ίδιο glider" }, reward: { skinTier: true }, check: ({ save }) => dailyStats(save).bestGlider >= 6, progress: ({ save }) => [dailyStats(save).bestGlider, 6] },
+  { id: "dr_squad5", group: "daily", icon: "🧑‍✈️", name: { en: "Squad Leader", el: "Αρχηγός Ομάδας" }, desc: { en: "Complete Daily Runs with 5 different gliders", el: "Ολοκλήρωσε Daily Runs με 5 διαφορετικά gliders" }, reward: { part: "rare" }, check: ({ save }) => dailyStats(save).gliders >= 5, progress: ({ save }) => [dailyStats(save).gliders, 5] },
+  { id: "dr_squad10", group: "daily", icon: "🛩️", name: { en: "Fleet Admiral", el: "Ναύαρχος του Στόλου" }, desc: { en: "Complete Daily Runs with 10 different gliders", el: "Ολοκλήρωσε Daily Runs με 10 διαφορετικά gliders" }, reward: { credits: 800 }, check: ({ save }) => dailyStats(save).gliders >= 10, progress: ({ save }) => [dailyStats(save).gliders, 10] },
+  { id: "dr_classes", group: "daily", icon: "🎭", name: { en: "All Classes", el: "Όλες οι Κατηγορίες" }, desc: { en: "Complete Daily Runs with a glider of every class", el: "Ολοκλήρωσε Daily Runs με glider από κάθε κατηγορία" }, reward: { part: "epic" }, check: ({ save }) => dailyStats(save).classes >= 6, progress: ({ save }) => [dailyStats(save).classes, 6] },
 ];
 
 export const EXTRA_REWARDS = Object.fromEntries(EXTRA_ACHIEVEMENTS.map((a) => [a.id, a.reward]));

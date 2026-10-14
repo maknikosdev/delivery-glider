@@ -6,6 +6,7 @@ import { applyRunProgress, applyAchievementRewards, gliderMastery, prestigePatch
 import { tableFor, CHOICE_LEVELS } from "../game/masteryPerks";
 import { evaluateExtraAchievements, EXTRA_REWARDS } from "../game/extraAchievements";
 import { partsOf, upgradeCost, SLOTS } from "../game/parts";
+import { applyMissionResult } from "../game/missions";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 
 // Evaluates the extra achievements against a save (no run result) and applies
@@ -29,6 +30,7 @@ export function GameProvider({ children }) {
   const [save, setSave] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRun, setLastRun] = useState(null);
+  const [missionResult, setMissionResult] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -203,6 +205,20 @@ export function GameProvider({ children }) {
     return true;
   }, []);
 
+  // Daily Run / Training Course finished (Garage → RUNS). Bypasses the normal
+  // run flow: no lifetime stats, no crate — only mission rewards + trophies.
+  const finishMission = useCallback(async (result) => {
+    const current = await loadSave();
+    const { patch, summary } = applyMissionResult(current, result);
+    let next = current;
+    if (patch) next = await saveSave(patch);
+    next = await grantExtraAchievements(next, null);
+    setSave(next);
+    setMissionResult({ ...summary, meters: Math.round(result.meters || 0), deliveries: result.deliveries || 0, coins: result.coinsThisRun || 0 });
+    return summary;
+  }, []);
+  const clearMissionResult = useCallback(() => setMissionResult(null), []);
+
   const ackExtraAch = useCallback(async () => {
     const current = await loadSave();
     if (!(current.extraAchNew || []).length) return;
@@ -371,6 +387,9 @@ export function GameProvider({ children }) {
     buySkinTier,
     equipPart,
     ackExtraAch,
+    finishMission,
+    clearMissionResult,
+    missionResult,
     chooseMasteryPerk,
     prestigeGlider,
     upgradePart,

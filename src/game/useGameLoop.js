@@ -62,6 +62,11 @@ function buildRunResult(world) {
     ordersCompleted: world.ordersCompleted || 0,
     passengersDelivered: world.passengersDelivered || 0,
     parcelsPickedUp: world.parcelsPickedUp || 0,
+    // Garage → RUNS missions (see game/missions.js)
+    mode: world.missionMeta ? world.missionMeta.mode : null,
+    missionId: world.missionMeta ? world.missionMeta.id : null,
+    gliderId: world.gliderId || null,
+    courseCleared: !!world.courseCleared,
   };
 }
 
@@ -218,6 +223,7 @@ export function useGameLoop({
   mutatorId = null,
   dailySeed = null,
   envId = null,
+  mission = null,
   onGameOver,
 }) {
   // Mutators: an optional, player-picked run modifier (see LoadoutScreen.js
@@ -439,6 +445,16 @@ export function useGameLoop({
           chunk.obstacles.push({ type: "static_antenna", id: `obs_env_${Math.floor(rng() * 1e9)}`, worldX: chunk.startX + relX, baseY: ry, y: ry, hit: false });
         }
       }
+      // Training Courses: extra Nano-Repair hearts (+1 shield) and Overclock orbs
+      if (mission && mission.mode === "training" && !zone.tunnelMode) {
+        const addOrb = (type) => {
+          const relX = 200 + Math.random() * (CHUNK_WIDTH - 400);
+          const ry = SCREEN.height * (0.2 + Math.random() * 0.55);
+          chunk.powerups.push({ id: `pu_m_${Math.floor(Math.random() * 1e9)}`, type, worldX: chunk.startX + relX, y: ry, collected: false });
+        };
+        if (Math.random() < (mission.heart || 0)) addOrb("nano_repair");
+        if (Math.random() < (mission.boost || 0)) addOrb("overclock");
+      }
       if (envRule.secretGiftChance && Math.random() < envRule.secretGiftChance) {
         world.bossGifts.push({
           id: `chest_${Math.floor(Math.random() * 1e9)}`,
@@ -515,6 +531,8 @@ export function useGameLoop({
   useEffect(() => {
     const w = makeInitialWorld(gliderConfig, gadgetIds, freeRevive);
     w.nextBossAtMeters = firstBossMeters(rng);
+    w.missionMeta = mission ? { mode: mission.mode, id: mission.id } : null;
+    w.gliderId = gliderConfig.id;
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
     w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield + mm.shield;
@@ -550,8 +568,8 @@ export function useGameLoop({
     [weightFactor, mutatorGravityMult]
   );
 
-  const mutatorSpeedMult = (mutator?.speedMult || 1) * (envRule.speedMult || 1) * mm.speedMult;
-  const mutatorCreditsMult = (mutator?.creditsMult || 1) * (envRule.creditsMult || 1);
+  const mutatorSpeedMult = (mutator?.speedMult || 1) * (envRule.speedMult || 1) * mm.speedMult * ((mission && mission.speedMult) || 1);
+  const mutatorCreditsMult = (mutator?.creditsMult || 1) * (envRule.creditsMult || 1) * ((mission && mission.creditsMult) || 1);
   const currentSpeed = useCallback(
     (world) => {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
@@ -983,6 +1001,13 @@ export function useGameLoop({
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
       world.score = world.cameraX * METERS_PER_PX;
+      if (mission && mission.finishMeters && world.status === "playing" && world.score >= mission.finishMeters) {
+        world.courseCleared = true;
+        runningRef.current = false;
+        AudioManager.play("pickup");
+        finalizeGameOver(world, buildRunResult(world));
+        return;
+      }
       world.prevZoneIndex = world.zoneIndex;
       world.zoneIndex = getZoneIndex(world.score);
 

@@ -8,6 +8,7 @@ const GROUPS = {
   boss: { en: "BOSS TROPHIES", el: "ΤΡΟΦΑΙΑ BOSS" },
   glider: { en: "GLIDER & PILOT TROPHIES", el: "ΤΡΟΦΑΙΑ GLIDER & ΠΙΛΟΤΩΝ" },
   hangar: { en: "HANGAR TROPHIES", el: "ΤΡΟΦΑΙΑ HANGAR" },
+  daily: { en: "DAILY RUN TROPHIES", el: "ΤΡΟΦΑΙΑ DAILY RUNS" },
 };
 
 export default function TrophiesPanel() {

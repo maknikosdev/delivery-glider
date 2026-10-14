@@ -283,3 +283,9 @@ eas build --platform android --profile preview      # .apk for testing
 
 ### Release / Google Play
 Bump `versionCode` (and `version`) in `app.json` before every new build, and upload the `mapping.txt` (R8) to the Play Console.
+
+
+## 📅 Daily Runs & 🎯 Training Courses (Garage → RUNS)
+**EL:** 15 διαφορετικά Daily Runs (ένα ανοιχτό κάθε φορά· το επόμενο ανοίγει 24 ώρες μετά το τελευταίο που ολοκλήρωσες) με σταθερό περιβάλλον/στόχο, πόντους, Mastery XP, σφραγίδα στο glider και 9 Daily τρόπαια. Επιπλέον 15 εύκολες Πίστες Εξάσκησης (όποτε θες): κανονικοί εχθροί και μπαλκόνια, έξτρα καρδιές (+1 ασπίδα) και Overclock, γραμμή τερματισμού, 3 αστέρια, αλλά μόνο 30% των πόντων.
+
+**EN:** 15 distinct Daily Runs (one open at a time; the next unlocks 24 h after your last completion) with a fixed environment/goal, credits, Mastery XP, a stamp on your glider and 9 Daily trophies. Plus 15 easier Training Courses (any time): normal enemies and balconies, extra hearts (+1 shield) and Overclock orbs, a finish line, 3 stars, but only 30% of credits.

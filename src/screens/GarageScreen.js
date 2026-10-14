@@ -12,6 +12,7 @@ import ScreenBackground from "../components/ScreenBackground";
 import SkinUpdatesRow from "../components/SkinUpdatesRow";
 import { MasteryRow, GliderTraits, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
 import TrophiesPanel from "../components/TrophiesPanel";
+import MissionsPanel, { MissionRun } from "../components/MissionsPanel";
 import HangarPanel, { LevelUpToast } from "../components/HangarPanel";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 
@@ -24,11 +25,13 @@ function skillUpgradeCost(level) {
 export default function GarageScreen({ onBack }) {
   const { save, buyGlider, selectGlider, buySkillLevel, setSkillBranch, selectSkin, t, language } = useGame();
   const [tab, setTab] = useState("gliders");
+  const [runCfg, setRunCfg] = useState(null);
   if (!save) return null;
   const TAB_LABELS = {
     gliders: "GLIDERS",
     hangar: language === "en" ? "HANGAR" : "HANGAR",
     collection: language === "en" ? "COLLECTION" : "ΣΥΛΛΟΓΗ",
+    runs: language === "en" ? "RUNS" : "ΠΙΣΤΕΣ",
     weekly: language === "en" ? "WEEKLY" : "ΕΒΔΟΜΑΔΑ",
     trophies: language === "en" ? "TROPHIES" : "ΤΡΟΠΑΙΑ",
   };
@@ -73,7 +76,7 @@ export default function GarageScreen({ onBack }) {
 
       {tab !== "gliders" ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-          {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : tab === "trophies" ? <TrophiesPanel /> : <WeeklyPanel />}
+          {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : tab === "trophies" ? <TrophiesPanel /> : tab === "runs" ? <MissionsPanel onStart={setRunCfg} /> : <WeeklyPanel />}
         </ScrollView>
       ) : (
       <>
@@ -236,6 +239,7 @@ export default function GarageScreen({ onBack }) {
       </ScrollView>
       </>
       )}
+      {runCfg ? <MissionRun cfg={runCfg} onClose={() => setRunCfg(null)} /> : null}
     </ScreenBackground>
   );
 }
