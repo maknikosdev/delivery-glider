@@ -13,6 +13,7 @@ import SkinUpdatesRow from "../components/SkinUpdatesRow";
 import { MasteryRow, GliderTraits, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
 import TrophiesPanel from "../components/TrophiesPanel";
 import MissionsPanel, { MissionRun } from "../components/MissionsPanel";
+import UpgradesPanel from "../components/UpgradesPanel";
 import HangarPanel, { LevelUpToast } from "../components/HangarPanel";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 // The 14 original gliders are drawn in gameplay with this same drone sprite.
@@ -33,12 +34,13 @@ export default function GarageScreen({ onBack }) {
     gliders: "GLIDERS",
     hangar: language === "en" ? "HANGAR" : "HANGAR",
     collection: language === "en" ? "COLLECTION" : "ΣΥΛΛΟΓΗ",
+    upgrade: language === "en" ? "UPGRADE" : "ΕΞΕΛΙΞΗ",
     runs: language === "en" ? "RUNS" : "ΠΙΣΤΕΣ",
     weekly: language === "en" ? "WEEKLY" : "ΕΒΔΟΜΑΔΑ",
     trophies: language === "en" ? "TROPHIES" : "ΤΡΟΠΑΙΑ",
   };
 
-  const TAB_ICONS = { gliders: "🛩️", hangar: "🔧", collection: "📖", runs: "🎯", weekly: "📅", trophies: "🏆" };
+  const TAB_ICONS = { gliders: "🛩️", hangar: "🔧", collection: "📖", runs: "🎯", upgrade: "✦", weekly: "📅", trophies: "🏆" };
 
   const unlockedSkins = save.unlockedSkins || [];
 
@@ -82,7 +84,7 @@ export default function GarageScreen({ onBack }) {
 
       {tab !== "gliders" ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-          {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : tab === "trophies" ? <TrophiesPanel /> : tab === "runs" ? <MissionsPanel onStart={setRunCfg} /> : <WeeklyPanel />}
+          {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : tab === "trophies" ? <TrophiesPanel /> : tab === "runs" ? <MissionsPanel onStart={setRunCfg} /> : tab === "upgrade" ? <UpgradesPanel /> : <WeeklyPanel />}
         </ScrollView>
       ) : (
       <>

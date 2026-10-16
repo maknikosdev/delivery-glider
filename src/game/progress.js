@@ -2,6 +2,7 @@ import { GLIDERS } from "./gliders";
 import { getPartTotals, addParts, rollPartId, rollRarity, getPartDef, PARTS } from "./parts";
 import { PILOTS, challengeStatValue, pilotSkinColor } from "./pilots";
 import { eventForWeek, EVENT_PART_CHANCE } from "./events";
+import { upgradeFx, sumFx } from "./upgrades";
 import { modsFor, NEUTRAL, MAX_LEVEL, MAX_PRESTIGE, PRESTIGE_REWARD } from "./masteryPerks";
 
 // ---------------------------------------------------------------------------
@@ -45,13 +46,22 @@ export function gliderMastery(save, id) {
 
 // Mastery 1-10 perks/penalties + environment affinity + prestige (see masteryPerks.js).
 // Disabled (neutral) in the Daily Challenge so everyone plays on equal terms.
+export function upgradeFxFor(save, gliderId) {
+  const m = gliderMastery(save, gliderId);
+  return upgradeFx({
+    asc: ((save.ascension || {})[gliderId]) || 0,
+    talents: (save.talents || {})[gliderId] || null,
+    tuning: (save.tuning || {})[gliderId] || null,
+  });
+}
+
 export function masteryModsFor(save, gliderId, envId, daily = false) {
   const g = GLIDERS.find((x) => x.id === gliderId);
   const innate = (g && g.traits) || null; // strengths/weaknesses of the newer gliders (always on)
   if (!save) return innate ? modsFor({ gliderId, innate }) : NEUTRAL;
   if (daily) return innate ? modsFor({ gliderId, innate }) : NEUTRAL;
   const m = gliderMastery(save, gliderId);
-  return modsFor({ gliderId, level: m.level, prestige: m.prestige, choices: ((save.masteryChoices || {})[gliderId]) || {}, envId, innate });
+  return modsFor({ gliderId, level: m.level, prestige: m.prestige, choices: ((save.masteryChoices || {})[gliderId]) || {}, envId, innate: sumFx(innate, upgradeFxFor(save, gliderId)) });
 }
 
 // Prestige: only at level 10. Resets this glider's mastery and perk choices,

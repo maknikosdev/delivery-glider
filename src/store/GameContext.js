@@ -7,6 +7,8 @@ import { tableFor, CHOICE_LEVELS } from "../game/masteryPerks";
 import { evaluateExtraAchievements, EXTRA_REWARDS } from "../game/extraAchievements";
 import { partsOf, upgradeCost, SLOTS } from "../game/parts";
 import { applyMissionResult } from "../game/missions";
+import { evaluateStory } from "../game/story";
+import { MAX_ASC, ASC_COST, TALENT_KEYS, TALENT_MAX, talentPoints, talentSpent, TUNE_KEYS, TUNE_MAX, TUNE_TOTAL, tuningOf, tuningUsed } from "../game/upgrades";
 import { readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 
 // Evaluates the extra achievements against a save (no run result) and applies
@@ -89,6 +91,11 @@ export function GameProvider({ children }) {
     } catch (e) {
       // progression is a bonus layer - never block the Game Over flow
     }
+    // Pilot story chapter (game/story.js)
+    try {
+      const st = evaluateStory(finalSave, result);
+      if (st) finalSave = await saveSave(st.patch);
+    } catch (e) {}
     // 15 extra achievements tied to glider upgrades (game/extraAchievements.js)
     finalSave = await grantExtraAchievements(finalSave, result);
     setSave(finalSave);
@@ -218,6 +225,53 @@ export function GameProvider({ children }) {
     return summary;
   }, []);
   const clearMissionResult = useCallback(() => setMissionResult(null), []);
+
+  // ---- Glider upgrades: Ascension / Talents / Tuning (game/upgrades.js) ----
+  const ascendGlider = useCallback(async (gid) => {
+    const cur = await loadSave();
+    const asc = ((cur.ascension || {})[gid]) || 0;
+    const m = gliderMastery(cur, gid);
+    if (asc >= MAX_ASC || m.prestige < asc + 1 || cur.credits < ASC_COST[asc]) return false;
+    let updated = await saveSave({ credits: cur.credits - ASC_COST[asc], ascension: { ...(cur.ascension || {}), [gid]: asc + 1 } });
+    updated = await grantExtraAchievements(updated, null);
+    setSave(updated);
+    return true;
+  }, []);
+
+  const spendTalent = useCallback(async (gid, branch, delta) => {
+    const cur = await loadSave();
+    if (!TALENT_KEYS.includes(branch)) return false;
+    const mine = { ...(((cur.talents || {})[gid]) || {}) };
+    const m = gliderMastery(cur, gid);
+    const pts = talentPoints({ level: m.level, prestige: m.prestige, asc: ((cur.ascension || {})[gid]) || 0 });
+    const next = (mine[branch] || 0) + delta;
+    if (next < 0 || next > TALENT_MAX) return false;
+    if (delta > 0 && talentSpent(mine) >= pts) return false;
+    mine[branch] = next;
+    let updated = await saveSave({ talents: { ...(cur.talents || {}), [gid]: mine } });
+    updated = await grantExtraAchievements(updated, null);
+    setSave(updated);
+    return true;
+  }, []);
+
+  const resetTalents = useCallback(async (gid) => {
+    const cur = await loadSave();
+    const updated = await saveSave({ talents: { ...(cur.talents || {}), [gid]: {} } });
+    setSave(updated);
+    return true;
+  }, []);
+
+  const setTuning = useCallback(async (gid, stat, delta) => {
+    const cur = await loadSave();
+    if (!TUNE_KEYS.includes(stat)) return false;
+    const mine = tuningOf((cur.tuning || {})[gid]);
+    const next = mine[stat] + delta;
+    if (next < 0 || next > TUNE_MAX) return false;
+    if (delta > 0 && tuningUsed(mine) >= TUNE_TOTAL) return false;
+    const updated = await saveSave({ tuning: { ...(cur.tuning || {}), [gid]: { ...mine, [stat]: next } } });
+    setSave(updated);
+    return true;
+  }, []);
 
   const ackExtraAch = useCallback(async () => {
     const current = await loadSave();
@@ -388,6 +442,10 @@ export function GameProvider({ children }) {
     equipPart,
     ackExtraAch,
     finishMission,
+    ascendGlider,
+    spendTalent,
+    resetTalents,
+    setTuning,
     clearMissionResult,
     missionResult,
     chooseMasteryPerk,
