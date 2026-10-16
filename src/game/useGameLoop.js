@@ -38,6 +38,8 @@ import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
 import { PORTAL, pickPortalEnv } from "./portals";
 import { initObjectives, objectiveEvent, tickObjectives } from "./objectives";
+import { initBoons, grantBoon } from "./boons";
+import { initWaypoints, tickWaypoints } from "./waypoints";
 import { getPairPerks, perkTotals, weekKey, masteryModsFor } from "./progress";
 import { initGliderSkills, activateGliderSkill, tickGliderSkills } from "./gliderSkills";
 import { loadBestGhost, saveBestGhostIfBetter } from "../store/storage";
@@ -77,6 +79,7 @@ function buildRunResult(world) {
     objectivesDone: world.objectivesDone || 0,
     bossEnragedClears: world.bossEnragedClears || 0,
     comboDrops: world.comboDrops || 0,
+    boonsGained: (world.boonOrder || []).length,
   };
 }
 
@@ -416,7 +419,7 @@ export function useGameLoop({
   const weightFactor = PHYSICS.weightFactor * effectiveWeightFactorMult;
   const boostMult = effectiveBoostMult;
   const magnetMult = effectiveMagnetMult * pairPerks.magnetMult * partTotals.magnetMult * mm.magnetMult;
-  const maxCapacity = isPassenger ? Math.min(gliderConfig.capacity, PASSENGER.capacity) : gliderConfig.capacity;
+  const maxCapacity = isPassenger ? Math.min(gliderConfig.capacity, PASSENGER.capacity) : Math.max(2, gliderConfig.capacity + (mm.capacity || 0));
 
   const hasGadget = useCallback(
     (id) => (worldRef.current.gadgets || []).includes(id),
@@ -453,6 +456,10 @@ export function useGameLoop({
       const chunk = instantiateChunk(template, world.lastChunkEndX, extra, yBounds, rng);
       world.chunks.push(chunk);
       world.lastChunkEndX = chunk.endX;
+      // Live customers: some balconies hold a VIP, a rushed or a generous client
+      for (const bal of chunk.balconies) {
+        if (!bal.express && !bal.order && Math.random() < 0.2) bal.customer = ["vip", "rush", "tipper"][Math.floor(Math.random() * 3)];
+      }
 
       // Environment rules (Ancient Ruins): extra static traps + hidden chests
       if (envRuleRef.current.staticHazards && !zone.tunnelMode) {
@@ -554,11 +561,15 @@ export function useGameLoop({
     w.portalsUsed = 0;
     w.portalLastMeters = 0;
     initObjectives(w);
+    initBoons(w);
+    initWaypoints(w);
+    if (!isPassenger && maxCapacity !== gliderConfig.capacity) w.packageTypes = rollPackageLoad(maxCapacity, rng);
+    w.lastObjDone = 0;
     w.capacity = maxCapacity;
     w.packages = maxCapacity;
     w.shieldCharges = startingShieldCharges + pairPerks.startShield + partTotals.startShield + mm.shield;
     if (isPassenger) w.packageTypes = Array(maxCapacity).fill("passenger");
-    initGliderSkills(w, skillDef, level);
+    initGliderSkills(w, skillDef, level, ownedCount);
     ensureChunksAhead(w);
     worldRef.current = w;
     runningRef.current = true;
@@ -571,7 +582,7 @@ export function useGameLoop({
   const currentGravity = useCallback(
     (world) => {
       const now = Date.now();
-      const base = (PHYSICS.gravityBase + world.packages * weightFactor) * mutatorGravityMult;
+      const base = (PHYSICS.gravityBase + world.packages * weightFactor) * mutatorGravityMult * ((world.bm && world.bm.gravity) || 1);
       const elapsed = now - world.startedAt;
       if (elapsed < START_GRACE_MS) {
         // Start-of-run grace period: instead of floating flat (0 gravity)
@@ -712,7 +723,7 @@ export function useGameLoop({
               world.wantedRedStreak = 0;
             }
 
-            if (now - world.lastDeliveryAt <= COMBO.windowMs) {
+            if (now - world.lastDeliveryAt <= COMBO.windowMs * ((world.bm && world.bm.comboWindow) || 1)) {
               world.combo = Math.min(COMBO.maxMultiplier, world.combo + 1);
             } else {
               world.combo = 1;
@@ -735,6 +746,21 @@ export function useGameLoop({
             const weatherMult = world.weatherEvent ? effectiveWeatherCreditMult : 1;
             let earned = COMBO.creditsPerDelivery * world.combo * slipMult * weatherMult * mutatorCreditsMult;
             if (comboDrop) earned *= RISK.payMult;
+            if (world.bm) earned *= world.bm.credit;
+            if (b.customer === "vip") {
+              earned *= 1.8;
+              packageTag = "VIP CLIENT";
+            } else if (b.customer === "rush") {
+              if (b.rushUntil && now <= b.rushUntil) {
+                earned *= 2.2;
+                packageTag = "RUSH ✓";
+              } else {
+                earned *= 0.6;
+              }
+            } else if (b.customer === "tipper") {
+              earned += 45;
+              packageTag = "TIP +45";
+            }
 
             if (b.express && b.expiresAt && now <= b.expiresAt) {
               earned = earned * EXPRESS.rewardMult;
@@ -795,6 +821,10 @@ export function useGameLoop({
             world.deliveryPulseAt = now; // Juice: brief camera punch-in, read by GameScreen.js
             delivered = true;
 
+            if (world.bm && world.bm.shieldEvery && world.deliveries % world.bm.shieldEvery === 0) {
+              world.shieldCharges += 1;
+              addFloatingText(world, "Shield +1 🛡️", riderWorldX, world.riderY - 50, "near_miss");
+            }
             objectiveEvent(world, "deliver", 1, objFt);
             objectiveEvent(world, "combo", world.combo, objFt);
 
@@ -808,7 +838,7 @@ export function useGameLoop({
             ) {
               const next = pickPortalEnv(envIdRef.current, portalEnvIds);
               if (next) {
-                const lost = Math.min(world.credits, Math.max(PORTAL.minLoss, Math.round(world.credits * PORTAL.lossPct)));
+                const lost = world.bm && world.bm.freePortal ? 0 : Math.min(world.credits, Math.max(PORTAL.minLoss, Math.round(world.credits * PORTAL.lossPct)));
                 world.credits -= lost;
                 world.portalsUsed = (world.portalsUsed || 0) + 1;
                 world.portalLastMeters = world.score;
@@ -854,9 +884,9 @@ export function useGameLoop({
 
     const inverted = world.weatherEvent && world.weatherEvent.id === "solar_flare" && !isStormImmune;
     if (inverted) {
-      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult);
+      world.velocityY = Math.min(world.velocityY, -PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult * ((world.bm && world.bm.dive) || 1));
     } else {
-      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult);
+      world.velocityY = Math.max(world.velocityY, PHYSICS.diveBoostVy * partTotals.diveMult * mm.diveMult * ((world.bm && world.bm.dive) || 1));
     }
     AudioManager.play("swipe");
   }, [isStormImmune, addFloatingText, isPassenger, partTotals.diveMult, mm.diveMult]);
@@ -1059,8 +1089,30 @@ export function useGameLoop({
       const speed = currentSpeed(world);
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
+      // picking up / refilling packages: a purely cosmetic random flip
+      if (world.prevPackages === undefined) world.prevPackages = world.packages;
+      if (world.packages > world.prevPackages) {
+        world.spin = { start: now, dur: 520, dir: Math.random() < 0.5 ? 1 : -1 };
+      }
+      world.prevPackages = world.packages;
       world.score = world.cameraX * METERS_PER_PX;
       tickObjectives(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind), !(mission && mission.mode === "daily"));
+      if ((world.objectivesDone || 0) > (world.lastObjDone || 0)) {
+        world.lastObjDone = world.objectivesDone;
+        grantBoon(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 100, kind));
+      }
+      tickWaypoints(
+        world,
+        {
+          ft: (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 90, kind),
+          now,
+          riderWorldX: world.cameraX + RIDER.screenX,
+          giftKinds: GIFT_KINDS,
+          overclockMs: 5000,
+          screenH: SCREEN.height,
+        },
+        !(mission && mission.mode === "daily")
+      );
       if (mission && mission.finishMeters && world.status === "playing" && world.score >= mission.finishMeters) {
         world.courseCleared = true;
         runningRef.current = false;
@@ -1406,8 +1458,10 @@ export function useGameLoop({
         // survival bonus exactly once, only if it was never hit.
         if (world.cameraX > b.endX) {
           if (!b.rewarded) {
-            world.credits += b.rewardCredits;
-            addFloatingText(world, `Boss cleared! +${b.rewardCredits}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
+            const bossPay = Math.round(b.rewardCredits * ((world.bm && world.bm.bounty) || 1) * ((world.gs && world.gs.bossMult) || 1));
+            world.credits += bossPay;
+            grantBoon(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 140, kind));
+            addFloatingText(world, `Boss cleared! +${bossPay}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
             if (!world.bossClearedIds.includes(b.id)) world.bossClearedIds.push(b.id);
             if (b.enraged) {
               world.bossEnragedClears = (world.bossEnragedClears || 0) + 1;
@@ -1592,8 +1646,9 @@ export function useGameLoop({
             const lastNear = world.nearMissCooldowns[o.id] || 0;
             if (nearOverlap && now - lastNear > NEAR_MISS.cooldownMs) {
               world.nearMissCooldowns[o.id] = now;
-              world.credits += NEAR_MISS.bonusCredits;
-              addFloatingText(world, `Close call! +${NEAR_MISS.bonusCredits}`, o.worldX, o.y - 34, "near_miss");
+              const nmBonus = Math.round(NEAR_MISS.bonusCredits * ((world.bm && world.bm.nearMiss) || 1));
+              world.credits += nmBonus;
+              addFloatingText(world, `Close call! +${nmBonus}`, o.worldX, o.y - 34, "near_miss");
               objectiveEvent(world, "nearmiss", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
               world.hitStopUntil = now + 55; // Juice: tiny freeze-frame punctuates the dodge
             }
@@ -1637,7 +1692,7 @@ export function useGameLoop({
           if (c.collected) continue;
           const dx = Math.abs(c.worldX - riderWorldX);
           const dy = Math.abs(c.y - (world.riderY + RIDER.height / 2));
-          const radius = COIN.pickupRadius * magnetMult;
+          const radius = COIN.pickupRadius * magnetMult * ((world.bm && world.bm.magnet) || 1);
           if (dx < radius && dy < radius) {
             c.collected = true;
             const feverActive = now < world.feverUntil;
@@ -1684,6 +1739,12 @@ export function useGameLoop({
         // Express delivery activation/expiry (lazily start the countdown the
         // moment the balcony first comes into view, not when it's created).
         for (const b of chunk.balconies) {
+          if (b.customer === "rush" && !b.delivered && !b.rushUntil && b.worldX - world.cameraX < SCREEN.width + 60) b.rushUntil = now + 9000;
+          if (b.customer === "rush" && !b.delivered && b.rushUntil && now > b.rushUntil + 400 && !b.rushGone) {
+            b.rushGone = true;
+            b.customer = null;
+            addFloatingText(world, "Customer left 😤", b.worldX, b.y - 40, "near_miss");
+          }
           if (!b.express || b.delivered) continue;
           const screenX = b.worldX - world.cameraX;
           if (!b.activated && screenX < SCREEN.width + 60) {
@@ -1751,14 +1812,37 @@ export function useGameLoop({
     };
   }, [step]);
 
-  const swipeRight = useCallback(() => {
-    tryDeliver(worldRef.current, false);
-  }, [tryDeliver]);
+  // Acrobatics: a delivery makes the glider flip forward (clockwise) or backward
+  // at random. Forward = falls slightly faster, backward = slightly slower; the
+  // strength (and spin speed) follows how fast the player swiped (px per ms).
+  const deliverySpin = useCallback((world, swipeSpeed) => {
+    const n = Math.max(0, Math.min(1, ((swipeSpeed || 0.8) - 0.3) / 2.2));
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const mag = 30 + 70 * n;
+    world.velocityY += dir > 0 ? mag : -mag;
+    world.spin = { start: Date.now(), dur: 650 - 280 * n, dir };
+  }, []);
+
+  const swipeRight = useCallback(
+    (swipeSpeed) => {
+      const w = worldRef.current;
+      const before = w.deliveries;
+      tryDeliver(w, false);
+      if (w.deliveries > before) deliverySpin(w, swipeSpeed);
+    },
+    [tryDeliver, deliverySpin]
+  );
 
   // Swipe up-right: risky "combo drop" (tight window, x1.5 pay, combo +2, miss resets combo).
-  const swipeComboDrop = useCallback(() => {
-    tryDeliver(worldRef.current, true);
-  }, [tryDeliver]);
+  const swipeComboDrop = useCallback(
+    (swipeSpeed) => {
+      const w = worldRef.current;
+      const before = w.deliveries;
+      tryDeliver(w, true);
+      if (w.deliveries > before) deliverySpin(w, swipeSpeed);
+    },
+    [tryDeliver, deliverySpin]
+  );
 
   const swipeDown = useCallback(() => {
     applyDive(worldRef.current);

@@ -30,6 +30,7 @@ import WantedStars from "../components/WantedStars";
 import FloatingText from "../components/FloatingText";
 import HUD from "../components/HUD";
 import { goalValue, goalText } from "../game/missions";
+import { boonById } from "../game/boons";
 import SkillIndicator from "../components/SkillIndicator";
 import RevivePrompt from "../components/RevivePrompt";
 import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
@@ -214,12 +215,13 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         }
 
         if (dt < 500) {
+          const swipeSpeed = Math.hypot(dx, dy) / Math.max(1, dt);
           if (dx > SWIPE_THRESHOLD && dy <= -60) {
-            actionsRef.current.swipeComboDrop();
+            actionsRef.current.swipeComboDrop(swipeSpeed);
             return;
           }
           if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 60) {
-            actionsRef.current.swipeRight();
+            actionsRef.current.swipeRight(swipeSpeed);
             return;
           }
           if (dy > SWIPE_THRESHOLD && Math.abs(dx) < 60) {
@@ -389,6 +391,14 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             return (
               <React.Fragment key={b.id}>
                 <BalconySprite color={b.color} screenX={screenX} y={b.y} delivered={b.delivered} />
+                {b.customer && !b.delivered ? (
+                  <View pointerEvents="none" style={[styles.custBadge, { left: screenX + 6, top: b.y - 46 }]}>
+                    <Text style={{ fontSize: 13 }}>
+                      {b.customer === "vip" ? "👑" : b.customer === "tipper" ? "💰" : "⏱"}
+                      {b.customer === "rush" && b.rushUntil ? ` ${Math.max(0, Math.ceil((b.rushUntil - Date.now()) / 1000))}` : ""}
+                    </Text>
+                  </View>
+                ) : null}
                 {orderIcon ? (
                   <View
                     pointerEvents="none"
@@ -518,14 +528,39 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           </View>
         ) : null}
 
-        <RiderComp
-          gliderId={gliderConfig.id}
-          y={world.riderY}
-          color={gliderConfig.color}
-          accentColor={gliderConfig.accentColor}
-          packages={world.packages}
-          thrusting={world.thrustHeld}
-        />
+        {(() => {
+          // flip animation (delivery / pickup): rotate around the glider's centre
+          const sp = world.spin;
+          let angle = 0;
+          if (sp) {
+            const p = (Date.now() - sp.start) / sp.dur;
+            if (p < 1) {
+              const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+              angle = sp.dir * 360 * e;
+            }
+          }
+          return (
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                angle !== 0 && {
+                  transformOrigin: `${RIDER.screenX}px ${world.riderY + RIDER.height / 2 + 6}px`,
+                  transform: [{ rotate: `${angle}deg` }],
+                },
+              ]}
+            >
+              <RiderComp
+                gliderId={gliderConfig.id}
+                y={world.riderY}
+                color={gliderConfig.color}
+                accentColor={gliderConfig.accentColor}
+                packages={world.packages}
+                thrusting={world.thrustHeld}
+              />
+            </View>
+          );
+        })()}
       </View>
 
       {/* Per-zone color grading: a very light, permanent full-screen wash
@@ -644,6 +679,20 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
                 </Text>
               </View>
             ) : null}
+            {world.boonOrder && world.boonOrder.length ? (
+              <View style={styles.boonRow}>
+                {world.boonOrder.map((id) => {
+                  const bn = boonById(id);
+                  const n = (world.boonStacks && world.boonStacks[id]) || 1;
+                  return (
+                    <Text key={id} style={styles.boonIcon}>
+                      {bn ? bn.icon : "✨"}
+                      {n > 1 ? `×${n}` : ""}
+                    </Text>
+                  );
+                })}
+              </View>
+            ) : null}
             {!mission && (world.score || 0) < 160 ? (
               <Text style={styles.gestureHint}>
                 {lang === "en" ? "→ quick drop   ↗ combo drop (x1.5, risky)" : "→ γρήγορη παράδοση   ↗ combo drop (x1.5, ρίσκο)"}
@@ -741,6 +790,9 @@ const styles = StyleSheet.create({
   portalFlash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#b46bff" },
   enrageTint: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#ff1a1a", borderWidth: 4, borderColor: "#ff4d4d" },
   objWrap: { position: "absolute", top: 120, left: 14, maxWidth: "58%" },
+  custBadge: { position: "absolute", backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1, borderColor: "#ffd35e" },
+  boonRow: { flexDirection: "row", flexWrap: "wrap", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 3, borderWidth: 1, borderColor: "#d9a8ff", alignSelf: "flex-start", marginTop: 2 },
+  boonIcon: { fontSize: 14, marginRight: 5, color: "#fff" },
   objChip: { backgroundColor: "rgba(0,0,0,0.55)", borderColor: "#7df9ff", borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 4 },
   objText: { color: "#7df9ff", fontSize: 12, fontWeight: "800" },
   objSub: { color: "#fff", fontSize: 10.5, marginTop: 1 },

@@ -167,6 +167,26 @@ export const ENVIRONMENTS = [
     rule: { gravityMult: 0.97, windForce: 110, creditsMult: 1.04, secretGiftChance: 0.25, text: { en: "Open sky: -3% gravity, strong crosswinds, +4% credits, floating chests", el: "Ανοιχτός ουρανός: -3% βαρύτητα, δυνατοί άνεμοι, +4% πόντοι, αιωρούμενα σεντούκια" } },
     bg: "#5aa0e0", scrim: 0.5, accent: "#ffffff", fogs: [], extra: null,
   },
+  {
+    id: "neon_skyline", unlockAt: 9, name: "Neon Skyline", image: require("../../assets/backgrounds/bg_neon_skyline.jpg"), fx: "casino",
+    rule: { creditsMult: 1.06, windForce: 60, text: { en: "Rooftop rush: +6% credits, light updrafts", el: "Ορμή στις ταράτσες: +6% πόντοι, ελαφριά ρεύματα" } },
+    bg: "#1a0b3d", scrim: 0.42, accent: "#ff5ce1", fogs: [], extra: null,
+  },
+  {
+    id: "cloud_dock", unlockAt: 12, name: "Cloud Dock", image: require("../../assets/backgrounds/bg_cloud_dock.jpg"), fx: "clouds",
+    rule: { gravityMult: 0.96, secretGiftChance: 0.3, text: { en: "Above the clouds: -4% gravity, cargo crates on the platforms", el: "Πάνω από τα σύννεφα: -4% βαρύτητα, crates στις πλατφόρμες" } },
+    bg: "#3a3f6a", scrim: 0.45, accent: "#ffcf4d", fogs: [], extra: null,
+  },
+  {
+    id: "neon_alley", unlockAt: 14, name: "Neon Alley", image: require("../../assets/backgrounds/bg_neon_alley.jpg"), fx: "storm",
+    rule: { extraHazards: 1, creditsMult: 1.1, text: { en: "Rainy back streets: more obstacles, +10% credits", el: "Βροχερά σοκάκια: περισσότερα εμπόδια, +10% πόντοι" } },
+    bg: "#0d0a22", scrim: 0.45, accent: "#28e0ff", fogs: [], extra: null,
+  },
+  {
+    id: "sunset_gorge", unlockAt: 16, name: "Sunset Gorge", image: require("../../assets/backgrounds/bg_sunset_gorge.jpg"), fx: "embers",
+    rule: { speedMult: 1.04, creditsMult: 1.08, windForce: 70, text: { en: "Golden hour: +4% speed, +8% credits, canyon updrafts", el: "Χρυσή ώρα: +4% ταχύτητα, +8% πόντοι, ρεύματα φαραγγιού" } },
+    bg: "#3a1208", scrim: 0.42, accent: "#ffb347", fogs: [], extra: null,
+  },
 ];
 
 export function getEnvironment(id) {

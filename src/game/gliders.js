@@ -15,6 +15,7 @@
 // like an arcade high-score/coin system, not an in-app purchase.
 import { NEW_GLIDERS } from "./newGliders";
 import { NEW_GLIDERS_2 } from "./newGliders2";
+import { NEW_GLIDERS_3 } from "./newGliders3";
 
 const BASE_GLIDERS = [
   {
@@ -219,7 +220,7 @@ const BASE_GLIDERS = [
   },
 ];
 
-export const GLIDERS = [...BASE_GLIDERS, ...NEW_GLIDERS, ...NEW_GLIDERS_2];
+export const GLIDERS = [...BASE_GLIDERS, ...NEW_GLIDERS, ...NEW_GLIDERS_2, ...NEW_GLIDERS_3];
 
 export function gliderById(id) {
   return GLIDERS.find((g) => g.id === id);

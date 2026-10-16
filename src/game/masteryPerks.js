@@ -26,6 +26,8 @@ export const CLASS_OF = {
   cupid: "coin", neon_beats: "coin",
   biohazard: "guard", crystal_shard: "guard",
   mecha_forge: "heavy",
+  // 16 skill gliders
+  tidecaller: "elemental", peak_prospector: "coin", mender: "guard", void_weaver: "trick", feral: "heavy", clockwork: "speed", blizzard: "elemental", thornbloom: "guard", cinderwing: "speed", arcane_seer: "trick", aegis: "guard", voltaic: "speed", riptide: "speed", helios: "coin", convoy: "heavy", prism_core: "trick",
 };
 export const classOf = (gliderId) => CLASS_OF[gliderId] || "speed";
 
@@ -153,6 +155,22 @@ const GLIDER_AFFINITY = {
   racing_gear: { home: ["neon_city", "storm_front", "lava_canyon"], hostile: ["sunken_kingdom", "bio_jungle", "frozen_peaks"] },
   ocean_breeze: { home: ["sunken_kingdom", "underwater_reef", "sky_islands"], hostile: ["lava_canyon", "crimson_dunes", "ancient_ruins"] },
   alien_tech: { home: ["galactic_orbit", "orbital_ring", "bio_jungle"], hostile: ["crimson_dunes", "ancient_ruins", "neon_casino"] },
+  tidecaller: { home: ["underwater_reef", "sunken_kingdom", "sky_islands"], hostile: ["lava_canyon", "crimson_dunes", "ancient_ruins"] },
+  peak_prospector: { home: ["frozen_peaks", "sky_islands", "ancient_ruins"], hostile: ["underwater_reef", "sunken_kingdom", "neon_casino"] },
+  mender: { home: ["neon_city", "bio_jungle", "neon_casino"], hostile: ["lava_canyon", "storm_front", "crimson_dunes"] },
+  void_weaver: { home: ["galactic_orbit", "orbital_ring", "neon_city"], hostile: ["sunken_kingdom", "bio_jungle", "storm_front"] },
+  feral: { home: ["bio_jungle", "sunken_kingdom", "ancient_ruins"], hostile: ["frozen_peaks", "neon_casino", "orbital_ring"] },
+  clockwork: { home: ["neon_city", "orbital_ring", "ancient_ruins"], hostile: ["storm_front", "sunken_kingdom", "bio_jungle"] },
+  blizzard: { home: ["frozen_peaks", "sky_islands", "galactic_orbit"], hostile: ["lava_canyon", "crimson_dunes", "neon_casino"] },
+  thornbloom: { home: ["bio_jungle", "underwater_reef", "sky_islands"], hostile: ["crimson_dunes", "lava_canyon", "frozen_peaks"] },
+  cinderwing: { home: ["lava_canyon", "crimson_dunes", "ancient_ruins"], hostile: ["frozen_peaks", "sunken_kingdom", "underwater_reef"] },
+  arcane_seer: { home: ["ancient_ruins", "galactic_orbit", "orbital_ring"], hostile: ["sky_islands", "neon_casino", "bio_jungle"] },
+  aegis: { home: ["neon_city", "ancient_ruins", "orbital_ring"], hostile: ["storm_front", "sky_islands", "lava_canyon"] },
+  voltaic: { home: ["storm_front", "orbital_ring", "neon_city"], hostile: ["sunken_kingdom", "underwater_reef", "ancient_ruins"] },
+  riptide: { home: ["underwater_reef", "sunken_kingdom", "storm_front"], hostile: ["lava_canyon", "crimson_dunes", "frozen_peaks"] },
+  helios: { home: ["crimson_dunes", "sky_islands", "neon_casino"], hostile: ["frozen_peaks", "galactic_orbit", "sunken_kingdom"] },
+  convoy: { home: ["neon_city", "neon_casino", "bio_jungle"], hostile: ["frozen_peaks", "galactic_orbit", "ancient_ruins"] },
+  prism_core: { home: ["neon_casino", "neon_city", "galactic_orbit"], hostile: ["frozen_peaks", "ancient_ruins", "bio_jungle"] },
 };
 export function affinityOf(gliderId) {
   return GLIDER_AFFINITY[gliderId] || CLASS_AFFINITY[classOf(gliderId)] || { home: [], hostile: [] };
@@ -172,7 +190,7 @@ export function affinityFx(gliderId, envId, level) {
   return out;
 }
 
-export const NEUTRAL = { gravityMult: 1, speedMult: 1, magnetMult: 1, diveMult: 1, shield: 0, credit: 0 };
+export const NEUTRAL = { gravityMult: 1, speedMult: 1, magnetMult: 1, diveMult: 1, shield: 0, capacity: 0, credit: 0 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const add = (acc, fx) => {
   for (const [k, v] of Object.entries(fx || {})) acc[k] = (acc[k] || 0) + v;
@@ -206,7 +224,8 @@ export function modsFor({ gliderId, level = 0, prestige = 0, choices = {}, envId
     speedMult: clamp(1 + (acc.speed || 0), 0.93, 1.08),
     magnetMult: clamp(1 + (acc.magnet || 0), 0.6, 1.8),
     diveMult: clamp(1 + (acc.dive || 0), 0.8, 1.3),
-    shield: clamp(Math.round(acc.shield || 0), 0, 2),
+    shield: clamp(Math.round(acc.shield || 0), 0, 4),
+    capacity: clamp(Math.round(acc.capacity || 0), -1, 2),
     credit: acc.credit || 0,
   };
 }
