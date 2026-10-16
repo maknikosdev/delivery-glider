@@ -1089,12 +1089,6 @@ export function useGameLoop({
       const speed = currentSpeed(world);
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
-      // picking up / refilling packages: a purely cosmetic random flip
-      if (world.prevPackages === undefined) world.prevPackages = world.packages;
-      if (world.packages > world.prevPackages) {
-        world.spin = { start: now, dur: 520, dir: Math.random() < 0.5 ? 1 : -1 };
-      }
-      world.prevPackages = world.packages;
       world.score = world.cameraX * METERS_PER_PX;
       tickObjectives(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind), !(mission && mission.mode === "daily"));
       if ((world.objectivesDone || 0) > (world.lastObjDone || 0)) {
@@ -1812,37 +1806,14 @@ export function useGameLoop({
     };
   }, [step]);
 
-  // Acrobatics: a delivery makes the glider flip forward (clockwise) or backward
-  // at random. Forward = falls slightly faster, backward = slightly slower; the
-  // strength (and spin speed) follows how fast the player swiped (px per ms).
-  const deliverySpin = useCallback((world, swipeSpeed) => {
-    const n = Math.max(0, Math.min(1, ((swipeSpeed || 0.8) - 0.3) / 2.2));
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const mag = 30 + 70 * n;
-    world.velocityY += dir > 0 ? mag : -mag;
-    world.spin = { start: Date.now(), dur: 650 - 280 * n, dir };
-  }, []);
-
-  const swipeRight = useCallback(
-    (swipeSpeed) => {
-      const w = worldRef.current;
-      const before = w.deliveries;
-      tryDeliver(w, false);
-      if (w.deliveries > before) deliverySpin(w, swipeSpeed);
-    },
-    [tryDeliver, deliverySpin]
-  );
+  const swipeRight = useCallback(() => {
+    tryDeliver(worldRef.current, false);
+  }, [tryDeliver]);
 
   // Swipe up-right: risky "combo drop" (tight window, x1.5 pay, combo +2, miss resets combo).
-  const swipeComboDrop = useCallback(
-    (swipeSpeed) => {
-      const w = worldRef.current;
-      const before = w.deliveries;
-      tryDeliver(w, true);
-      if (w.deliveries > before) deliverySpin(w, swipeSpeed);
-    },
-    [tryDeliver, deliverySpin]
-  );
+  const swipeComboDrop = useCallback(() => {
+    tryDeliver(worldRef.current, true);
+  }, [tryDeliver]);
 
   const swipeDown = useCallback(() => {
     applyDive(worldRef.current);

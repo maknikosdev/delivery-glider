@@ -215,13 +215,12 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         }
 
         if (dt < 500) {
-          const swipeSpeed = Math.hypot(dx, dy) / Math.max(1, dt);
           if (dx > SWIPE_THRESHOLD && dy <= -60) {
-            actionsRef.current.swipeComboDrop(swipeSpeed);
+            actionsRef.current.swipeComboDrop();
             return;
           }
           if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 60) {
-            actionsRef.current.swipeRight(swipeSpeed);
+            actionsRef.current.swipeRight();
             return;
           }
           if (dy > SWIPE_THRESHOLD && Math.abs(dx) < 60) {
@@ -528,39 +527,14 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           </View>
         ) : null}
 
-        {(() => {
-          // flip animation (delivery / pickup): rotate around the glider's centre
-          const sp = world.spin;
-          let angle = 0;
-          if (sp) {
-            const p = (Date.now() - sp.start) / sp.dur;
-            if (p < 1) {
-              const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-              angle = sp.dir * 360 * e;
-            }
-          }
-          return (
-            <View
-              pointerEvents="none"
-              style={[
-                StyleSheet.absoluteFill,
-                angle !== 0 && {
-                  transformOrigin: `${RIDER.screenX}px ${world.riderY + RIDER.height / 2 + 6}px`,
-                  transform: [{ rotate: `${angle}deg` }],
-                },
-              ]}
-            >
-              <RiderComp
-                gliderId={gliderConfig.id}
-                y={world.riderY}
-                color={gliderConfig.color}
-                accentColor={gliderConfig.accentColor}
-                packages={world.packages}
-                thrusting={world.thrustHeld}
-              />
-            </View>
-          );
-        })()}
+        <RiderComp
+          gliderId={gliderConfig.id}
+          y={world.riderY}
+          color={gliderConfig.color}
+          accentColor={gliderConfig.accentColor}
+          packages={world.packages}
+          thrusting={world.thrustHeld}
+        />
       </View>
 
       {/* Per-zone color grading: a very light, permanent full-screen wash
