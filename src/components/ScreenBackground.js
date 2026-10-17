@@ -1,5 +1,6 @@
 import React from "react";
-import { ImageBackground, View, StyleSheet } from "react-native";
+import { ImageBackground, Image, View, StyleSheet, useWindowDimensions } from "react-native";
+import AmbientFX from "./AmbientFX";
 
 // Same illustrated background art used on the Menu screen, now shared by
 // every other screen too, so the whole app feels like one consistent
@@ -10,11 +11,47 @@ import { ImageBackground, View, StyleSheet } from "react-native";
 // extra gradient dependency.
 const BG = require("../../assets/art/menu_background.jpg");
 
-export default function ScreenBackground({ children, style }) {
+// Logo mode (`logoTop` prop): the artwork's big "The Delivery Glider" title is
+// shown COMPLETE (not sliced by the scrim bands) in a block right under the
+// screen's header, then fades smoothly into the dark content area.
+// logoTop = pixels reserved at the top for the header. Use
+// logoBlockHeight(windowHeight, logoTop) to leave room for it in the layout.
+const LOGO_FRAC = 0.44;
+export const logoBlockHeight = (windowH, logoTop) => logoTop + LOGO_FRAC * (windowH - logoTop);
+
+export default function ScreenBackground({ children, style, logoTop }) {
+  const { height: winH } = useWindowDimensions();
+  if (logoTop != null) {
+    const artH = winH - logoTop;
+    const blockH = LOGO_FRAC * artH;
+    const fadeFrom = 0.37; // title ends at ~36% of the art
+    const bands = 14;
+    return (
+      <View style={[styles.bg, { backgroundColor: "#05030d" }, style]}>
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: logoTop, height: blockH, overflow: "hidden" }}>
+          <Image source={BG} style={{ width: "100%", height: artH }} resizeMode="cover" />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(5,3,13,0.22)" }]} />
+          {Array.from({ length: bands }).map((_, i) => {
+            const top = blockH * fadeFrom + ((blockH * (1 - fadeFrom)) / bands) * i;
+            return (
+              <View
+                key={i}
+                style={{ position: "absolute", left: 0, right: 0, top, height: (blockH * (1 - fadeFrom)) / bands + 1, backgroundColor: `rgba(5,3,13,${((i + 1) / bands).toFixed(3)})` }}
+              />
+            );
+          })}
+        </View>
+        <AmbientFX intensity="soft" />
+        {children}
+      </View>
+    );
+  }
   return (
     <ImageBackground source={BG} style={[styles.bg, style]} resizeMode="cover">
       <View style={styles.scrimTop} pointerEvents="none" />
       <View style={styles.scrimBottom} pointerEvents="none" />
+      {/* ambient animation: behind the content, never blocks touches */}
+      <AmbientFX intensity="soft" />
       {children}
     </ImageBackground>
   );

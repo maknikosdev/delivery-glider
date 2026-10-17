@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { View, Image, StyleSheet, StatusBar, BackHandler } from "react-native";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { View, Image, StyleSheet, StatusBar, BackHandler, Animated, Easing } from "react-native";
+import AmbientFX from "./src/components/AmbientFX";
 import * as SplashScreen from "expo-splash-screen";
 import { GameProvider, useGame } from "./src/store/GameContext";
 import MenuScreen from "./src/screens/MenuScreen";
@@ -31,7 +32,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 
 // The logo must stay on screen for at least this long, regardless of how
 // fast the save file finishes loading from AsyncStorage.
-const MIN_SPLASH_MS = 1000;
+const MIN_SPLASH_MS = 2200;
 
 // Android 12+'s native SplashScreen API constrains the image to a small,
 // icon-sized area (~240dp max) no matter what resizeMode is configured —
@@ -41,9 +42,44 @@ const MIN_SPLASH_MS = 1000;
 // normal React Native view with no such size limit — the logo can be shown
 // as large as we want, for exactly as long as we want.
 function SplashOverlay() {
+  // Animated intro: the logo fades/zooms in with a pulsing neon glow, light
+  // motes and a glider fly across behind it, and a loading bar fills along
+  // the bottom for the whole splash time. Code-only, no extra assets.
+  const logo = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+  const bar = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(logo, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    Animated.timing(bar, { toValue: 1, duration: MIN_SPLASH_MS - 150, easing: Easing.inOut(Easing.quad), useNativeDriver: false }).start();
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [logo, glow, bar]);
   return (
     <View style={styles.splashOverlay}>
-      <Image source={require("./assets/splash.png")} style={styles.splashImage} resizeMode="contain" />
+      <AmbientFX intensity="hero" force />
+      <Animated.View
+        style={[
+          styles.splashGlow,
+          { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.3] }), transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] }) }] },
+        ]}
+      />
+      <Animated.Image
+        source={require("./assets/splash.png")}
+        style={[
+          styles.splashImage,
+          { opacity: logo, transform: [{ scale: logo.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] },
+        ]}
+        resizeMode="contain"
+      />
+      <View style={styles.splashBarTrack}>
+        <Animated.View style={[styles.splashBarFill, { width: bar.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }]} />
+      </View>
     </View>
   );
 }
@@ -327,4 +363,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   splashImage: { width: "82%", height: "82%" },
+  splashGlow: {
+    position: "absolute",
+    width: "78%",
+    aspectRatio: 1,
+    borderRadius: 999,
+    backgroundColor: "#7d5cff",
+  },
+  splashBarTrack: {
+    position: "absolute",
+    bottom: 64,
+    left: "20%",
+    right: "20%",
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
+  },
+  splashBarFill: { height: 4, borderRadius: 2, backgroundColor: "#28e0ff" },
 });

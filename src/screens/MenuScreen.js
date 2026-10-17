@@ -4,6 +4,8 @@ import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import MuteButton from "../components/MuteButton";
 import LanguageToggleButton from "../components/LanguageToggleButton";
+import AmbientFX from "../components/AmbientFX";
+import TitleShine from "../components/TitleShine";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import AudioManager from "../audio/AudioManager";
@@ -19,7 +21,7 @@ import { pickMenuLineIndex } from "../game/dispatcher";
 const BG = require("../../assets/art/menu_background.jpg");
 
 export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial, onHazards }) {
-  const { save, t } = useGame();
+  const { save, t, toggleFx } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
 
   // Story/NPCs: one line from Nyx (the dispatcher), rotating daily rather
@@ -30,9 +32,15 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
 
   return (
     <ImageBackground source={BG} style={styles.container} resizeMode="cover">
+      <TitleShine source={BG} layer="under" />
       <View style={styles.scrim} />
+      <AmbientFX intensity="hero" />
+      <TitleShine source={BG} layer="over" />
 
       <View style={styles.topRight}>
+        <Pressable onPress={toggleFx} hitSlop={8} style={styles.fxBtn}>
+          <Text style={styles.fxText}>{save?.fxOff ? "FX ✕" : "FX ✦"}</Text>
+        </Pressable>
         <LanguageToggleButton style={{ marginRight: 8 }} />
         <MuteButton />
       </View>
@@ -126,6 +134,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(5,3,13,0.28)",
   },
   topRight: { position: "absolute", top: 50, right: 20, flexDirection: "row", alignItems: "center" },
+  fxBtn: {
+    marginRight: 8,
+    paddingHorizontal: 10,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.neonCyan,
+    backgroundColor: "rgba(5,3,13,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fxText: { color: COLORS.neonCyan, fontWeight: "800", fontSize: 12, letterSpacing: 0.5 },
   spacer: { flex: 1 },
   dispatcherNote: {
     marginHorizontal: 24,

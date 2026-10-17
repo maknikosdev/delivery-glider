@@ -67,6 +67,15 @@ export function GameProvider({ children }) {
     });
   }, []);
 
+  // Menu / tab / in-game visual effects on-off switch (save.fxOff).
+  const toggleFx = useCallback(() => {
+    setSave((prev) => {
+      const fxOff = !prev.fxOff;
+      saveSave({ fxOff });
+      return { ...prev, fxOff };
+    });
+  }, []);
+
   const toggleLanguage = useCallback(() => {
     setSave((prev) => {
       const nextLang = prev.language === "en" ? "el" : "en";
@@ -432,6 +441,7 @@ export function GameProvider({ children }) {
     loading,
     lastRun,
     toggleMute,
+    toggleFx,
     language,
     setLanguage,
     toggleLanguage,

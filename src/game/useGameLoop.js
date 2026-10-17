@@ -1137,7 +1137,7 @@ export function useGameLoop({
             }
           }
         }
-        world.particles = world.particles.filter((p) => now - p.born < 700);
+        world.particles = world.particles.filter((p) => now - p.born < (p.kind ? 700 : 900));
         world.floatingTexts = world.floatingTexts.filter((f) => now - f.born < (f.kind === "banner" ? 1800 : 900));
         return;
       }
@@ -1766,7 +1766,7 @@ export function useGameLoop({
 
       if (world.shake > 0) world.shake = Math.max(0, world.shake - dt * 2.5);
 
-      world.particles = world.particles.filter((p) => now - p.born < 700);
+      world.particles = world.particles.filter((p) => now - p.born < (p.kind ? 700 : 900));
       world.floatingTexts = world.floatingTexts.filter((f) => now - f.born < (f.kind === "banner" ? 1800 : 900));
     },
     [

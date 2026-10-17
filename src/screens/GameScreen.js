@@ -7,6 +7,8 @@ import SpecialRiderSprite from "../components/SpecialRiderSprite";
 import ParcelSprite from "../components/ParcelSprite";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 import GliderTrail from "../components/GliderTrail";
+import EngineFX from "../components/EngineFX";
+import DeliveryBurst from "../components/DeliveryBurst";
 import { useGame } from "../store/GameContext";
 import { pickEnvironmentId, getEnvironment, unlockedEnvironments } from "../game/environments";
 import { runCreditBonus, gliderMastery, weekKey } from "../game/progress";
@@ -478,7 +480,14 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         )}
 
         {world.particles.map((p) => (
-          <DeliveryParticle key={p.id} screenX={p.x - world.cameraX} y={p.y} />
+          p.kind ? (
+            <DeliveryParticle key={p.id} screenX={p.x - world.cameraX} y={p.y} />
+          ) : (
+            <React.Fragment key={p.id}>
+              <DeliveryParticle screenX={p.x - world.cameraX} y={p.y} />
+              {!(save && save.fxOff) && <DeliveryBurst screenX={p.x - world.cameraX} y={p.y} born={p.born} />}
+            </React.Fragment>
+          )
         ))}
 
         {world.floatingTexts.map((f) => (
@@ -504,6 +513,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             </View>
           );
         })()}
+
+        {!(save && save.fxOff) && (
+          <EngineFX y={world.riderY} color={gliderConfig.color} accentColor={gliderConfig.accentColor} thrusting={world.thrustHeld} />
+        )}
 
         <GliderTrail
           variant={trailVariant(gliderConfig.id)}
