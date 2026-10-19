@@ -12,12 +12,12 @@ const COUNTS = [4, 6, 9, 12];
 const WAVE = [1, 0.4, 2, 1.4];
 const RADIUS = [null, 1, null, 3];
 
-export default function GliderTrail({ y, color, accentColor, tier: tierProp, thrusting, variant = 0, gold = false }) {
+export default function GliderTrail({ y, color, accentColor, tier: tierProp, thrusting, variant = 0, gold = false, low = false }) {
   // tier 0 = a short faint trail in the glider's colour; Mastery 5 = GOLD trail.
   const tier = gold ? Math.max(3, tierProp || 0) : tierProp || 0;
   const faint = tier === 0 ? 0.55 : 1;
   const now = Date.now();
-  const n = COUNTS[tier] || 0;
+  const n = Math.min(COUNTS[tier] || 0, low ? 4 : 99);
   const x0 = RIDER.screenX - RIDER.width / 2 + 6;
   const cy = y + (RIDER.height + 20) / 2 + 4;
   const boost = thrusting ? 1.25 : 1;
@@ -65,7 +65,7 @@ export default function GliderTrail({ y, color, accentColor, tier: tierProp, thr
     );
   }
 
-  if (tier === 3) {
+  if (tier === 3 && !low) {
     for (let k = 0; k < 3; k++) {
       const p = Math.sin(now / 90 + k * 2.1);
       segs.push(

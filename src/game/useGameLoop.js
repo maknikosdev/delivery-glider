@@ -1832,21 +1832,34 @@ export function useGameLoop({
     ]
   );
 
+  // One display frame -> 1..MAX_SUBSTEPS physics steps of ~1/55 s or less.
+  // A slow phone (20-30 fps) now plays at the same real-time speed with the
+  // same collision accuracy as a flagship; a fast phone (60/90/120 Hz) still
+  // takes a single smooth step per frame, exactly as before.
+  const advance = useCallback(
+    (ts) => {
+      if (lastTsRef.current == null) lastTsRef.current = ts;
+      const frameDt = Math.min(0.1, Math.max(0, (ts - lastTsRef.current) / 1000));
+      lastTsRef.current = ts;
+      const n = Math.min(4, Math.max(1, Math.ceil(frameDt * 55)));
+      const sub = frameDt / n;
+      for (let i = 0; i < n; i++) step(sub);
+      forceRender((c) => c + 1);
+    },
+    [step]
+  );
+
   useEffect(() => {
     function loop(ts) {
       if (!runningRef.current) return;
-      if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dt = Math.min(0.033, (ts - lastTsRef.current) / 1000);
-      lastTsRef.current = ts;
-      step(dt);
-      forceRender((n) => n + 1);
+      advance(ts);
       rafRef.current = requestAnimationFrame(loop);
     }
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [step]);
+  }, [advance]);
 
   const swipeRight = useCallback(() => {
     tryDeliver(worldRef.current, false);
@@ -1876,14 +1889,10 @@ export function useGameLoop({
     lastTsRef.current = null;
     rafRef.current = requestAnimationFrame(function loop(ts) {
       if (!runningRef.current) return;
-      if (lastTsRef.current == null) lastTsRef.current = ts;
-      const dt = Math.min(0.033, (ts - lastTsRef.current) / 1000);
-      lastTsRef.current = ts;
-      step(dt);
-      forceRender((n) => n + 1);
+      advance(ts);
       rafRef.current = requestAnimationFrame(loop);
     });
-  }, [step]);
+  }, [advance]);
 
   const resume = useCallback(() => {
     if (worldRef.current.status !== "playing") return 0;

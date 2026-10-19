@@ -387,7 +387,7 @@ function CodeBackground({ cameraX, env = "neon_city" }) {
 // αστραπές, neon flicker, πυγολαμπίδες). Μόνο διακοσμητικό.
 const IMG_ASPECT = 766 / 454;
 
-function ImageEnvBackground({ cameraX, E }) {
+function ImageEnvBackground({ cameraX, E, low = false }) {
   const now = Date.now();
   const H = SCREEN.height;
   const W = SCREEN.width;
@@ -396,7 +396,9 @@ function ImageEnvBackground({ cameraX, E }) {
   const off = -((cameraX * 0.09) % period);
   const t = now / 1000;
   const fxItems = [];
-  if (E.fx === "bubbles") {
+  if (low) {
+    // low-quality mode: skip the animated particles
+  } else if (E.fx === "bubbles") {
     for (let i = 0; i < 14; i++) {
       const sp = 22 + (i % 5) * 9;
       const y = H - (((t * sp) + i * 97) % (H + 40)) + 20;
@@ -495,9 +497,9 @@ function ImageEnvBackground({ cameraX, E }) {
   );
 }
 
-export default function ParallaxBackground({ cameraX, env = "neon_city" }) {
+export default function ParallaxBackground({ cameraX, env = "neon_city", low = false }) {
   const E0 = getEnvironment(env);
-  if (E0.image) return <ImageEnvBackground cameraX={cameraX} E={E0} />;
+  if (E0.image) return <ImageEnvBackground cameraX={cameraX} E={E0} low={low} />;
   return <CodeBackground cameraX={cameraX} env={env} />;
 }
 

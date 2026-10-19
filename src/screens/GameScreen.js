@@ -60,6 +60,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   );
   const [bannerVisible, setBannerVisible] = useState(true);
   const bannerTimer = useRef(null);
+  // Auto quality: if frames are consistently slow, drop decorative effects
+  // (gameplay and physics are unaffected).
+  const [lowFx, setLowFx] = useState(false);
+  const frameRef = useRef({ last: 0, ema: 16, slow: 0 });
   // Portal Balcony: environments the run may jump to (all unlocked ones)
   const portalEnvIds = useMemo(
     () => unlockedEnvironments(Math.max(1, ((save && save.ownedGliders) || []).length), (save && save.bonusEnvs) || []).map((e) => e.id),
@@ -166,6 +170,16 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   // once via useRef) never read a stale value from their first render.
   const statusRef = useRef(world.status);
   statusRef.current = world.status;
+  {
+    const f = frameRef.current;
+    const nowMs = Date.now();
+    if (world.status === "playing" && f.last && nowMs - f.last < 250) {
+      f.ema = f.ema * 0.95 + (nowMs - f.last) * 0.05;
+      f.slow = f.ema > 27 ? f.slow + 1 : 0;
+    }
+    f.last = nowMs;
+    if (!lowFx && f.slow > 120) setTimeout(() => setLowFx(true), 0);
+  }
 
   const clearHoldTimer = useCallback(() => {
     if (holdTimer.current) {
@@ -339,7 +353,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           transform: [{ translateX: shakeX }, { translateY: shakeY }, { scale: deliveryZoom }],
         }}
       >
-        <ParallaxBackground cameraX={world.cameraX} env={envId} />
+        <ParallaxBackground cameraX={world.cameraX} env={envId} low={lowFx} />
         {bannerVisible ? (() => {
           const env = getEnvironment(envId);
           const lang = language === "el" ? "el" : "en";
@@ -550,7 +564,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           ) : (
             <React.Fragment key={p.id}>
               <DeliveryParticle screenX={p.x - world.cameraX} y={p.y} />
-              {!(save && save.fxOff) && <DeliveryBurst screenX={p.x - world.cameraX} y={p.y} born={p.born} />}
+              {!(save && save.fxOff) && !lowFx && <DeliveryBurst screenX={p.x - world.cameraX} y={p.y} born={p.born} />}
             </React.Fragment>
           )
         ))}
@@ -580,7 +594,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         })()}
 
         {!(save && save.fxOff) && (
-          <EngineFX y={world.riderY} color={gliderConfig.color} accentColor={gliderConfig.accentColor} thrusting={world.thrustHeld} />
+          <EngineFX y={world.riderY} color={gliderConfig.color} accentColor={gliderConfig.accentColor} thrusting={world.thrustHeld} low={lowFx} />
         )}
 
         <GliderTrail
@@ -591,6 +605,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           accentColor={gliderConfig.accentColor}
           tier={skinTier}
           thrusting={world.thrustHeld}
+          low={lowFx}
         />
 
         {getEnvironment(envId).image ? (
@@ -864,7 +879,7 @@ const styles = StyleSheet.create({
   orderBadgeOn: { borderColor: "#7dffb0", backgroundColor: "rgba(20,90,50,0.7)" },
   portalFlash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#b46bff" },
   enrageTint: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#ff1a1a", borderWidth: 4, borderColor: "#ff4d4d" },
-  objWrap: { position: "absolute", top: 120, left: 14, maxWidth: "58%" },
+  objWrap: { position: "absolute", top: BANNER_TOP + 90, left: 14, maxWidth: "58%" },
   custBadge: { position: "absolute", backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 8, paddingHorizontal: 4, paddingVertical: 1, borderWidth: 1, borderColor: "#ffd35e" },
   boonRow: { flexDirection: "row", flexWrap: "wrap", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 3, borderWidth: 1, borderColor: "#d9a8ff", alignSelf: "flex-start", marginTop: 2 },
   boonIcon: { fontSize: 14, marginRight: 5, color: "#fff" },
@@ -872,8 +887,8 @@ const styles = StyleSheet.create({
   objText: { color: "#7df9ff", fontSize: 12, fontWeight: "800" },
   objSub: { color: "#fff", fontSize: 10.5, marginTop: 1 },
   gestureHint: { color: "#fff", fontSize: 10.5, fontWeight: "700", opacity: 0.85, textShadowColor: "#000", textShadowRadius: 3, marginTop: 4 },
-  envBanner: { position: "absolute", top: 70, left: 0, right: 0, alignItems: "center" },
-  rivalWrap: { position: "absolute", top: 120, right: 14, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  envBanner: { position: "absolute", top: BANNER_TOP + 44, left: 0, right: 0, alignItems: "center" },
+  rivalWrap: { position: "absolute", top: BANNER_TOP + 90, right: 14, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   rivalText: { fontSize: 12, fontWeight: "800" },
   envEvent: { color: "#7de8ff", fontSize: 12, fontWeight: "700", marginTop: 2, textShadowColor: "#000", textShadowRadius: 3 },
   envName: { color: "#fff", fontSize: 15, fontWeight: "800", letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 4 },
