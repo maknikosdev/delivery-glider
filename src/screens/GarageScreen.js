@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Image, FlatList } from "react-native";
 import { COLORS, SKILL_UPGRADES, readSkillLevel, readSkillBranch } from "../constants/gameConfig";
 import { GLIDERS } from "../game/gliders";
 import { useGame } from "../store/GameContext";
@@ -9,6 +9,7 @@ import LanguageToggleButton from "../components/LanguageToggleButton";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
 import ScreenBackground from "../components/ScreenBackground";
+import FadeInView from "../components/FadeInView";
 import SkinUpdatesRow from "../components/SkinUpdatesRow";
 import { MasteryRow, GliderTraits, CollectionPanel, WeeklyPanel } from "../components/GaragePanels";
 import TrophiesPanel from "../components/TrophiesPanel";
@@ -29,7 +30,21 @@ export default function GarageScreen({ onBack }) {
   const { save, buyGlider, selectGlider, buySkillLevel, setSkillBranch, selectSkin, t, language } = useGame();
   const [tab, setTab] = useState("gliders");
   const [runCfg, setRunCfg] = useState(null);
+  const [filter, setFilter] = useState("all"); // all | owned | buyable
   if (!save) return null;
+  const en = language === "en";
+  // 58 gliders is a lot to scroll: let the player narrow the list.
+  const FILTERS = [
+    { id: "all", label: en ? "ALL" : "ΟΛΑ", n: GLIDERS.length },
+    { id: "owned", label: en ? "OWNED" : "ΔΙΚΑ ΜΟΥ", n: GLIDERS.filter((g) => save.ownedGliders.includes(g.id)).length },
+    { id: "buyable", label: en ? "AFFORDABLE" : "ΜΠΟΡΩ ΝΑ ΑΓΟΡΑΣΩ", n: GLIDERS.filter((g) => !save.ownedGliders.includes(g.id) && save.credits >= g.unlockCost).length },
+  ];
+  const visibleGliders = GLIDERS.filter((g) => {
+    const owned = save.ownedGliders.includes(g.id);
+    if (filter === "owned") return owned;
+    if (filter === "buyable") return !owned && save.credits >= g.unlockCost;
+    return true;
+  });
   const TAB_LABELS = {
     gliders: "GLIDERS",
     hangar: language === "en" ? "HANGAR" : "HANGAR",
@@ -48,6 +63,8 @@ export default function GarageScreen({ onBack }) {
     <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
+          hitSlop={12}
+          style={styles.backBtn}
           onPress={() => {
             AudioManager.play("click");
             onBack();
@@ -84,15 +101,41 @@ export default function GarageScreen({ onBack }) {
 
       {tab !== "gliders" ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+          <FadeInView key={tab} distance={10} duration={240}>
           {tab === "hangar" ? <HangarPanel /> : tab === "collection" ? <CollectionPanel /> : tab === "trophies" ? <TrophiesPanel /> : tab === "runs" ? <MissionsPanel onStart={setRunCfg} /> : tab === "upgrade" ? <UpgradesPanel /> : <WeeklyPanel />}
+          </FadeInView>
         </ScrollView>
       ) : (
       <>
       <Text style={styles.sectionTitle}>{t("garage.gliders")}</Text>
       <Text style={styles.sectionHint}>{t("garage.glidersHint")}</Text>
+      <View style={styles.filterRow}>
+        {FILTERS.map((f) => (
+          <Pressable
+            key={f.id}
+            accessibilityRole="button"
+            onPress={() => {
+              AudioManager.play("click");
+              setFilter(f.id);
+            }}
+            style={[styles.filterChip, filter === f.id && styles.filterChipOn]}
+          >
+            <Text style={[styles.filterText, filter === f.id && styles.filterTextOn]}>
+              {f.label} {f.n}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-        {GLIDERS.map((g) => {
+      <FlatList
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        data={visibleGliders}
+        keyExtractor={(g) => g.id}
+        initialNumToRender={5}
+        windowSize={7}
+        ListEmptyComponent={<Text style={styles.noSkinsText}>{en ? "Nothing here yet." : "Δεν υπάρχει κάτι εδώ ακόμα."}</Text>}
+        renderItem={({ item: g }) => {
           const owned = save.ownedGliders.includes(g.id);
           const selected = save.selectedGlider === g.id;
           const canAfford = save.credits >= g.unlockCost;
@@ -220,8 +263,9 @@ export default function GarageScreen({ onBack }) {
               {owned && <MasteryRow glider={g} />}
             </OctagonPanel>
           );
-        })}
-
+        }}
+        ListFooterComponent={
+          <View>
         <Text style={styles.sectionTitle}>{t("garage.skins")}</Text>
         <Text style={styles.sectionHint}>{t("garage.skinsHint")}</Text>
         <View style={styles.skinRow}>
@@ -246,7 +290,9 @@ export default function GarageScreen({ onBack }) {
           ))}
           {unlockedSkins.length === 0 && <Text style={styles.noSkinsText}>{t("garage.noSkins")}</Text>}
         </View>
-      </ScrollView>
+          </View>
+        }
+      />
       </>
       )}
       {runCfg ? <MissionRun cfg={runCfg} onClose={() => setRunCfg(null)} /> : null}
@@ -257,13 +303,19 @@ export default function GarageScreen({ onBack }) {
 const styles = StyleSheet.create({
   tabBar: { backgroundColor: "rgba(4,6,16,0.96)", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 6, marginBottom: 14, borderWidth: 1.5, borderColor: "#28e0ff55" },
   tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 2 },
-  tabBtn: { paddingVertical: 10, paddingHorizontal: 14, backgroundColor: "rgba(20,24,48,0.9)", borderRadius: 10, borderWidth: 2, borderColor: "#28e0ffaa", alignItems: "center", shadowColor: "#28e0ff", shadowOpacity: 0.55, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  tabBtn: { minHeight: 44, justifyContent: "center", paddingHorizontal: 14, backgroundColor: "rgba(20,24,48,0.9)", borderRadius: 10, borderWidth: 1.5, borderColor: "#28e0ff55", alignItems: "center" },
   tabBtnOn: { borderColor: "#7df3ff", backgroundColor: "rgba(40,224,255,0.30)", shadowOpacity: 1, shadowRadius: 10, elevation: 8 },
   tabText: { flexShrink: 0, color: "#c9d2f2", fontSize: 12, fontWeight: "800", letterSpacing: 0.8 },
   tabTextOn: { color: COLORS.neonCyan },
   container: { flex: 1, backgroundColor: COLORS.bgDeep, paddingTop: 50, paddingHorizontal: 16 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   back: { color: COLORS.neonCyan, fontWeight: "700" },
+  backBtn: { minHeight: 44, minWidth: 64, justifyContent: "center" },
+  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  filterChip: { minHeight: 36, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1.5, borderColor: "#3a3155", backgroundColor: "rgba(255,255,255,0.03)", alignItems: "center", justifyContent: "center" },
+  filterChipOn: { borderColor: COLORS.neonCyan, backgroundColor: "rgba(40,224,255,0.16)" },
+  filterText: { color: COLORS.textDim, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  filterTextOn: { color: COLORS.neonCyan },
   creditsBadge: {
     backgroundColor: "rgba(255,225,77,0.1)",
     borderWidth: 1.5,

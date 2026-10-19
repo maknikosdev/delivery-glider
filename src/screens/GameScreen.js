@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, PanResponder } from "react-native";
+import { View, Text, StyleSheet, PanResponder, BackHandler, AppState } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
@@ -35,12 +35,13 @@ import { goalValue, goalText } from "../game/missions";
 import { boonById } from "../game/boons";
 import SkillIndicator from "../components/SkillIndicator";
 import RevivePrompt from "../components/RevivePrompt";
+import PauseOverlay from "../components/PauseOverlay";
 import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
 
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
-export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, mission, onGameOver }) {
+export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, mission, onGameOver, onExit }) {
   const { save, language } = useGame();
   // Random background for this run, from the environments unlocked so far
   // (one more every 3 gliders owned + achievement-unlocked ones).
@@ -113,6 +114,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     swipeComboDrop,
     swipeDown,
     activateSkill,
+    pause,
+    resume,
     reviveContinue,
     reviveDecline,
     skillCooldownRemainingMs,
@@ -161,6 +164,46 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     }
   }, []);
 
+  // Pause: freezes the loop, shows the overlay. The hardware back button
+  // pauses/resumes instead of throwing the run away, and the app going to
+  // the background pauses automatically.
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const doPause = useCallback(() => {
+    if (statusRef.current !== "playing" || pausedRef.current) return;
+    pausedRef.current = true;
+    setThrust(false);
+    clearHoldTimer();
+    pause();
+    setPaused(true);
+  }, [pause, setThrust, clearHoldTimer]);
+  const doResume = useCallback(() => {
+    if (!pausedRef.current) return;
+    pausedRef.current = false;
+    setPaused(false);
+    runStartRef.current += resume() || 0; // keep the rival pacer in step
+  }, [resume]);
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (pausedRef.current) {
+        doResume();
+        return true;
+      }
+      const st = statusRef.current;
+      if (st === "playing") doPause();
+      // Mid-run states (revive choice, ejector) swallow back; once the run
+      // is over, let the screen's owner handle it as before.
+      return st === "playing" || st === "awaiting_revive" || st === "ejected";
+    });
+    return () => sub.remove();
+  }, [doPause, doResume]);
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active") doPause();
+    });
+    return () => sub.remove();
+  }, [doPause]);
+
   // Ghost Replay: remembers the last index we interpolated between, so
   // finding "where was the ghost at this cameraX" each frame is O(1)
   // amortized instead of re-scanning the whole trace every time (cameraX
@@ -181,8 +224,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => statusRef.current === "playing",
-      onMoveShouldSetPanResponder: () => statusRef.current === "playing",
+      onStartShouldSetPanResponder: () => statusRef.current === "playing" && !pausedRef.current,
+      onMoveShouldSetPanResponder: () => statusRef.current === "playing" && !pausedRef.current,
       onPanResponderGrant: (evt) => {
         gestureStart.current = {
           x: evt.nativeEvent.pageX,
@@ -741,6 +784,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         combo={world.combo}
         packageTypes={world.packageTypes}
         dimmed={world.weatherEvent && world.weatherEvent.id === "blackout" && !stormImmune}
+        onPause={world.status === "playing" ? doPause : null}
       />
 
       <SkillIndicator
@@ -748,6 +792,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         cooldownRemainingMs={skillCooldownRemainingMs}
         activeRemainingMs={skillActiveRemainingMs}
       />
+
+      {paused && <PauseOverlay onResume={doResume} onQuit={onExit} />}
 
       {world.status === "awaiting_revive" && (
         <RevivePrompt

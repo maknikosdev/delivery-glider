@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, Pressable, ImageBackground } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, ImageBackground, Animated, Easing } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import MuteButton from "../components/MuteButton";
@@ -8,7 +8,8 @@ import AmbientFX from "../components/AmbientFX";
 import TitleShine from "../components/TitleShine";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
-import AudioManager from "../audio/AudioManager";
+import FadeInView from "../components/FadeInView";
+import { ACHIEVEMENTS } from "../game/achievements";
 import { pickMenuLineIndex } from "../game/dispatcher";
 
 // Background art is the user-supplied illustration (courier on the glider,
@@ -23,6 +24,20 @@ const BG = require("../../assets/art/menu_background.jpg");
 export default function MenuScreen({ onPlay, onGarage, onAchievements, onContracts, onStats, onTutorial, onHazards }) {
   const { save, t, toggleFx } = useGame();
   const achievementCount = (save?.unlockedAchievements || []).length;
+
+  // Gentle breathing pulse on the PLAY button so the primary action stays
+  // the focal point of the screen.
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Story/NPCs: one line from Nyx (the dispatcher), rotating daily rather
   // than every Menu visit — reads like an actual message waiting for you,
@@ -48,13 +63,13 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
       <View style={styles.spacer} />
 
       {menuLine && (
-        <View style={styles.dispatcherNote}>
+        <FadeInView delay={80} style={styles.dispatcherNote}>
           <Text style={styles.dispatcherName}>{t("dispatcher.name")}</Text>
           <Text style={styles.dispatcherText}>{menuLine}</Text>
-        </View>
+        </FadeInView>
       )}
 
-      <View style={styles.statsRow}>
+      <FadeInView delay={160} style={styles.statsRow}>
         <OctagonPanel color={COLORS.neonCyan} size="medium" style={styles.statPanel}>
           <View style={styles.statInner}>
             <Text style={[styles.statValue, { color: COLORS.neonCyan }]}>{`${save?.highScoreMeters ?? 0}m`}</Text>
@@ -67,20 +82,23 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
             <Text style={styles.statLabel}>{t("menu.credits")}</Text>
           </View>
         </OctagonPanel>
-      </View>
+      </FadeInView>
 
-      <OctagonButton
-        label={t("menu.play")}
-        onPress={onPlay}
-        color={COLORS.neonCyan}
-        fillOpacity={0.2}
-        size="wide"
-        style={styles.playButton}
-        textStyle={styles.playText}
-        icon={<Text style={[styles.playIcon, { color: COLORS.neonCyan }]}>▶</Text>}
-      />
+      <FadeInView delay={240}>
+        <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] }) }] }}>
+          <OctagonButton
+            label={t("menu.play")}
+            onPress={onPlay}
+            color={COLORS.neonCyan}
+            size="wide"
+            style={styles.playButton}
+            textStyle={styles.playText}
+            icon={<Text style={[styles.playIcon, { color: COLORS.neonCyan }]}>▶</Text>}
+          />
+        </Animated.View>
+      </FadeInView>
 
-      <View style={styles.grid}>
+      <FadeInView delay={320} style={styles.grid}>
         <OctagonButton
           label={t("menu.garage")}
           onPress={onGarage}
@@ -88,7 +106,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
           style={styles.gridButton}
         />
         <OctagonButton
-          label={`${t("menu.achievements")} ${achievementCount}/19`}
+          label={`${t("menu.achievements")} ${achievementCount}/${ACHIEVEMENTS.length}`}
           onPress={onAchievements}
           color="#9dff4d"
           style={styles.gridButton}
@@ -105,9 +123,9 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
           color={COLORS.neonCyan}
           style={styles.gridButton}
         />
-      </View>
+      </FadeInView>
 
-      <View style={styles.bottomRow}>
+      <FadeInView delay={400} style={styles.bottomRow}>
         <OctagonButton
           label={t("menu.tutorial")}
           onPress={onTutorial}
@@ -122,7 +140,7 @@ export default function MenuScreen({ onPlay, onGarage, onAchievements, onContrac
           fillOpacity={0.1}
           style={styles.bottomButton}
         />
-      </View>
+      </FadeInView>
     </ImageBackground>
   );
 }

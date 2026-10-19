@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { View, Image, StyleSheet, StatusBar, BackHandler, Animated, Easing } from "react-native";
+import { View, StyleSheet, StatusBar, BackHandler, Animated, Easing } from "react-native";
 import AmbientFX from "./src/components/AmbientFX";
+import FadeInView from "./src/components/FadeInView";
 import * as SplashScreen from "expo-splash-screen";
 import { GameProvider, useGame } from "./src/store/GameContext";
 import MenuScreen from "./src/screens/MenuScreen";
@@ -95,7 +96,7 @@ function Root() {
     updateDailyContracts,
     markTutorialSeen,
   } = useGame();
-  const [screen, setScreen] = useState("menu"); // menu | tutorial | loadout | game | crate | gameover | garage | achievements | contracts | stats
+  const [screen, setScreen] = useState("menu"); // menu | tutorial | loadout | game | crate | gameover | garage | achievements | contracts | stats | hazards
   const [runResult, setRunResult] = useState(null);
   const [runKey, setRunKey] = useState(0);
   const [runBonuses, setRunBonuses] = useState({ reviveToken: false, tempSkinColor: null });
@@ -114,7 +115,7 @@ function Root() {
   // straight into a run (first launch) or back to Menu (re-opened manually).
   const [tutorialReturnTo, setTutorialReturnTo] = useState("loadout");
 
-  // Enforces the minimum 1-second splash display, independent of how fast
+  // Enforces the minimum splash display (MIN_SPLASH_MS), independent of how fast
   // (or slow) the save file loads. The splash only actually hides once
   // BOTH the save has loaded AND this timer has elapsed.
   const [minSplashElapsed, setMinSplashElapsed] = useState(false);
@@ -287,24 +288,6 @@ function Root() {
   return (
     <View style={styles.container}>
       <StatusBar hidden />
-      {screen === "menu" && (
-        <MenuScreen
-          onPlay={handleGoToLoadout}
-          onGarage={() => setScreen("garage")}
-          onAchievements={() => setScreen("achievements")}
-          onContracts={() => setScreen("contracts")}
-          onStats={() => setScreen("stats")}
-          onHazards={() => setScreen("hazards")}
-          onTutorial={handleOpenTutorial}
-        />
-      )}
-
-      {screen === "tutorial" && <TutorialScreen onDone={handleTutorialDone} />}
-
-      {screen === "loadout" && (
-        <LoadoutScreen onBack={() => setScreen("menu")} onPlay={handlePlay} />
-      )}
-
       {screen === "game" && (
         <GameScreen
           key={runKey}
@@ -317,31 +300,54 @@ function Root() {
           skillBranch={skillBranch}
           totalRuns={save.totalRuns || 0}
           onGameOver={handleGameOver}
+          onExit={() => setScreen("menu")}
         />
       )}
 
-      {screen === "crate" && runResult && <MysteryCrateScreen onDone={handleCrateDone} />}
+      {screen !== "game" && (
+        <FadeInView key={screen} style={styles.fill} distance={0} duration={240}>
+          {screen === "menu" && (
+            <MenuScreen
+              onPlay={handleGoToLoadout}
+              onGarage={() => setScreen("garage")}
+              onAchievements={() => setScreen("achievements")}
+              onContracts={() => setScreen("contracts")}
+              onStats={() => setScreen("stats")}
+              onHazards={() => setScreen("hazards")}
+              onTutorial={handleOpenTutorial}
+            />
+          )}
 
-      {screen === "gameover" && runResult && (
-        <GameOverScreen
-          result={runResult}
-          isNewHighScore={runResult.isNewHighScore}
-          newAchievements={newAchievements.map((id) => achievementById(id)).filter(Boolean)}
-          newContracts={newContracts}
-          newMilestones={newMilestones.map((m) => ({ ...m, gliderName: gliderById(m.gliderId)?.name || m.gliderId }))}
-          onRetry={handleGoToLoadout}
-          onMenu={() => setScreen("menu")}
-        />
+          {screen === "tutorial" && <TutorialScreen onDone={handleTutorialDone} />}
+
+          {screen === "loadout" && (
+            <LoadoutScreen onBack={() => setScreen("menu")} onPlay={handlePlay} />
+          )}
+
+          {screen === "crate" && runResult && <MysteryCrateScreen onDone={handleCrateDone} />}
+
+          {screen === "gameover" && runResult && (
+            <GameOverScreen
+              result={runResult}
+              isNewHighScore={runResult.isNewHighScore}
+              newAchievements={newAchievements.map((id) => achievementById(id)).filter(Boolean)}
+              newContracts={newContracts}
+              newMilestones={newMilestones.map((m) => ({ ...m, gliderName: gliderById(m.gliderId)?.name || m.gliderId }))}
+              onRetry={handleGoToLoadout}
+              onMenu={() => setScreen("menu")}
+            />
+          )}
+
+          {screen === "garage" && <GarageScreen onBack={() => setScreen("menu")} />}
+
+          {screen === "achievements" && <AchievementsScreen onBack={() => setScreen("menu")} />}
+
+          {screen === "contracts" && <DailyContractsScreen onBack={() => setScreen("menu")} />}
+
+          {screen === "stats" && <StatsScreen onBack={() => setScreen("menu")} />}
+          {screen === "hazards" && <FieldGuideScreen onBack={() => setScreen("menu")} />}
+        </FadeInView>
       )}
-
-      {screen === "garage" && <GarageScreen onBack={() => setScreen("menu")} />}
-
-      {screen === "achievements" && <AchievementsScreen onBack={() => setScreen("menu")} />}
-
-      {screen === "contracts" && <DailyContractsScreen onBack={() => setScreen("menu")} />}
-
-      {screen === "stats" && <StatsScreen onBack={() => setScreen("menu")} />}
-      {screen === "hazards" && <FieldGuideScreen onBack={() => setScreen("menu")} />}
     </View>
   );
 }
@@ -356,6 +362,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgDeep },
+  fill: { flex: 1 },
   splashOverlay: {
     flex: 1,
     backgroundColor: COLORS.bgDeep,

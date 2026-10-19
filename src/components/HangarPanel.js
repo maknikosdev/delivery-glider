@@ -23,7 +23,7 @@ import {
   setCounts,
   MAX_PART_LEVEL,
 } from "../game/parts";
-import { PILOTS, CHAPTER_LEVELS, CHALLENGE_TEXT, challengeStatValue, pilotSkinColor } from "../game/pilots";
+import { PILOTS, CHAPTER_LEVELS, CHALLENGE_TEXT, pilotSkinColor } from "../game/pilots";
 import { gliderMastery, MASTERY_TITLES } from "../game/progress";
 
 const L = {

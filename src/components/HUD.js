@@ -1,11 +1,23 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { COLORS, DIFFICULTY } from "../constants/gameConfig";
 import { HUD_TOP } from "../constants/hudLayout";
 import MuteButton from "./MuteButton";
+import OctagonPanel from "./OctagonPanel";
+import AudioManager from "../audio/AudioManager";
 
-export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed }) {
+export default function HUD({ meters, packages, capacity, credits, zoneIndex, combo, dimmed, onPause }) {
   const zone = DIFFICULTY.zones[zoneIndex] || DIFFICULTY.zones[0];
+  // Combo pill "pops" every time the multiplier goes up.
+  const pop = useRef(new Animated.Value(1)).current;
+  const prevCombo = useRef(combo);
+  useEffect(() => {
+    if (combo > prevCombo.current && combo > 1) {
+      pop.setValue(1.35);
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }).start();
+    }
+    prevCombo.current = combo;
+  }, [combo, pop]);
   return (
     <View style={[styles.wrap, dimmed && styles.wrapDimmed]} pointerEvents="box-none">
       <View style={styles.row}>
@@ -15,7 +27,25 @@ export default function HUD({ meters, packages, capacity, credits, zoneIndex, co
         <View style={styles.pill}>
           <Text style={[styles.pillText, { color: COLORS.neonYellow }]} allowFontScaling={false}>◆ {credits}</Text>
         </View>
-        <MuteButton />
+        <View style={styles.btnGroup}>
+          {onPause ? (
+            <Pressable
+              onPress={() => {
+                AudioManager.play("click");
+                onPause();
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Pause"
+              style={styles.pauseBtn}
+            >
+              <OctagonPanel color={COLORS.neonCyan} size="medium" contentStyle={styles.pauseInner}>
+                <Text style={styles.pauseIcon}>⏸</Text>
+              </OctagonPanel>
+            </Pressable>
+          ) : null}
+          <MuteButton />
+        </View>
       </View>
       <View style={styles.row2} pointerEvents="none">
         <View style={styles.pill}>
@@ -24,9 +54,9 @@ export default function HUD({ meters, packages, capacity, credits, zoneIndex, co
           </Text>
         </View>
         {combo > 1 && (
-          <View style={[styles.pill, styles.comboPill]}>
+          <Animated.View style={[styles.pill, styles.comboPill, { transform: [{ scale: pop }] }]}>
             <Text style={styles.comboText} allowFontScaling={false}>🔥 x{combo}</Text>
-          </View>
+          </Animated.View>
         )}
         {/* The zone name takes whatever space is left and shrinks its font
             instead of being cut off, so long names fit next to the combo. */}
@@ -64,6 +94,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  btnGroup: { flexDirection: "row", alignItems: "center" },
+  pauseBtn: { marginRight: 8 },
+  pauseInner: { paddingHorizontal: 10, paddingVertical: 6, alignItems: "center", justifyContent: "center" },
+  pauseIcon: { fontSize: 15, color: "#fff" },
   row2: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,11 +1,29 @@
-import React, { useRef, useState } from "react";
-import { View, Text, StyleSheet, useWindowDimensions } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, useWindowDimensions, ScrollView, Animated, Easing } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { COLORS, MIN_METERS_FOR_REWARDS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
+import FadeInView from "../components/FadeInView";
+import { gameOverBucket, pickLine } from "../game/dispatcher";
+
+// Numbers roll up from 0 so the result feels earned.
+function CountUp({ to, prefix = "", suffix = "", style, delay = 0 }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const v = new Animated.Value(0);
+    const id = v.addListener(({ value }) => setVal(Math.round(value)));
+    const anim = Animated.timing(v, { toValue: Math.floor(to) || 0, duration: 900, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    anim.start();
+    return () => {
+      anim.stop();
+      v.removeListener(id);
+    };
+  }, [to, delay]);
+  return <Text style={style}>{prefix}{val}{suffix}</Text>;
+}
 
 export default function GameOverScreen({
   result,
@@ -23,6 +41,9 @@ export default function GameOverScreen({
   const hasNewContracts = newContracts && newContracts.length > 0;
   const hasNewMilestones = newMilestones && newMilestones.length > 0;
   const shareRef = useRef(null);
+  // Nyx (dispatcher) reacts to how the run went.
+  const nyxPool = t(`dispatcher.${gameOverBucket({ meters: result.meters, isNewHighScore })}`);
+  const nyxLine = Array.isArray(nyxPool) ? pickLine(nyxPool, Math.floor(result.meters) + (result.deliveries || 0)) : "";
   const [sharing, setSharing] = useState(false);
 
   const handleShare = async () => {
@@ -47,23 +68,34 @@ export default function GameOverScreen({
   return (
     // Explicit window size so the whole block is truly centered on screen.
     <View style={[styles.overlay, { width, height }]}>
-      <View style={styles.column}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+      <FadeInView style={styles.column} duration={420} distance={22}>
         <View ref={shareRef} collapsable={false} style={styles.shareWrap}>
           <OctagonPanel color={COLORS.danger} contentStyle={styles.panelContent}>
             <Text style={styles.title}>{t("gameover.title")}</Text>
             {isNewHighScore && <Text style={styles.newRecord}>{t("gameover.newRecord")}</Text>}
+            {result.dailyChallengeNewBest && <Text style={styles.newRecord}>{t("gameover.dailyBest")}</Text>}
+            {nyxLine ? (
+              <Text style={styles.nyx}>
+                {t("dispatcher.name")}: «{nyxLine}»
+              </Text>
+            ) : null}
 
             <View style={styles.row}>
               <Text style={styles.label}>{t("gameover.distance")}</Text>
-              <Text style={styles.value}>{Math.floor(result.meters)}m</Text>
+              <CountUp style={styles.value} to={result.meters} suffix="m" delay={250} />
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>{t("gameover.deliveries")}</Text>
-              <Text style={styles.value}>{result.deliveries}</Text>
+              <CountUp style={styles.value} to={result.deliveries} delay={400} />
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>{t("gameover.credits")}</Text>
-              <Text style={[styles.value, { color: COLORS.neonYellow }]}>◆ {result.creditsEarned}</Text>
+              <CountUp style={[styles.value, { color: COLORS.neonYellow }]} to={result.creditsEarned} prefix="◆ " delay={550} />
             </View>
             {!qualified && (
               <Text style={styles.notCounted}>{t("gameover.notCounted", { n: MIN_METERS_FOR_REWARDS })}</Text>
@@ -142,7 +174,8 @@ export default function GameOverScreen({
             style={styles.button}
           />
         </View>
-      </View>
+      </FadeInView>
+      </ScrollView>
     </View>
   );
 }
@@ -156,7 +189,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  scroll: { width: "100%" },
+  scrollContent: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingVertical: 24 },
   column: { width: "82%", alignItems: "stretch" },
+  nyx: { color: COLORS.textDim, fontSize: 12, fontStyle: "italic", textAlign: "center", marginTop: 10, lineHeight: 17 },
   shareWrap: { width: "100%" },
   panelContent: { paddingVertical: 26, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
   title: { color: COLORS.danger, fontSize: 28, fontWeight: "900", letterSpacing: 2, textAlign: "center" },

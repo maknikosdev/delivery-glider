@@ -1,6 +1,5 @@
 import { masteryInfo } from "./progress";
 import { equippedItems, setCounts, partsOf, SLOTS } from "./parts";
-import { GLIDERS } from "./gliders";
 import { dailyStats } from "./missions";
 
 // ---------------------------------------------------------------------------

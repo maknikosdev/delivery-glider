@@ -46,6 +46,7 @@ export function MissionRun({ cfg, onClose }) {
         dailySeed={cfg.seed}
         mission={cfg}
         onGameOver={(res) => finishMission(res)}
+        onExit={onClose}
       />
       {r ? (
         <View style={s.resultWrap}>

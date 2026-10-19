@@ -1,5 +1,5 @@
 import { GLIDERS } from "./gliders";
-import { getPartTotals, addParts, rollPartId, rollRarity, getPartDef, PARTS } from "./parts";
+import { getPartTotals, addParts, rollPartId } from "./parts";
 import { PILOTS, challengeStatValue, pilotSkinColor } from "./pilots";
 import { eventForWeek, EVENT_PART_CHANCE } from "./events";
 import { upgradeFx, sumFx } from "./upgrades";

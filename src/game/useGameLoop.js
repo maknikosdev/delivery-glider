@@ -31,7 +31,7 @@ import {
 } from "../constants/gameConfig";
 import { pickChunk, instantiateChunk, getZoneIndex, ROUTE_BRANCH_CHUNK, setOrderBias } from "./chunks";
 import { getPartTotals } from "./parts";
-import { NEW_BOSSES, NEW_BOSS_IDS, NEW_PROJECTILE_TYPES, GIFT_KINDS, GIFT_REWARD, LAVA, firstBossMeters, bossGapMeters, shuffledBag } from "./newBosses";
+import { NEW_BOSSES, NEW_PROJECTILE_TYPES, GIFT_KINDS, GIFT_REWARD, LAVA, firstBossMeters, bossGapMeters, shuffledBag } from "./newBosses";
 import { eventForWeek } from "./events";
 import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
@@ -224,6 +224,24 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random
     lastDiveAt: Date.now(),
     longestNoDiveMs: 0,
   };
+}
+
+// Adds `delta` ms to every wall-clock field (…Until, …At, expiresAt, born)
+// reachable from `node` through plain objects/arrays. 0 means "never set".
+const TIME_KEY = /(Until|until|At|expiresAt|born)$/;
+function shiftTimestamps(node, delta, seen = new WeakSet(), depth = 0) {
+  if (!node || typeof node !== "object" || depth > 5 || seen.has(node)) return;
+  const proto = Object.getPrototypeOf(node);
+  if (!Array.isArray(node) && proto !== Object.prototype) return;
+  seen.add(node);
+  for (const k of Object.keys(node)) {
+    const v = node[k];
+    if (typeof v === "number") {
+      if (v > 0 && !Array.isArray(node) && TIME_KEY.test(k)) node[k] = v + delta;
+    } else if (v && typeof v === "object") {
+      shiftTimestamps(v, delta, seen, depth + 1);
+    }
+  }
 }
 
 export function useGameLoop({
@@ -1819,7 +1837,13 @@ export function useGameLoop({
     applyDive(worldRef.current);
   }, [applyDive]);
 
+  // Pause freezes the loop AND remembers when, so resume() can push every
+  // wall-clock timestamp (cooldowns, shields, weather, express timers...)
+  // forward by the paused time instead of letting them silently expire.
+  const pausedAtRef = useRef(0);
   const pause = useCallback(() => {
+    if (worldRef.current.status !== "playing" || pausedAtRef.current) return;
+    pausedAtRef.current = Date.now();
     runningRef.current = false;
   }, []);
 
@@ -1838,8 +1862,12 @@ export function useGameLoop({
   }, [step]);
 
   const resume = useCallback(() => {
-    if (worldRef.current.status !== "playing") return;
+    if (worldRef.current.status !== "playing") return 0;
+    const paused = pausedAtRef.current ? Date.now() - pausedAtRef.current : 0;
+    pausedAtRef.current = 0;
+    if (paused > 0) shiftTimestamps(worldRef.current, paused);
     resumeLoop();
+    return paused;
   }, [resumeLoop]);
 
   const reviveContinue = useCallback(() => {

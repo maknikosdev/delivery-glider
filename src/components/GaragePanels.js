@@ -8,7 +8,6 @@ import {
   gliderMastery,
   MASTERY_TITLES,
   MASTERY_XP,
-  MASTERY_BONUS,
   PAIRS,
   PERK_TEXT,
   getPairPerks,
