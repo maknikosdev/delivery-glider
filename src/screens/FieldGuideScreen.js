@@ -66,6 +66,7 @@ export default function FieldGuideScreen({ onBack }) {
     <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
+          hitSlop={14}
           onPress={() => {
             AudioManager.play("click");
             onBack();

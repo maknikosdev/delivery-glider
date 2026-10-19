@@ -6,6 +6,7 @@ import AudioManager from "../audio/AudioManager";
 import { MILESTONES } from "../store/storage";
 import { gliderById } from "../game/gliders";
 import { ACHIEVEMENTS } from "../game/achievements";
+import AnimatedFill from "../components/AnimatedFill";
 import OctagonPanel from "../components/OctagonPanel";
 import ScreenBackground from "../components/ScreenBackground";
 
@@ -45,6 +46,7 @@ export default function StatsScreen({ onBack }) {
     <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
+          hitSlop={14}
           onPress={() => {
             AudioManager.play("click");
             onBack();
@@ -64,12 +66,7 @@ export default function StatsScreen({ onBack }) {
             {t("stats.nextGift", { name: gliderById(nextMilestone.gliderId)?.name || nextMilestone.gliderId })}
           </Text>
           <View style={styles.milestoneTrack}>
-            <View
-              style={[
-                styles.milestoneFill,
-                { width: `${Math.min(100, (totalMeters / nextMilestone.meters) * 100)}%` },
-              ]}
-            />
+            <AnimatedFill pct={Math.min(100, (totalMeters / nextMilestone.meters) * 100)} style={styles.milestoneFill} />
           </View>
           <Text style={styles.milestoneProgress}>
             {Math.floor(totalMeters)}m / {nextMilestone.meters}m

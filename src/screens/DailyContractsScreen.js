@@ -4,6 +4,8 @@ import { COLORS } from "../constants/gameConfig";
 import { contractById, contractProgress, getTodayKey, pickDailyContracts } from "../game/contracts";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import FadeInView from "../components/FadeInView";
+import AnimatedFill from "../components/AnimatedFill";
 import OctagonPanel from "../components/OctagonPanel";
 import ScreenBackground, { logoBlockHeight } from "../components/ScreenBackground";
 
@@ -43,15 +45,15 @@ export default function DailyContractsScreen({ onBack }) {
       {/* contracts: centred in the remaining area (scrolls if they don't fit) */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         <Text style={styles.hint}>{t("contractsScreen.hint")}</Text>
-        {ids.map((id) => {
+        {ids.map((id, idx) => {
           const c = contractById(id);
           if (!c) return null;
           const done = completed.includes(id);
           const progress = contractProgress(c, dailyCumulative, {});
           const pct = Math.min(100, Math.round((progress.current / progress.target) * 100));
           return (
+            <FadeInView key={id} delay={idx * 90} distance={14}>
             <OctagonPanel
-              key={id}
               color={done ? COLORS.neonGreen : COLORS.neonCyan}
               size="wide"
               fillOpacity={done ? 0.24 : 0.14}
@@ -69,12 +71,13 @@ export default function DailyContractsScreen({ onBack }) {
               </View>
               <Text style={styles.desc}>{t(`contracts.${c.id}`)}</Text>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${pct}%` }, done && { backgroundColor: COLORS.neonGreen }]} />
+                <AnimatedFill pct={pct} delay={idx * 90 + 200} style={[styles.progressFill, done && { backgroundColor: COLORS.neonGreen }]} />
               </View>
               <Text style={[styles.progressText, done && { color: COLORS.neonGreen }]}>
                 {Math.floor(progress.current)}/{progress.target}
               </Text>
             </OctagonPanel>
+            </FadeInView>
           );
         })}
       </ScrollView>

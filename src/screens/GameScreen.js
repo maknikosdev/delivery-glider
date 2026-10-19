@@ -36,13 +36,23 @@ import { boonById } from "../game/boons";
 import SkillIndicator from "../components/SkillIndicator";
 import RevivePrompt from "../components/RevivePrompt";
 import PauseOverlay from "../components/PauseOverlay";
+import FadeInView from "../components/FadeInView";
+import { HUD_TOP, BANNER_TOP } from "../constants/hudLayout";
 import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
+
+// Top-right corner holding the pause + mute buttons. The game-wide
+// PanResponder must NOT claim touches here: it steals the responder on the
+// first tiny finger movement, which silently cancels the button's tap.
+const inHudButtons = (e) => {
+  const { pageX, pageY } = e.nativeEvent;
+  return pageY <= HUD_TOP + 56 && pageX >= SCREEN.width - 150;
+};
 
 const SWIPE_THRESHOLD = 40;
 const TAP_MOVE_TOLERANCE = 18;
 
 export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillLevel, skillBranch, totalRuns, mutatorId, dailySeed, mission, onGameOver, onExit }) {
-  const { save, language } = useGame();
+  const { save, language, t } = useGame();
   // Random background for this run, from the environments unlocked so far
   // (one more every 3 gliders owned + achievement-unlocked ones).
   const [envId, setEnvId] = useState(() =>
@@ -168,6 +178,18 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   // pauses/resumes instead of throwing the run away, and the app going to
   // the background pauses automatically.
   const [paused, setPaused] = useState(false);
+
+  // Personal-best tracker: a thin bar fills toward your record, and a
+  // banner pops the moment you beat it (normal runs only).
+  const best = !mission && save ? save.highScoreMeters || 0 : 0;
+  const passedBest = best > 0 && (world.score || 0) > best;
+  const [bestChip, setBestChip] = useState(false);
+  useEffect(() => {
+    if (!passedBest) return undefined;
+    setBestChip(true);
+    const id = setTimeout(() => setBestChip(false), 2600);
+    return () => clearTimeout(id);
+  }, [passedBest]);
   const pausedRef = useRef(false);
   const doPause = useCallback(() => {
     if (statusRef.current !== "playing" || pausedRef.current) return;
@@ -224,8 +246,8 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => statusRef.current === "playing" && !pausedRef.current,
-      onMoveShouldSetPanResponder: () => statusRef.current === "playing" && !pausedRef.current,
+      onStartShouldSetPanResponder: (e) => statusRef.current === "playing" && !pausedRef.current && !inHudButtons(e),
+      onMoveShouldSetPanResponder: (e) => statusRef.current === "playing" && !pausedRef.current && !inHudButtons(e),
       onPanResponderGrant: (evt) => {
         gestureStart.current = {
           x: evt.nativeEvent.pageX,
@@ -793,6 +815,22 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         activeRemainingMs={skillActiveRemainingMs}
       />
 
+      {best > 0 && world.status === "playing" ? (
+        <View pointerEvents="none" style={styles.bestTrack}>
+          <View
+            style={[
+              styles.bestFill,
+              { width: `${Math.min(100, ((world.score || 0) / best) * 100)}%`, backgroundColor: passedBest ? COLORS.neonYellow : COLORS.neonCyan },
+            ]}
+          />
+        </View>
+      ) : null}
+      {bestChip && !paused ? (
+        <FadeInView pointerEvents="none" style={styles.bestChip} distance={-12} duration={300}>
+          <Text style={styles.bestChipText}>{t("gameover.newRecord")}</Text>
+        </FadeInView>
+      ) : null}
+
       {paused && <PauseOverlay onResume={doResume} onQuit={onExit} />}
 
       {world.status === "awaiting_revive" && (
@@ -808,6 +846,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
 }
 
 const styles = StyleSheet.create({
+  bestTrack: { position: "absolute", top: 0, left: 0, right: 0, height: 4, backgroundColor: "rgba(255,255,255,0.10)" },
+  bestFill: { height: 4 },
+  bestChip: { position: "absolute", top: BANNER_TOP, alignSelf: "center", backgroundColor: "rgba(0,0,0,0.6)", borderColor: "#ffe14d", borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6 },
+  bestChipText: { color: "#ffe14d", fontWeight: "900", letterSpacing: 1.5, fontSize: 14 },
   orderBadge: {
     position: "absolute",
     width: 28,

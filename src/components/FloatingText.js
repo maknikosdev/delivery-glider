@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { COLORS, SCREEN } from "../constants/gameConfig";
 import { BANNER_TOP } from "../constants/hudLayout";
 
@@ -14,6 +14,11 @@ const POP_WIDTH = 180;
 
 export default function FloatingText({ text, screenX, y, kind = "score" }) {
   const style = KIND_STYLE[kind] || KIND_STYLE.score;
+  // Pop-in: starts small and transparent, springs to full size.
+  const pop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(pop, { toValue: 1, friction: 5, tension: 190, useNativeDriver: true }).start();
+  }, [pop]);
   const isBanner = kind === "banner";
 
   // Pop-up texts (score / near miss): keep the whole box inside the screen so
@@ -37,6 +42,12 @@ export default function FloatingText({ text, screenX, y, kind = "score" }) {
       ]}
       pointerEvents="none"
     >
+      <Animated.View
+        style={{
+          opacity: pop.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] }),
+          transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+        }}
+      >
       <Text
         style={[styles.text, { color: style.color, fontSize: style.fontSize }]}
         numberOfLines={1}
@@ -46,6 +57,7 @@ export default function FloatingText({ text, screenX, y, kind = "score" }) {
       >
         {text}
       </Text>
+      </Animated.View>
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { Animated, Easing, AccessibilityInfo } from "react-native";
 
 // Soft entrance: fades in while sliding up a few px. Honors the system
 // "reduce motion" setting by skipping the movement.
-export default function FadeInView({ delay = 0, duration = 380, distance = 14, style, children }) {
+export default function FadeInView({ delay = 0, duration = 380, distance = 14, style, pointerEvents, children }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     let alive = true;
@@ -26,6 +26,7 @@ export default function FadeInView({ delay = 0, duration = 380, distance = 14, s
   }, [v, delay, duration]);
   return (
     <Animated.View
+      pointerEvents={pointerEvents}
       style={[style, { opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] }]}
     >
       {children}

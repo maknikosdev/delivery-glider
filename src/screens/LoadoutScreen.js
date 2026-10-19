@@ -27,6 +27,7 @@ export default function LoadoutScreen({ onBack, onPlay }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable
+          hitSlop={14}
           onPress={() => {
             AudioManager.play("click");
             onBack();

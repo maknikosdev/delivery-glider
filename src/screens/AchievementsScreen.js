@@ -4,6 +4,7 @@ import { COLORS } from "../constants/gameConfig";
 import { ACHIEVEMENTS, SKIN_COLORS } from "../game/achievements";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import FadeInView from "../components/FadeInView";
 import OctagonPanel from "../components/OctagonPanel";
 import ScreenBackground from "../components/ScreenBackground";
 
@@ -18,6 +19,7 @@ export default function AchievementsScreen({ onBack }) {
     <ScreenBackground style={styles.container}>
       <View style={styles.header}>
         <Pressable
+          hitSlop={14}
           onPress={() => {
             AudioManager.play("click");
             onBack();
@@ -35,12 +37,12 @@ export default function AchievementsScreen({ onBack }) {
       <Text style={styles.hint}>{t("achievementsScreen.hint")}</Text>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-        {ACHIEVEMENTS.map((a) => {
+        {ACHIEVEMENTS.map((a, idx) => {
           const done = unlocked.has(a.id);
           const skin = SKIN_COLORS[a.id];
           return (
+            <FadeInView key={a.id} delay={Math.min(idx, 12) * 40} distance={12}>
             <OctagonPanel
-              key={a.id}
               color={done ? skin : "#3a3155"}
               size="wide"
               fillOpacity={done ? 0.14 : 0.06}
@@ -55,6 +57,7 @@ export default function AchievementsScreen({ onBack }) {
                 <Text style={styles.desc}>{t(`achievements.${a.id}`)}</Text>
               </View>
             </OctagonPanel>
+            </FadeInView>
           );
         })}
       </ScrollView>

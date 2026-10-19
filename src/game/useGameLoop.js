@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Vibration } from "react-native";
 import {
   PHYSICS,
   RIDER,
@@ -226,6 +227,18 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random
   };
 }
 
+// Short haptic tick (VIBRATE is already in the manifest). Follows the
+// Menu's FX switch so players who turn effects off get no buzzing either.
+let hapticsOn = true;
+function buzz(ms) {
+  if (!hapticsOn) return;
+  try {
+    Vibration.vibrate(ms);
+  } catch (e) {
+    // no vibrator / permission: purely cosmetic, ignore
+  }
+}
+
 // Adds `delta` ms to every wall-clock field (…Until, …At, expiresAt, born)
 // reachable from `node` through plain objects/arrays. 0 means "never set".
 const TIME_KEY = /(Until|until|At|expiresAt|born)$/;
@@ -298,10 +311,12 @@ export function useGameLoop({
     };
   }, []);
   const [, forceRender] = useState(0);
+
   const rafRef = useRef(null);
   const lastTsRef = useRef(null);
   const runningRef = useRef(true);
   const { t, save: gameSave } = useGame();
+  hapticsOn = !(gameSave && gameSave.fxOff);
   // Glider pairs: owning both gliders of a pair gives a small passive perk
   const ownedCount = ((gameSave && gameSave.ownedGliders) || []).length;
   // Equipped parts (engine/wings/core + set bonuses) and the weekly event.
@@ -668,6 +683,7 @@ export function useGameLoop({
       if (world.status !== "playing") return;
       world.shake = 1;
       AudioManager.play("crash");
+      buzz(140);
       runningRef.current = false;
 
       const result = buildRunResult(world);
@@ -836,6 +852,7 @@ export function useGameLoop({
             const baseLabel = world.combo > 1 ? `+${earned} x${world.combo}` : `+${earned}`;
             addFloatingText(world, packageTag ? `${packageTag} ${baseLabel}` : baseLabel, b.worldX, b.y - 30, "score");
             AudioManager.play("deliver");
+            buzz(18);
             world.deliveryPulseAt = now; // Juice: brief camera punch-in, read by GameScreen.js
             delivered = true;
 
@@ -1108,6 +1125,13 @@ export function useGameLoop({
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
       world.score = world.cameraX * METERS_PER_PX;
+      // Distance milestone every 250 m: a banner and a pickup chime.
+      const mile = Math.floor(world.score / 250);
+      if (mile > (world.lastMilestone || 0)) {
+        world.lastMilestone = mile;
+        addFloatingText(world, `🏁 ${mile * 250} m`, world.cameraX + RIDER.screenX, world.riderY - 110, "banner");
+        AudioManager.play("pickup");
+      }
       tickObjectives(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 70, kind), !(mission && mission.mode === "daily"));
       if ((world.objectivesDone || 0) > (world.lastObjDone || 0)) {
         world.lastObjDone = world.objectivesDone;

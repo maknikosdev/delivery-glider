@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable } from "react-native";
 import { COLORS } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
+import FadeInView from "../components/FadeInView";
 
 export default function TutorialScreen({ onDone }) {
   const { t } = useGame();
@@ -32,11 +33,13 @@ export default function TutorialScreen({ onDone }) {
         <Text style={styles.skipText}>{t("tutorial.skip")}</Text>
       </Pressable>
 
-      <View style={styles.card}>
-        <Text style={styles.icon}>{current.icon}</Text>
-        <Text style={styles.title}>{current.title}</Text>
-        <Text style={styles.body}>{current.body}</Text>
-      </View>
+      <FadeInView key={step} style={styles.cardWrap} distance={18} duration={320}>
+        <View style={styles.card}>
+          <Text style={styles.icon}>{current.icon}</Text>
+          <Text style={styles.title}>{current.title}</Text>
+          <Text style={styles.body}>{current.body}</Text>
+        </View>
+      </FadeInView>
 
       <View style={styles.dots}>
         {steps.map((_, i) => (
@@ -59,7 +62,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
-  skip: { position: "absolute", top: 50, right: 20 },
+  skip: { position: "absolute", top: 40, right: 12, minHeight: 44, paddingHorizontal: 8, justifyContent: "center" },
+  cardWrap: { width: "100%" },
   skipText: { color: COLORS.textDim, fontSize: 12, fontWeight: "700" },
   card: {
     width: "100%",

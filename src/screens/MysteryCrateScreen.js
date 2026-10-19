@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from "react-native";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { View, Text, StyleSheet, Pressable, useWindowDimensions, Animated, Easing } from "react-native";
 import { COLORS, MYSTERY_CRATE } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
+import FadeInView from "../components/FadeInView";
 
 function rollReward() {
   const pool = MYSTERY_CRATE.rewardPool;
@@ -25,6 +26,52 @@ function rewardLabel(reward, t) {
   if (reward.type === "coins") return t("mysteryCrate.rewardCoins", { n: reward.amount });
   if (reward.type === "revive_token") return t("mysteryCrate.rewardRevive");
   return t("mysteryCrate.rewardSkin");
+}
+
+// One crate: bobs gently while waiting, shakes and pops when chosen.
+function Crate({ index, opened, other, onPress, disabled }) {
+  const bob = useRef(new Animated.Value(0)).current;
+  const wig = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (opened || other) return undefined;
+    const d = 850 + index * 140;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: 1, duration: d, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: d, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opened, other, index, bob]);
+  useEffect(() => {
+    if (!opened) return;
+    Animated.sequence([
+      Animated.timing(wig, { toValue: 1, duration: 70, useNativeDriver: true }),
+      Animated.timing(wig, { toValue: -1, duration: 90, useNativeDriver: true }),
+      Animated.timing(wig, { toValue: 1, duration: 90, useNativeDriver: true }),
+      Animated.timing(wig, { toValue: 0, duration: 70, useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 150, useNativeDriver: true }),
+    ]).start();
+  }, [opened, wig, pop]);
+  return (
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" style={{ opacity: other ? 0.3 : 1 }}>
+      <Animated.View
+        style={{
+          transform: [
+            { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) },
+            { rotate: wig.interpolate({ inputRange: [-1, 1], outputRange: ["-9deg", "9deg"] }) },
+            { scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) },
+          ],
+        }}
+      >
+        <OctagonPanel color={opened ? COLORS.neonYellow : COLORS.neonCyan} style={styles.crate} contentStyle={styles.crateContent}>
+          <Text style={styles.crateIcon}>{opened ? "✨" : "📦"}</Text>
+        </OctagonPanel>
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 export default function MysteryCrateScreen({ onDone }) {
@@ -57,33 +104,26 @@ export default function MysteryCrateScreen({ onDone }) {
             const isOpened = openedIndex === i;
             const isOther = openedIndex !== null && openedIndex !== i;
             return (
-              <Pressable
-                key={i}
-                onPress={() => pickCrate(i)}
-                disabled={openedIndex !== null}
-                style={({ pressed }) => [{ opacity: isOther ? 0.3 : pressed ? 0.75 : 1 }]}
-              >
-                <OctagonPanel
-                  color={isOpened ? COLORS.neonYellow : COLORS.neonCyan}
-                  style={styles.crate}
-                  contentStyle={styles.crateContent}
-                >
-                  <Text style={styles.crateIcon}>{isOpened ? "✨" : "📦"}</Text>
-                </OctagonPanel>
-              </Pressable>
+              <Crate key={i} index={i} opened={isOpened} other={isOther} disabled={openedIndex !== null} onPress={() => pickCrate(i)} />
             );
           })}
         </View>
 
-        {reward && <Text style={styles.rewardText}>{rewardLabel(reward, t)}</Text>}
+        {reward && (
+          <FadeInView delay={450} distance={10}>
+            <Text style={styles.rewardText}>{rewardLabel(reward, t)}</Text>
+          </FadeInView>
+        )}
 
         {reward && (
-          <OctagonButton
-            label={t("mysteryCrate.continue")}
-            color={COLORS.neonCyan}
-            style={styles.continueButton}
-            onPress={() => onDone(reward)}
-          />
+          <FadeInView delay={700} distance={10} style={styles.continueWrap}>
+            <OctagonButton
+              label={t("mysteryCrate.continue")}
+              color={COLORS.neonCyan}
+              style={styles.continueButton}
+              onPress={() => onDone(reward)}
+            />
+          </FadeInView>
         )}
       </OctagonPanel>
     </View>
@@ -114,5 +154,6 @@ const styles = StyleSheet.create({
     marginTop: 22,
     textAlign: "center",
   },
-  continueButton: { marginTop: 20, alignSelf: "stretch" },
+  continueWrap: { alignSelf: "stretch", marginTop: 20 },
+  continueButton: { alignSelf: "stretch" },
 });
