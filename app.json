@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Delivery Glider",
     "slug": "the-delivery-glider",
-    "version": "2.7.0",
+    "version": "2.8.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
     ],
     "android": {
       "package": "com.neoncourier.deliveryglider",
-      "versionCode": 21,
+      "versionCode": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#05030d"

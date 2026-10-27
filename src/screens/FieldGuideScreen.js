@@ -7,6 +7,7 @@ import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import OctagonPanel from "../components/OctagonPanel";
 import ScreenBackground from "../components/ScreenBackground";
+import SeasonGuide from "../components/SeasonGuide";
 
 const OBSTACLES = [
   { id: "static_antenna", img: require("../../assets/sprites/obstacle_static_antenna.png") },
@@ -170,6 +171,10 @@ export default function FieldGuideScreen({ onBack }) {
             </OctagonPanel>
           ))}
         </View>
+
+        <View style={styles.divider} />
+        <SeasonGuide />
+        <View style={styles.divider} />
 
         <Text style={[styles.sectionTitle, { color: COLORS.textDim, marginTop: 16 }]}>{t("hazards.cargo")}</Text>
         <Text style={styles.subHint}>{t("hazards.cargo_hint")}</Text>

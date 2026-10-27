@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, useWindowDimensions } from "react-native";
-import { COLORS } from "../constants/gameConfig";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { COLORS, SCREEN } from "../constants/gameConfig";
 import { contractById, contractProgress, getTodayKey, pickDailyContracts } from "../game/contracts";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
@@ -13,7 +13,7 @@ const HEADER_H = 84; // space reserved for the back/title row above the logo
 
 export default function DailyContractsScreen({ onBack }) {
   const { save, t } = useGame();
-  const { height: winH } = useWindowDimensions();
+  const { height: winH } = SCREEN;
   if (!save) return null;
 
   const today = getTodayKey();

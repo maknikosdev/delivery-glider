@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { View, StyleSheet, StatusBar, BackHandler, Animated, Easing } from "react-native";
 import AmbientFX from "./src/components/AmbientFX";
 import FadeInView from "./src/components/FadeInView";
+import ErrorBoundary from "./src/components/ErrorBoundary";
 import * as SplashScreen from "expo-splash-screen";
 import { GameProvider, useGame } from "./src/store/GameContext";
 import MenuScreen from "./src/screens/MenuScreen";
@@ -19,7 +20,7 @@ import { GLIDERS, gliderById } from "./src/game/gliders";
 import { evaluateNewAchievements, SKIN_COLORS, achievementById } from "./src/game/achievements";
 import { contractById, getTodayKey } from "./src/game/contracts";
 import { recordDailyChallengeResult } from "./src/store/storage";
-import { COLORS, MIN_METERS_FOR_REWARDS, readSkillLevel, readSkillBranch } from "./src/constants/gameConfig";
+import { COLORS, MIN_METERS_FOR_REWARDS, readSkillLevel, readSkillBranch, SCREEN, FRAMED } from "./src/constants/gameConfig";
 
 // Keeps the native splash screen (the full, uncropped logo — see the
 // expo-splash-screen plugin config in app.json) visible past the moment
@@ -285,8 +286,8 @@ function Root() {
     return <SplashOverlay />;
   }
 
-  return (
-    <View style={styles.container}>
+  const body = (
+    <>
       <StatusBar hidden />
       {screen === "game" && (
         <GameScreen
@@ -348,21 +349,33 @@ function Root() {
           {screen === "hazards" && <FieldGuideScreen onBack={() => setScreen("menu")} />}
         </FadeInView>
       )}
+    </>
+  );
+
+  // Phones: unchanged (full window). Tablets: phone-shaped frame, centered.
+  if (!FRAMED) return <View style={styles.container}>{body}</View>;
+  return (
+    <View style={[styles.container, styles.stage]}>
+      <View style={[styles.frame, { width: SCREEN.width, height: SCREEN.height }]}>{body}</View>
     </View>
   );
 }
 
 export default function App() {
   return (
-    <GameProvider>
-      <Root />
-    </GameProvider>
+    <ErrorBoundary>
+      <GameProvider>
+        <Root />
+      </GameProvider>
+    </ErrorBoundary>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgDeep },
   fill: { flex: 1 },
+  stage: { alignItems: "center", justifyContent: "center" },
+  frame: { maxWidth: "100%", maxHeight: "100%", overflow: "hidden", backgroundColor: COLORS.bgDeep },
   splashOverlay: {
     flex: 1,
     backgroundColor: COLORS.bgDeep,

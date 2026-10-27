@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { Animated, Easing, Image, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Image, StyleSheet, View } from "react-native";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 import { useGame } from "../store/GameContext";
+import { SCREEN } from "../constants/gameConfig";
 
 // Light, code-only ambient animation for the menu / tab backgrounds and the
 // splash: drifting neon motes, slow haze bands and an occasional glider
@@ -264,7 +265,7 @@ function Flash() {
 }
 
 export default function AmbientFX({ intensity = "soft", force = false }) {
-  const { width: w, height: h } = useWindowDimensions();
+  const { width: w, height: h } = SCREEN;
   const game = useGame();
   const off = !force && game && game.save && game.save.fxOff;
   if (off) return null;

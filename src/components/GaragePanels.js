@@ -242,8 +242,8 @@ export function CollectionPanel() {
         const isUnl = unlockedEnv.includes(e.id);
         return (
           <Text key={e.id} style={isSeen ? s.ok : s.dim}>
-            {isSeen ? "✓" : isUnl ? "○" : "🔒"} {envName(e)} ·{" "}
-            {isSeen ? tx.seen : isUnl ? tx.unlocked : tx.locked}
+            {isSeen ? "✓" : isUnl ? "○" : "🔒"} {e.season ? (e.season === "halloween" ? "🎃 " : "🎄 ") : ""}{envName(e)} ·{" "}
+            {isSeen ? tx.seen : isUnl ? tx.unlocked : e.season ? (l === "el" ? "εποχιακό (7 ημέρες/χρόνο)" : "seasonal (7 days/year)") : tx.locked}
             {isSeen && e.rule && e.rule.text ? ` — ${e.rule.text[l]}` : ""}
           </Text>
         );

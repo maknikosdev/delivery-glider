@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, Animated, Easing } from "react-native";
-import { COLORS, MYSTERY_CRATE } from "../constants/gameConfig";
+import { View, Text, StyleSheet, Pressable, Animated, Easing } from "react-native";
+import { COLORS, MYSTERY_CRATE, SCREEN } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import AudioManager from "../audio/AudioManager";
 import OctagonPanel from "../components/OctagonPanel";
@@ -76,7 +76,7 @@ function Crate({ index, opened, other, onPress, disabled }) {
 
 export default function MysteryCrateScreen({ onDone }) {
   const { t } = useGame();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = SCREEN;
   const [openedIndex, setOpenedIndex] = useState(null);
   const [reward, setReward] = useState(null);
 

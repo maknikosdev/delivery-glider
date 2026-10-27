@@ -639,6 +639,10 @@ export function useGameLoop({
     (world) => {
       const zone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
       const ramp = 1 + world.score * DIFFICULTY.speedPerMeter * 0.01;
+      // "Breathing" pace: the world eases off and speeds back up in slow waves
+      // (about every 100 m) so there is room to recover. Never faster than the
+      // normal speed, only slower; depends on distance only, so pausing is safe.
+      const pace = 0.86 + 0.14 * (0.5 + 0.5 * Math.sin((world.score / 100) * Math.PI * 2 - Math.PI / 2));
       const now = Date.now();
       const overclock = now < world.overclockUntil ? POWERUP.types.overclock.speedMult : 1;
       const turboDash = now < world.turboDashUntil ? SKILLS.turbo_dash.speedMult : 1;
@@ -646,6 +650,7 @@ export function useGameLoop({
         DIFFICULTY.baseSpeed *
         zone.speedMult *
         ramp *
+        pace *
         startSpeedMult *
         overclock *
         turboDash *
@@ -1186,7 +1191,7 @@ export function useGameLoop({
 
       if (world.zoneIndex > world.prevZoneIndex) {
         const zone = DIFFICULTY.zones[world.zoneIndex];
-        const bonus = 40 * world.zoneIndex;
+        const bonus = 25 * world.zoneIndex;
         world.credits += bonus;
         addFloatingText(world, `${zone.name.toUpperCase()} · +${bonus}`, world.cameraX + RIDER.screenX, SCREEN.height * 0.3, "banner");
       }
@@ -1494,7 +1499,7 @@ export function useGameLoop({
         // survival bonus exactly once, only if it was never hit.
         if (world.cameraX > b.endX) {
           if (!b.rewarded) {
-            const bossPay = Math.round(b.rewardCredits * ((world.bm && world.bm.bounty) || 1) * ((world.gs && world.gs.bossMult) || 1));
+            const bossPay = Math.round(0.8 * b.rewardCredits * ((world.bm && world.bm.bounty) || 1) * ((world.gs && world.gs.bossMult) || 1));
             world.credits += bossPay;
             grantBoon(world, (txt, kind) => addFloatingText(world, txt, world.cameraX + RIDER.screenX, world.riderY - 140, kind));
             addFloatingText(world, `Boss cleared! +${bossPay}`, world.cameraX + RIDER.screenX, world.riderY - 50, "score");
@@ -1687,6 +1692,7 @@ export function useGameLoop({
               addFloatingText(world, `Close call! +${nmBonus}`, o.worldX, o.y - 34, "near_miss");
               objectiveEvent(world, "nearmiss", 1, (txt, kind) => addFloatingText(world, txt, riderWorldX, world.riderY - 70, kind));
               world.hitStopUntil = now + 55; // Juice: tiny freeze-frame punctuates the dodge
+              world.nearMissAt = now;
             }
           }
         }
@@ -1698,7 +1704,7 @@ export function useGameLoop({
           if (dx < 70 && dy < 70) {
             d.used = true;
             world.packages = world.capacity;
-            world.credits += 10;
+            world.credits += 5;
             world.velocityY = PHYSICS.refuelBoostVy * boostMult;
             AudioManager.play("pickup");
 

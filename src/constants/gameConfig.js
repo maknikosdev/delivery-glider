@@ -1,8 +1,24 @@
 import { Dimensions } from "react-native";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+const WIN = Dimensions.get("window");
+
+// Tablets / large screens: gameplay is tuned for a phone-shaped playfield
+// (pixel speeds, 64px glider, height-based layouts), so on a large window we
+// play inside a centered phone-proportioned frame instead of stretching the
+// world. Phones (shortest side < 600 dp) are NOT affected: the frame is the
+// full window, exactly as before.
+const TABLET_MIN_SIDE = 600;
+const PHONE_ASPECT = 2.05; // height / width of a typical phone
+const FRAME_MAX_H = 960;
+const IS_LARGE = Math.min(WIN.width, WIN.height) >= TABLET_MIN_SIDE;
+const FRAME_H = IS_LARGE ? Math.min(WIN.height, FRAME_MAX_H) : WIN.height;
+const FRAME_W = IS_LARGE ? Math.min(WIN.width, Math.round(FRAME_H / PHONE_ASPECT)) : WIN.width;
+const SCREEN_W = FRAME_W;
+const SCREEN_H = FRAME_H;
 
 export const SCREEN = { width: SCREEN_W, height: SCREEN_H };
+// True when the game is letterboxed inside a smaller frame (tablets).
+export const FRAMED = IS_LARGE;
 
 // Rider (glider) geometry
 export const RIDER = {
@@ -129,7 +145,7 @@ export const DIFFICULTY = {
 export const COMBO = {
   windowMs: 3200, // time allowed since last delivery before combo resets
   maxMultiplier: 5,
-  creditsPerDelivery: 7, // was 12 - credits are scarcer so gliders/skins last longer
+  creditsPerDelivery: 5, // was 7 (was 12) - credits are scarcer so gliders/skins last longer
 };
 
 // Passing close to an obstacle without hitting it grants a small "close call"
@@ -137,7 +153,7 @@ export const COMBO = {
 // pure relief, which is what was missing.
 export const NEAR_MISS = {
   triggerDistance: 34, // px beyond the hitbox edge that still counts as "close"
-  bonusCredits: 3, // was 6
+  bonusCredits: 2, // was 3 (was 6)
   cooldownMs: 900, // avoid re-triggering on the same obstacle every frame
 };
 

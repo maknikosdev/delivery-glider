@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, PanResponder, BackHandler, AppState } from "react-native";
+import { View, Text, StyleSheet, PanResponder, BackHandler, AppState, Dimensions } from "react-native";
 import { useGameLoop } from "../game/useGameLoop";
 import ParallaxBackground from "../components/ParallaxBackground";
 import RiderSprite from "../components/RiderSprite";
@@ -8,6 +8,8 @@ import ParcelSprite from "../components/ParcelSprite";
 import { GLIDER_SPRITES } from "../game/gliderSprites";
 import GliderTrail from "../components/GliderTrail";
 import EngineFX from "../components/EngineFX";
+import SpeedLines from "../components/SpeedLines";
+import { activeSeason } from "../game/seasons";
 import DeliveryBurst from "../components/DeliveryBurst";
 import { useGame } from "../store/GameContext";
 import { pickEnvironmentId, getEnvironment, unlockedEnvironments } from "../game/environments";
@@ -38,14 +40,17 @@ import RevivePrompt from "../components/RevivePrompt";
 import PauseOverlay from "../components/PauseOverlay";
 import FadeInView from "../components/FadeInView";
 import { HUD_TOP, BANNER_TOP } from "../constants/hudLayout";
-import { RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
+import { FRAMED, RIDER, SCREEN, COLORS, DOUBLE_TAP_MS, HOLD_SKILL_MS, WEATHER, DIFFICULTY } from "../constants/gameConfig";
 
 // Top-right corner holding the pause + mute buttons. The game-wide
 // PanResponder must NOT claim touches here: it steals the responder on the
 // first tiny finger movement, which silently cancels the button's tap.
 const inHudButtons = (e) => {
   const { pageX, pageY } = e.nativeEvent;
-  return pageY <= HUD_TOP + 56 && pageX >= SCREEN.width - 150;
+  // On tablets the game is a centered frame, so page coordinates start at the
+  // window edge: subtract the frame offset.
+  const off = FRAMED ? (Dimensions.get("window").width - SCREEN.width) / 2 : 0;
+  return pageY <= HUD_TOP + 56 && pageX - off >= SCREEN.width - 150;
 };
 
 const SWIPE_THRESHOLD = 40;
@@ -64,6 +69,16 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   // (gameplay and physics are unaffected).
   const [lowFx, setLowFx] = useState(false);
   const frameRef = useRef({ last: 0, ema: 16, slow: 0 });
+  const tiltRef = useRef({ y: null, deg: 0 });
+  // Seasonal event (Halloween / Christmas) that is live today, fixed for this run.
+  const season = useMemo(() => activeSeason(), []);
+  // Trail look never changes during a run: compute once instead of every frame.
+  const trailVar = useMemo(() => trailVariant(gliderConfig.id), [gliderConfig.id]);
+  const trailGold = useMemo(
+    () => gliderMastery(save, gliderConfig.id).storyLevel >= 5,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [gliderConfig.id]
+  );
   // Portal Balcony: environments the run may jump to (all unlocked ones)
   const portalEnvIds = useMemo(
     () => unlockedEnvironments(Math.max(1, ((save && save.ownedGliders) || []).length), (save && save.bonusEnvs) || []).map((e) => e.id),
@@ -178,7 +193,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
       f.slow = f.ema > 27 ? f.slow + 1 : 0;
     }
     f.last = nowMs;
-    if (!lowFx && f.slow > 120) setTimeout(() => setLowFx(true), 0);
+    if (!lowFx && f.slow > 120) {
+      f.slow = -1e9; // schedule once
+      setTimeout(() => setLowFx(true), 0);
+    }
   }
 
   const clearHoldTimer = useCallback(() => {
@@ -343,6 +361,18 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   const deliveryZoom =
     pulseElapsed >= 0 && pulseElapsed < PULSE_MS ? 1 + 0.035 * Math.sin((pulseElapsed / PULSE_MS) * Math.PI) : 1;
 
+  // Glider banks with its vertical movement (nose down when falling, up when
+  // climbing), smoothed so it never twitches. Visual only.
+  const fxLight = !!(save && save.fxOff) || lowFx;
+  const tl = tiltRef.current;
+  if (tl.y == null) tl.y = world.riderY;
+  const dyTilt = world.riderY - tl.y;
+  tl.y = world.riderY;
+  tl.deg = tl.deg * 0.82 + Math.max(-16, Math.min(16, dyTilt * 2.4)) * 0.18;
+  const tiltDeg = world.status === "playing" ? tl.deg : 0;
+  const tiltPy = world.riderY + 30;
+  const nearAge = Date.now() - (world.nearMissAt || 0);
+
   const currentZone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
 
   return (
@@ -436,7 +466,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             const screenX = o.worldX - world.cameraX;
             if (screenX < -60 || screenX > SCREEN.width + 60) return null;
             return (
-              <ObstacleSprite key={o.id} type={o.type} screenX={screenX} y={o.y} />
+              <ObstacleSprite key={o.id} id={o.id} season={season} low={fxLight} type={o.type} screenX={screenX} y={o.y} />
             );
           })
         )}
@@ -446,7 +476,7 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             if (c.collected) return null;
             const screenX = c.worldX - world.cameraX;
             if (screenX < -40 || screenX > SCREEN.width + 40) return null;
-            return <CoinSprite key={c.id} screenX={screenX} y={c.y} />;
+            return <CoinSprite key={c.id} season={season} screenX={screenX} y={c.y} />;
           })
         )}
 
@@ -509,12 +539,12 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
             if (p.collected) return null;
             const screenX = p.worldX - world.cameraX;
             if (screenX < -50 || screenX > SCREEN.width + 50) return null;
-            return <PowerupSprite key={p.id} type={p.type} screenX={screenX} y={p.y} />;
+            return <PowerupSprite key={p.id} season={season} type={p.type} screenX={screenX} y={p.y} />;
           })
         )}
 
         {world.chaser && (
-          <ObstacleSprite type="police_drone" screenX={world.chaser.worldX - world.cameraX} y={world.chaser.y} />
+          <ObstacleSprite id="chaser" season={season} low={fxLight} type="police_drone" screenX={world.chaser.worldX - world.cameraX} y={world.chaser.y} />
         )}
 
         {/* Boss Encounters: one real boss character, its own sprite +
@@ -597,9 +627,11 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           <EngineFX y={world.riderY} color={gliderConfig.color} accentColor={gliderConfig.accentColor} thrusting={world.thrustHeld} low={lowFx} />
         )}
 
+        {!fxLight && <SpeedLines cameraX={world.cameraX} thrusting={world.thrustHeld} />}
+
         <GliderTrail
-          variant={trailVariant(gliderConfig.id)}
-          gold={gliderMastery(save, gliderConfig.id).storyLevel >= 5}
+          variant={trailVar}
+          gold={trailGold}
           y={world.riderY}
           color={gliderConfig.color}
           accentColor={gliderConfig.accentColor}
@@ -620,14 +652,22 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           </View>
         ) : null}
 
-        <RiderComp
-          gliderId={gliderConfig.id}
-          y={world.riderY}
-          color={gliderConfig.color}
-          accentColor={gliderConfig.accentColor}
-          packages={world.packages}
-          thrusting={world.thrustHeld}
-        />
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { transformOrigin: [RIDER.screenX, tiltPy, 0], transform: [{ rotate: `${tiltDeg.toFixed(1)}deg` }] },
+          ]}
+        >
+          <RiderComp
+            gliderId={gliderConfig.id}
+            y={world.riderY}
+            color={gliderConfig.color}
+            accentColor={gliderConfig.accentColor}
+            packages={world.packages}
+            thrusting={world.thrustHeld}
+          />
+        </View>
       </View>
 
       {/* Per-zone color grading: a very light, permanent full-screen wash
@@ -769,6 +809,10 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
         );
       })() : null}
 
+      {!fxLight && nearAge >= 0 && nearAge < 380 ? (
+        <View pointerEvents="none" style={[styles.nearFlash, { opacity: 0.55 * (1 - nearAge / 380) }]} />
+      ) : null}
+
       {world.portalFlashAt && Date.now() - world.portalFlashAt < 700 ? (
         <View pointerEvents="none" style={[styles.portalFlash, { opacity: 0.75 * (1 - (Date.now() - world.portalFlashAt) / 700) }]} />
       ) : null}
@@ -877,6 +921,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   orderBadgeOn: { borderColor: "#7dffb0", backgroundColor: "rgba(20,90,50,0.7)" },
+  nearFlash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderWidth: 6, borderColor: "#ffe14d" },
   portalFlash: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#b46bff" },
   enrageTint: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#ff1a1a", borderWidth: 4, borderColor: "#ff4d4d" },
   objWrap: { position: "absolute", top: BANNER_TOP + 90, left: 14, maxWidth: "58%" },

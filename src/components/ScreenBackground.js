@@ -1,6 +1,7 @@
 import React from "react";
-import { ImageBackground, Image, View, StyleSheet, useWindowDimensions } from "react-native";
+import { ImageBackground, Image, View, StyleSheet } from "react-native";
 import AmbientFX from "./AmbientFX";
+import { SCREEN } from "../constants/gameConfig";
 
 // Same illustrated background art used on the Menu screen, now shared by
 // every other screen too, so the whole app feels like one consistent
@@ -20,7 +21,7 @@ const LOGO_FRAC = 0.44;
 export const logoBlockHeight = (windowH, logoTop) => logoTop + LOGO_FRAC * (windowH - logoTop);
 
 export default function ScreenBackground({ children, style, logoTop }) {
-  const { height: winH } = useWindowDimensions();
+  const { height: winH } = SCREEN;
   if (logoTop != null) {
     const artH = winH - logoTop;
     const blockH = LOGO_FRAC * artH;

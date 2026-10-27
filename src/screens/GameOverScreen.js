@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, useWindowDimensions, ScrollView, Animated, Easing, ImageBackground } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Animated, Easing, ImageBackground } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import { COLORS, MIN_METERS_FOR_REWARDS } from "../constants/gameConfig";
+import { COLORS, MIN_METERS_FOR_REWARDS, SCREEN } from "../constants/gameConfig";
 import { useGame } from "../store/GameContext";
 import OctagonPanel from "../components/OctagonPanel";
 import OctagonButton from "../components/OctagonButton";
@@ -99,7 +99,7 @@ export default function GameOverScreen({
   onMenu,
 }) {
   const { t } = useGame();
-  const { width, height } = useWindowDimensions();
+  const { width, height } = SCREEN;
   const qualified = result.meters >= MIN_METERS_FOR_REWARDS;
   const hasNewAchievements = newAchievements && newAchievements.length > 0;
   const hasNewContracts = newContracts && newContracts.length > 0;

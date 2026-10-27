@@ -442,6 +442,22 @@ function ImageEnvBackground({ cameraX, E, low = false }) {
       const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * 2.2 + i));
       fxItems.push(<Circle key={`em${i}`} cx={xx} cy={y} r={1.4 + (i % 3) * 0.7} fill={i % 2 ? "#ffb347" : "#ff5a2e"} opacity={tw * 0.85} />);
     }
+  } else if (E.fx === "snow") {
+    for (let i = 0; i < 28; i++) {
+      const sp = 24 + (i % 5) * 10;
+      const y = (((t * sp) + i * 67) % (H + 20)) - 10;
+      const x = ((i * 97) % W) + Math.sin(t * 0.8 + i * 1.9) * 18 - ((cameraX * 0.05) % W);
+      const xx = ((x % W) + W) % W;
+      fxItems.push(<Circle key={`sn${i}`} cx={xx} cy={y} r={1.3 + (i % 4) * 0.7} fill="#ffffff" opacity={0.55 + (i % 3) * 0.12} />);
+    }
+  } else if (E.fx === "leaves") {
+    for (let i = 0; i < 16; i++) {
+      const sp = 18 + (i % 5) * 8;
+      const y = (((t * sp) + i * 83) % (H + 20)) - 10;
+      const x = ((i * 113) % W) + Math.sin(t * 1.2 + i * 2.3) * 26 - ((cameraX * 0.06) % W);
+      const xx = ((x % W) + W) % W;
+      fxItems.push(<Ellipse key={`lf${i}`} cx={xx} cy={y} rx={3.2 + (i % 3)} ry={1.8 + (i % 2)} fill={i % 3 === 0 ? "#ff7a1a" : i % 3 === 1 ? "#d9541a" : "#ffb347"} opacity={0.75} />);
+    }
   } else if (E.fx === "clouds") {
     for (let i = 0; i < 7; i++) {
       const x = (((i * 211) - t * (14 + (i % 3) * 8) - cameraX * 0.12) % (W + 240) + (W + 240)) % (W + 240) - 120;

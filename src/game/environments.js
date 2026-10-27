@@ -1,4 +1,6 @@
 import { COLORS } from "../constants/gameConfig";
+import { SEASON_BACKGROUNDS } from "./seasonAssets";
+import { activeSeason, SEASON_ENV_CHANCE } from "./seasons";
 
 // 13 διαφορετικά (5 code-drawn + 8 image-based) περιβάλλοντα background. Καθαρά διακοσμητικά — δεν επηρεάζουν
 // collisions/δυσκολία. Το πρώτο (neon_city) είναι το υπάρχον look.
@@ -187,6 +189,23 @@ export const ENVIRONMENTS = [
     rule: { speedMult: 1.04, creditsMult: 1.08, windForce: 70, text: { en: "Golden hour: +4% speed, +8% credits, canyon updrafts", el: "Χρυσή ώρα: +4% ταχύτητα, +8% πόντοι, ρεύματα φαραγγιού" } },
     bg: "#3a1208", scrim: 0.42, accent: "#ffb347", fogs: [], extra: null,
   },
+  // ---- Seasonal environments (7 days a year each; see game/seasons.js) ----
+  { id: "h_castle", season: "halloween", unlockAt: 1, name: { en: "Haunted Castle", el: "Στοιχειωμένο Κάστρο" }, image: SEASON_BACKGROUNDS.bg_h_castle, fx: "leaves",
+    rule: { creditsMult: 1.04, text: { en: "Haunted night: +4% credits", el: "Στοιχειωμένη νύχτα: +4% πόντοι" } }, bg: "#1a0b33", scrim: 0.3, accent: "#ff9a2f", fogs: [], extra: null },
+  { id: "h_graveyard", season: "halloween", unlockAt: 1, name: { en: "Misty Graveyard", el: "Ομιχλώδες Νεκροταφείο" }, image: SEASON_BACKGROUNDS.bg_h_graveyard, fx: "leaves",
+    rule: { creditsMult: 1.04, text: { en: "Haunted night: +4% credits", el: "Στοιχειωμένη νύχτα: +4% πόντοι" } }, bg: "#06241f", scrim: 0.3, accent: "#6dffb0", fogs: [], extra: null },
+  { id: "h_gate", season: "halloween", unlockAt: 1, name: { en: "Spooky Gate", el: "Στοιχειωμένη Πύλη" }, image: SEASON_BACKGROUNDS.bg_h_gate, fx: "leaves",
+    rule: { creditsMult: 1.04, text: { en: "Haunted night: +4% credits", el: "Στοιχειωμένη νύχτα: +4% πόντοι" } }, bg: "#0e0e33", scrim: 0.3, accent: "#ffb347", fogs: [], extra: null },
+  { id: "h_farm", season: "halloween", unlockAt: 1, name: { en: "Witch's Farm", el: "Το Αγρόκτημα της Μάγισσας" }, image: SEASON_BACKGROUNDS.bg_h_farm, fx: "leaves",
+    rule: { creditsMult: 1.04, text: { en: "Haunted night: +4% credits", el: "Στοιχειωμένη νύχτα: +4% πόντοι" } }, bg: "#2a0f33", scrim: 0.3, accent: "#a6ff4d", fogs: [], extra: null },
+  { id: "x_village", season: "christmas", unlockAt: 1, name: { en: "Snowy Village", el: "Χιονισμένο Χωριό" }, image: SEASON_BACKGROUNDS.bg_x_village, fx: "snow",
+    rule: { creditsMult: 1.04, gravityMult: 0.98, text: { en: "Festive air: +4% credits, -2% gravity", el: "Γιορτινός αέρας: +4% πόντοι, -2% βαρύτητα" } }, bg: "#0a1a44", scrim: 0.3, accent: "#ffe08a", fogs: [], extra: null },
+  { id: "x_sunset", season: "christmas", unlockAt: 1, name: { en: "Winter Sunset", el: "Χειμερινό Ηλιοβασίλεμα" }, image: SEASON_BACKGROUNDS.bg_x_sunset, fx: "snow",
+    rule: { creditsMult: 1.04, gravityMult: 0.98, text: { en: "Festive air: +4% credits, -2% gravity", el: "Γιορτινός αέρας: +4% πόντοι, -2% βαρύτητα" } }, bg: "#2a1a52", scrim: 0.3, accent: "#ffb7e0", fogs: [], extra: null },
+  { id: "x_porch", season: "christmas", unlockAt: 1, name: { en: "Cozy Porch", el: "Ζεστή Βεράντα" }, image: SEASON_BACKGROUNDS.bg_x_porch, fx: "snow",
+    rule: { creditsMult: 1.04, gravityMult: 0.98, text: { en: "Festive air: +4% credits, -2% gravity", el: "Γιορτινός αέρας: +4% πόντοι, -2% βαρύτητα" } }, bg: "#0a1a44", scrim: 0.3, accent: "#ffe08a", fogs: [], extra: null },
+  { id: "x_fireplace", season: "christmas", unlockAt: 1, name: { en: "Fireplace Lounge", el: "Σαλόνι με Τζάκι" }, image: SEASON_BACKGROUNDS.bg_x_fireplace, fx: "snow",
+    rule: { creditsMult: 1.04, gravityMult: 0.98, text: { en: "Festive air: +4% credits, -2% gravity", el: "Γιορτινός αέρας: +4% πόντοι, -2% βαρύτητα" } }, bg: "#2a0d0d", scrim: 0.3, accent: "#ff9a4d", fogs: [], extra: null },
 ];
 
 export function getEnvironment(id) {
@@ -194,14 +213,18 @@ export function getEnvironment(id) {
 }
 
 export function unlockedEnvironments(ownedCount, bonusIds = []) {
-  return ENVIRONMENTS.filter((e) => ownedCount >= e.unlockAt || bonusIds.includes(e.id));
+  const season = activeSeason();
+  return ENVIRONMENTS.filter((e) => (e.season ? e.season === season : ownedCount >= e.unlockAt || bonusIds.includes(e.id)));
 }
 
 // Random among the unlocked ones (by glider count, or unlocked by an
 // achievement reward). Avoids repeating the previous run's environment.
 let lastId = null;
 export function pickEnvironmentId(ownedCount, bonusIds = [], rnd = Math.random) {
-  const pool = unlockedEnvironments(Math.max(1, ownedCount || 1), bonusIds || []);
+  let pool = unlockedEnvironments(Math.max(1, ownedCount || 1), bonusIds || []);
+  // While a seasonal event is live, its environments are picked most of the time.
+  const seasonal = pool.filter((e) => e.season);
+  if (seasonal.length && rnd() < SEASON_ENV_CHANCE) pool = seasonal;
   const candidates = pool.length > 1 ? pool.filter((e) => e.id !== lastId) : pool;
   const pick = candidates[Math.floor(rnd() * candidates.length)];
   lastId = pick.id;

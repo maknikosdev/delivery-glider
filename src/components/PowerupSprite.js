@@ -1,6 +1,9 @@
 import React from "react";
 import { View, Image, StyleSheet } from "react-native";
 
+import { SEASON_SPRITES } from "../game/seasonAssets";
+import { SEASON_POWERUPS } from "../game/seasons";
+
 const SIZE = 42; // matches the original SVG's display size exactly
 
 const IMAGES = {
@@ -9,8 +12,9 @@ const IMAGES = {
   grav_inverter: require("../../assets/sprites/powerup_grav_inverter.png"),
 };
 
-export default function PowerupSprite({ type, screenX, y }) {
-  const source = IMAGES[type] || IMAGES.overclock;
+export default function PowerupSprite({ type, screenX, y, season }) {
+  const sid = season && SEASON_POWERUPS[season] && SEASON_POWERUPS[season][type];
+  const source = (sid && SEASON_SPRITES[sid] && SEASON_SPRITES[sid][0]) || IMAGES[type] || IMAGES.overclock;
   return (
     <View style={[styles.wrap, { left: screenX - SIZE / 2, top: y - SIZE / 2 }]} pointerEvents="none">
       <Image source={source} style={styles.img} resizeMode="contain" />
