@@ -27,6 +27,7 @@ import { NewBossSprite, NewProjectileSprite, GiftSprite, LavaZone } from "../com
 import { NEW_BOSS_IDS, NEW_PROJECTILE_TYPES } from "../game/newBosses";
 import { BalconySprite, DroneStationSprite, DeliveryParticle } from "../components/BalconySprite";
 import CoinSprite from "../components/CoinSprite";
+import DarknessOverlay from "../components/DarknessOverlay";
 import DecoySprite from "../components/DecoySprite";
 import PowerupSprite from "../components/PowerupSprite";
 import WeatherBanner from "../components/WeatherBanner";
@@ -229,12 +230,14 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
     setThrust(false);
     clearHoldTimer();
     pause();
+    AudioManager.pauseMusic(); // music stops while paused
     setPaused(true);
   }, [pause, setThrust, clearHoldTimer]);
   const doResume = useCallback(() => {
     if (!pausedRef.current) return;
     pausedRef.current = false;
     setPaused(false);
+    AudioManager.playMusic(); // continue the gameplay track
     runStartRef.current += resume() || 0; // keep the rival pacer in step
   }, [resume]);
   useEffect(() => {
@@ -370,7 +373,6 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
   tl.y = world.riderY;
   tl.deg = tl.deg * 0.82 + Math.max(-16, Math.min(16, dyTilt * 2.4)) * 0.18;
   const tiltDeg = world.status === "playing" ? tl.deg : 0;
-  const tiltPy = world.riderY + 30;
   const nearAge = Date.now() - (world.nearMissAt || 0);
 
   const currentZone = DIFFICULTY.zones[world.zoneIndex] || DIFFICULTY.zones[0];
@@ -652,22 +654,15 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           </View>
         ) : null}
 
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { transformOrigin: [RIDER.screenX, tiltPy, 0], transform: [{ rotate: `${tiltDeg.toFixed(1)}deg` }] },
-          ]}
-        >
-          <RiderComp
-            gliderId={gliderConfig.id}
-            y={world.riderY}
-            color={gliderConfig.color}
-            accentColor={gliderConfig.accentColor}
-            packages={world.packages}
-            thrusting={world.thrustHeld}
-          />
-        </View>
+        <RiderComp
+          gliderId={gliderConfig.id}
+          y={world.riderY}
+          color={gliderConfig.color}
+          accentColor={gliderConfig.accentColor}
+          packages={world.packages}
+          thrusting={world.thrustHeld}
+          tilt={tiltDeg}
+        />
       </View>
 
       {/* Per-zone color grading: a very light, permanent full-screen wash
@@ -733,6 +728,44 @@ export default function GameScreen({ gliderConfig, gadgetIds, freeRevive, skillL
           pointerEvents="none"
         />
       )}
+
+      {/* Segment "Darkness": black screen with a light disc around the glider;
+          the segment's coins are drawn again on top so they glow in the dark. */}
+      {world.darkLevel > 0.03 && (
+        <>
+          <DarknessOverlay cx={RIDER.screenX + RIDER.width / 2} cy={world.riderY + RIDER.height / 2} level={world.darkLevel} />
+          <View style={[StyleSheet.absoluteFill, { opacity: world.darkLevel }]} pointerEvents="none">
+            {world.chunks.map((chunk) =>
+              chunk.segment === "dark"
+                ? chunk.coins.map((c) => {
+                    if (c.collected) return null;
+                    const sx = c.worldX - world.cameraX;
+                    if (sx < -40 || sx > SCREEN.width + 40) return null;
+                    return <CoinSprite key={`g_${c.id}`} season={season} screenX={sx} y={c.y} />;
+                  })
+                : null
+            )}
+          </View>
+        </>
+      )}
+
+      {/* Segment "Rhythm": the frame pulses on the beat; the accent beat is the
+          one where the next obstacle reaches the glider. */}
+      {world.segment && world.segment.id === "rhythm" && world.segment.beatPx
+        ? (() => {
+            const pos = (world.cameraX + RIDER.screenX - world.segment.startX) / world.segment.beatPx;
+            if (pos < 0) return null;
+            const phase = pos - Math.floor(pos);
+            const accent = Math.floor(pos) % 2 === 0 ? 1 : 0.4;
+            const pulse = (1 - phase) * (1 - phase) * accent;
+            return (
+              <View
+                pointerEvents="none"
+                style={[StyleSheet.absoluteFill, styles.beatFrame, { opacity: 0.12 + pulse * 0.6 }]}
+              />
+            );
+          })()
+        : null}
 
       {/* Metro Undercity tunnel walls: permanent solid ceiling/floor that
           narrow the playable band — touching either one crashes, same as
@@ -956,6 +989,7 @@ const styles = StyleSheet.create({
   flareTint: { backgroundColor: COLORS.danger, opacity: 0.07 },
   sandTint: { backgroundColor: "#ffcf6b" },
   blackoutTint: { backgroundColor: "#000000" },
+  beatFrame: { borderWidth: 6, borderColor: "#22d3ee" },
   blockadeBand: {
     position: "absolute",
     left: 0,

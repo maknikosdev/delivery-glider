@@ -67,6 +67,15 @@ const el = {
     warn: "Αν βγεις τώρα, το τρέχον run χάνεται.",
     hint: "Πάτα πίσω ξανά για να συνεχίσεις.",
   },
+  segments: {
+    done: "Ολοκληρώθηκε!",
+    sprint_banner: "ΣΠΡΙΝΤ ΠΑΡΑΔΟΣΗΣ — παράδωσε όσα προλαβαίνεις!",
+    coins_banner: "ΜΑΖΕΜΑ ΝΟΜΙΣΜΑΤΩΝ — ακολούθησε τη διαδρομή",
+    chase_banner: "ΚΥΝΗΓΙ — μη σταματάς, απόφυγε τους τοίχους!",
+    rhythm_banner: "ΡΥΘΜΙΚΗ ΕΝΟΤΗΤΑ — ακολούθησε τον ρυθμό",
+    dark_banner: "ΣΚΟΤΑΔΙ — ακολούθησε τα φωτεινά νομίσματα",
+    slow_banner: "ΑΡΓΗ ΚΙΝΗΣΗ — πέρασε με ακρίβεια",
+  },
   gameover: {
     title: "CRASH!",
     newRecord: "★ ΝΕΟ ΡΕΚΟΡ ★",
@@ -506,6 +515,15 @@ const en = {
     confirm: "TAP AGAIN TO QUIT",
     warn: "If you quit now, this run is lost.",
     hint: "Press back again to resume.",
+  },
+  segments: {
+    done: "Cleared!",
+    sprint_banner: "DELIVERY SPRINT — drop as many as you can!",
+    coins_banner: "COIN RUSH — follow the trail",
+    chase_banner: "CHASE — keep moving, dodge the walls!",
+    rhythm_banner: "RHYTHM RUN — follow the beat",
+    dark_banner: "DARKNESS — follow the glowing coins",
+    slow_banner: "SLOW & PRECISE — thread the gaps",
   },
   gameover: {
     title: "CRASH!",

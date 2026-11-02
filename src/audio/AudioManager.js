@@ -10,9 +10,10 @@ import { createAudioPlayer, setAudioModeAsync } from "expo-audio";
 //   - click: UI buttons
 //   - swipe: swipe-down dive
 //
-// MUSIC: a single looping background track at assets/audio/music.mp3,
-// user-supplied and confirmed royalty-free/no-copyright by the user. It
-// loops continuously from app launch (menu + in-run) and is controlled by
+// MUSIC: two looping tracks, both user-supplied and confirmed royalty-free:
+//   - assets/audio/music.mp3          -> every screen EXCEPT gameplay (menu, garage, game over...)
+//   - assets/audio/gameplay_music.mp3 -> only while a run is being played
+// setScene("menu" | "game") switches between them. Both are controlled by
 // the SAME mute toggle as the SFX, just at a lower mixed volume so it never
 // buries the gameplay cues.
 //
@@ -34,12 +35,15 @@ const SOUND_FILES = {
 };
 
 const MUSIC_FILE = require("../../assets/audio/music.mp3");
+const GAME_MUSIC_FILE = require("../../assets/audio/gameplay_music.mp3");
 const MUSIC_VOLUME = 0.35; // kept under the SFX so deliver/crash/etc. still cut through
 
 class AudioManagerClass {
   constructor() {
     this.players = {};
     this.musicPlayer = null;
+    this.gamePlayer = null;
+    this.scene = "menu"; // "menu" | "game"
     this.muted = false;
     this.ready = false;
     // simple cooldown map so rapid triggers (e.g. holding thrust) don't spam
@@ -74,17 +78,49 @@ class AudioManagerClass {
       // If the music file fails to load, the game must keep working silently.
       this.musicPlayer = null;
     }
+    try {
+      this.gamePlayer = createAudioPlayer(GAME_MUSIC_FILE);
+      this.gamePlayer.loop = true;
+      this.gamePlayer.volume = this.muted ? 0 : MUSIC_VOLUME;
+    } catch (e) {
+      this.gamePlayer = null;
+    }
     this.ready = true;
   }
 
   setMuted(muted) {
     this.muted = muted;
-    if (this.musicPlayer) {
+    for (const p of [this.musicPlayer, this.gamePlayer]) {
+      if (!p) continue;
       try {
-        this.musicPlayer.volume = muted ? 0 : MUSIC_VOLUME;
+        p.volume = muted ? 0 : MUSIC_VOLUME;
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  // Switches the background track: "game" plays gameplay_music.mp3 (restarted
+  // for each run), anything else plays the regular music.mp3 (it continues
+  // where it left off). Safe to call repeatedly with the same scene.
+  setScene(scene) {
+    const next = scene === "game" ? "game" : "menu";
+    const changed = next !== this.scene;
+    this.scene = next;
+    if (!this.ready) return;
+    try {
+      if (next === "game") {
+        if (this.musicPlayer) this.musicPlayer.pause();
+        if (this.gamePlayer) {
+          if (changed) this.gamePlayer.seekTo(0);
+          this.gamePlayer.play();
+        }
+      } else {
+        if (this.gamePlayer) this.gamePlayer.pause();
+        if (this.musicPlayer) this.musicPlayer.play();
+      }
+    } catch (e) {
+      // ignore playback errors
     }
   }
 
@@ -94,20 +130,17 @@ class AudioManagerClass {
   // continuously across Menu/Game/Garage/etc. rather than restarting per
   // screen.
   playMusic() {
-    if (!this.musicPlayer) return;
-    try {
-      this.musicPlayer.play();
-    } catch (e) {
-      // ignore playback errors (e.g. player mid-teardown)
-    }
+    this.setScene(this.scene);
   }
 
   pauseMusic() {
-    if (!this.musicPlayer) return;
-    try {
-      this.musicPlayer.pause();
-    } catch (e) {
-      // ignore
+    for (const p of [this.musicPlayer, this.gamePlayer]) {
+      if (!p) continue;
+      try {
+        p.pause();
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -143,6 +176,12 @@ class AudioManagerClass {
       // ignore
     }
     this.musicPlayer = null;
+    try {
+      if (this.gamePlayer) this.gamePlayer.release();
+    } catch (e) {
+      // ignore
+    }
+    this.gamePlayer = null;
     this.ready = false;
   }
 }

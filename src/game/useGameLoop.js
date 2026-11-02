@@ -38,6 +38,7 @@ import { createSeededRng } from "./seededRandom";
 import { updateParcels } from "./parcels";
 import { getEnvironment } from "./environments";
 import { PORTAL, pickPortalEnv } from "./portals";
+import { buildSegment, SEGMENT_IDS, SEGMENT_RULES, nextSegmentGapMeters } from "./segments";
 import { initObjectives, objectiveEvent, tickObjectives } from "./objectives";
 import { initBoons, grantBoon } from "./boons";
 import { initWaypoints, tickWaypoints } from "./waypoints";
@@ -134,6 +135,14 @@ function makeInitialWorld(gliderConfig, gadgetIds, freeRevive, rng = Math.random
     // generated is forced to be the upper(risk)/lower(safe) fork instead of
     // a random pick from the weighted pool.
     nextBranchAtMeters: ROUTE_BRANCH_INTERVAL_M,
+    // Mode-change segments (see game/segments.js)
+    nextSegmentAtMeters: 300,
+    segmentRanges: [],
+    segment: null,
+    segBag: [],
+    segSpeed: 1,
+    darkLevel: 0,
+    segmentsDone: 0,
     status: "playing", // "playing" | "awaiting_revive" | "ejected" | "crashed"
     thrustHeld: false,
     particles: [],
@@ -475,6 +484,25 @@ export function useGameLoop({
       // those just skip ahead to the next scheduled fork instead.
       const chunkStartMeters = world.lastChunkEndX * METERS_PER_PX;
       const dueForBranch = chunkStartMeters >= world.nextBranchAtMeters && world.zoneIndex >= ROUTE_BRANCH_CHUNK.minZoneIndex;
+      // Mode-change segment: a short stretch with its own rules. Only when no
+      // fork / boss / tunnel is involved, so those systems stay untouched.
+      const nextZone = DIFFICULTY.zones[world.zoneIndex + 1];
+      if (
+        !dueForBranch &&
+        !zone.tunnelMode &&
+        !(nextZone && nextZone.tunnelMode) &&
+        !world.activeBossEntity &&
+        chunkStartMeters >= world.nextSegmentAtMeters &&
+        chunkStartMeters + 4 * CHUNK_WIDTH * METERS_PER_PX < world.nextBossAtMeters
+      ) {
+        if (!world.segBag || world.segBag.length === 0) world.segBag = shuffledBag(SEGMENT_IDS, rng);
+        const built = buildSegment(world.segBag.pop(), world.lastChunkEndX, rng);
+        for (const c of built.chunks) world.chunks.push(c);
+        world.segmentRanges.push(built.info);
+        world.lastChunkEndX = built.info.endX;
+        world.nextSegmentAtMeters = built.info.endX * METERS_PER_PX + nextSegmentGapMeters(rng);
+        continue;
+      }
       let template;
       if (dueForBranch && !zone.tunnelMode) {
         template = ROUTE_BRANCH_CHUNK;
@@ -655,7 +683,8 @@ export function useGameLoop({
         overclock *
         turboDash *
         softSpeedMult *
-        mutatorSpeedMult
+        mutatorSpeedMult *
+        (world.segSpeed || 1)
       );
     },
     [startSpeedMult, softSpeedMult, mutatorSpeedMult]
@@ -1126,6 +1155,48 @@ export function useGameLoop({
         }
       }
 
+      // Mode-change segments: detect entering / leaving a special stretch.
+      {
+        const rx = world.cameraX + RIDER.screenX;
+        let cur = null;
+        for (const r of world.segmentRanges) {
+          if (rx >= r.startX && rx < r.endX) {
+            cur = r;
+            break;
+          }
+        }
+        if (cur && !world.segment) {
+          world.segment = { ...cur, enteredAt: now, del0: world.deliveries, coin0: world.coinsThisRun };
+          addFloatingText(world, t(`segments.${cur.id}_banner`), rx - 40, SCREEN.height * 0.14, "banner");
+          if (cur.id === "sprint") {
+            // A fresh hold, so the sprint is never blocked by an empty cargo bay.
+            world.packages = world.capacity;
+            world.packageTypes = rollPackageLoad(world.capacity, rng);
+            world.packagesLoadedAt = now;
+          }
+        } else if (!cur && world.segment) {
+          const sg = world.segment;
+          const rule = SEGMENT_RULES[sg.id];
+          let bonus = 0;
+          if (sg.id === "sprint") bonus = Math.min(rule.maxBonus, (world.deliveries - sg.del0) * rule.endBonusPerDelivery);
+          else if (sg.id === "coins") bonus = Math.min(rule.endBonus, Math.floor((world.coinsThisRun - sg.coin0) / 4));
+          else bonus = rule.endBonus;
+          if (bonus > 0) {
+            world.credits += bonus;
+            addFloatingText(world, `${t("segments.done")} +${bonus}`, rx - 40, SCREEN.height * 0.14, "banner");
+          }
+          world.segmentsDone = (world.segmentsDone || 0) + 1;
+          world.segment = null;
+        }
+        const spTarget = world.segment ? SEGMENT_RULES[world.segment.id].speedMult : 1;
+        world.segSpeed += (spTarget - world.segSpeed) * Math.min(1, 3 * dt);
+        const dkTarget = world.segment && world.segment.id === "dark" ? 1 : 0;
+        world.darkLevel += (dkTarget - world.darkLevel) * Math.min(1, 4 * dt);
+        if (world.segmentRanges.length > 3) {
+          world.segmentRanges = world.segmentRanges.filter((r) => r.endX > world.cameraX - SCREEN.width);
+        }
+      }
+
       const speed = currentSpeed(world);
       world.cameraX += speed * dt;
       tickGliderSkills(world, dt, now, { addFloatingText, currentSpeed });
@@ -1264,12 +1335,14 @@ export function useGameLoop({
       const fuelShieldActive = world.fuelShieldMetersLeft > 0;
 
       // wanted level chaser
-      if (world.wantedLevel >= 2) {
+      // (the "Chase" segment uses the same chaser, a bit closer and faster)
+      const chaseSeg = !!(world.segment && world.segment.id === "chase");
+      if (world.wantedLevel >= 2 || chaseSeg) {
         const riderWorldXNow = world.cameraX + RIDER.screenX;
         if (!world.chaser) {
-          world.chaser = { worldX: riderWorldXNow - 320, y: world.riderY };
+          world.chaser = { worldX: riderWorldXNow - (chaseSeg ? 260 : 320), y: world.riderY };
         }
-        world.chaser.worldX += WANTED.chaserSpeedGain * dt + speed * dt * 0.85;
+        world.chaser.worldX += WANTED.chaserSpeedGain * dt + speed * dt * (chaseSeg ? 0.995 : 0.85);
         world.chaser.y += (world.riderY - world.chaser.y) * Math.min(1, 2 * dt);
       } else {
         world.chaser = null;
@@ -1302,6 +1375,13 @@ export function useGameLoop({
         if (dx < 46 && dy < 40) {
           if (invincible || absorbHit()) {
             world.chaser = null;
+          } else if (chaseSeg && world.wantedLevel < 2) {
+            // In the Chase segment a catch costs a little pay, not Wanted Level.
+            world.credits = Math.max(0, world.credits - 3);
+            world.velocityY -= 200;
+            world.chaser.worldX -= 220;
+            addFloatingText(world, "Caught! -3", riderWorldX, world.riderY - 40, "near_miss");
+            world.hitStopUntil = now + 70;
           } else {
             world.wantedLevel = Math.min(WANTED.maxLevel, world.wantedLevel + 1);
             world.velocityY -= 200;

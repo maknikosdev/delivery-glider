@@ -42,7 +42,7 @@ const IMAGES = {
 const DISPLAY_W = RIDER.width;
 const DISPLAY_H = RIDER.height + 20;
 
-export default function RiderSprite({ gliderId, y, color, accentColor, packages = 0, thrusting = false }) {
+export default function RiderSprite({ gliderId, y, color, accentColor, packages = 0, thrusting = false, tilt = 0 }) {
   const source = IMAGES[gliderId] || IMAGES.starter;
   return (
     <View
@@ -55,7 +55,9 @@ export default function RiderSprite({ gliderId, y, color, accentColor, packages 
           height: DISPLAY_H,
           // Cheap thrust feedback: a small scale pulse instead of a second
           // source image per glider.
-          transform: [{ scale: thrusting ? 1.08 : 1 }],
+          // Banking tilt rotates around the sprite's own centre, so it can never
+          // move the sprite away from where the engine/trail effects are drawn.
+          transform: [{ rotate: `${tilt.toFixed(1)}deg` }, { scale: thrusting ? 1.08 : 1 }],
         },
       ]}
       pointerEvents="none"
